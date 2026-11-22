@@ -487,6 +487,43 @@ public final class ReportExporter {
     shields.put("damageTakenAfterLocalDisable", sh.damageTakenAfterLocalDisable());
     root.put("shields", shields);
 
+    var cp = b.comboProfile;
+    Map<String, Object> comboProfile = new LinkedHashMap<>();
+    comboProfile.put("localCombos", cp.localCombos());
+    comboProfile.put("opponentCombos", cp.opponentCombos());
+    comboProfile.put("longestLocal", cp.longestLocal());
+    comboProfile.put("longestOpponent", cp.longestOpponent());
+    comboProfile.put("longestUnansweredLocal", cp.longestUnansweredLocal());
+    comboProfile.put("localComboHits", cp.localComboHits());
+    comboProfile.put("totalLocalHits", cp.totalLocalHits());
+    comboProfile.put("comboHitSharePct", n(cp.comboHitSharePct()));
+    comboProfile.put("avgLocalCombo", n(cp.avgLocalCombo()));
+    comboProfile.put("avgOpponentCombo", n(cp.avgOpponentCombo()));
+    comboProfile.put("sameTickTrades", cp.sameTickTrades());
+    comboProfile.put("rating", n(cp.rating()));
+    root.put("comboProfile", comboProfile);
+
+    var kb = b.knockbackControl;
+    Map<String, Object> knockbackControl = new LinkedHashMap<>();
+    knockbackControl.put("eligibleHits", kb.eligibleHits());
+    knockbackControl.put("idealResets", kb.idealResets());
+    knockbackControl.put("attemptResets", kb.attemptResets());
+    knockbackControl.put("earlyAttempts", kb.earlyAttempts());
+    knockbackControl.put("lateAttempts", kb.lateAttempts());
+    knockbackControl.put("outsideWindow", kb.outsideWindow());
+    knockbackControl.put("noJump", kb.noJump());
+    knockbackControl.put("timingRatePct", n(kb.timingRatePct()));
+    knockbackControl.put("idealSharePct", n(kb.idealSharePct()));
+    knockbackControl.put("meanAbsOffsetTicks", n(kb.meanAbsOffsetTicks()));
+    knockbackControl.put("kbSamples", kb.kbSamples());
+    knockbackControl.put("meanKbCandidate", n(kb.meanKbCandidate()));
+    knockbackControl.put("meanKbNoJump", n(kb.meanKbNoJump()));
+    knockbackControl.put("meanSpeedCandidate", n(kb.meanSpeedCandidate()));
+    knockbackControl.put("meanSpeedNoJump", n(kb.meanSpeedNoJump()));
+    knockbackControl.put("speedReductionPct", n(kb.speedReductionPct()));
+    knockbackControl.put("rating", n(kb.rating()));
+    root.put("knockbackControl", knockbackControl);
+
     var es = b.exchangeSummary;
     Map<String, Object> exSum = new LinkedHashMap<>();
     exSum.put("total", es.total());

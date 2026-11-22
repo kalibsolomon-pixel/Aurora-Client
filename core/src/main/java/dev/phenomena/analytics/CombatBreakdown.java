@@ -102,6 +102,39 @@ public final class CombatBreakdown {
       int even,
       double tradeRatio) {}
 
+  public record ComboProfile(
+      int localCombos,
+      int opponentCombos,
+      int longestLocal,
+      int longestOpponent,
+      int longestUnansweredLocal,
+      int localComboHits,
+      int totalLocalHits,
+      double comboHitSharePct,
+      double avgLocalCombo,
+      double avgOpponentCombo,
+      int sameTickTrades,
+      double rating) {}
+
+  public record KnockbackControl(
+      int eligibleHits,
+      int idealResets,
+      int attemptResets,
+      int earlyAttempts,
+      int lateAttempts,
+      int outsideWindow,
+      int noJump,
+      double timingRatePct,
+      double idealSharePct,
+      double meanAbsOffsetTicks,
+      int kbSamples,
+      double meanKbCandidate,
+      double meanKbNoJump,
+      double meanSpeedCandidate,
+      double meanSpeedNoJump,
+      double speedReductionPct,
+      double rating) {}
+
   public record TurningPoint(
       double time, String kind, String tone, String title, String detail) {}
 
@@ -111,6 +144,8 @@ public final class CombatBreakdown {
   public final SwordMechanics sword;
   public final ShieldPunish shields;
   public final ExchangeSummary exchangeSummary;
+  public final ComboProfile comboProfile;
+  public final KnockbackControl knockbackControl;
   public final List<Exchange> exchanges;
   public final List<TurningPoint> turningPoints;
   public final List<Takeaway> takeaways;
@@ -120,6 +155,8 @@ public final class CombatBreakdown {
       SwordMechanics sword,
       ShieldPunish shields,
       ExchangeSummary exchangeSummary,
+      ComboProfile comboProfile,
+      KnockbackControl knockbackControl,
       List<Exchange> exchanges,
       List<TurningPoint> turningPoints,
       List<Takeaway> takeaways) {
@@ -127,6 +164,8 @@ public final class CombatBreakdown {
     this.sword = sword;
     this.shields = shields;
     this.exchangeSummary = exchangeSummary;
+    this.comboProfile = comboProfile;
+    this.knockbackControl = knockbackControl;
     this.exchanges = exchanges;
     this.turningPoints = turningPoints;
     this.takeaways = takeaways;
@@ -150,15 +189,20 @@ public final class CombatBreakdown {
     SprintResetResult sprintResult = analyzeSword(a, sprintStops);
     ShieldPunish shieldPunish = buildShieldPunish(a);
     ExchangeBuild exchangeBuild = buildExchanges(a, trace, sprintResult.resetHitIndices);
+    ComboProfile comboProfile = buildComboProfile(a);
+    KnockbackControl knockbackControl = buildKnockbackControl(a);
     List<TurningPoint> turningPoints = buildTurningPoints(a, health, shieldPunish, trace);
     List<Takeaway> takeaways =
-        buildTakeaways(a, health, sprintResult.sword, shieldPunish, exchangeBuild.summary);
+        buildTakeaways(
+            a, health, sprintResult.sword, shieldPunish, exchangeBuild.summary, knockbackControl);
 
     return new CombatBreakdown(
         health,
         sprintResult.sword,
         shieldPunish,
         exchangeBuild.summary,
+        comboProfile,
+        knockbackControl,
         exchangeBuild.exchanges,
         turningPoints,
         takeaways);
@@ -240,6 +284,19 @@ public final class CombatBreakdown {
 
   private static SprintResetResult analyzeSword(FightAnalytics a, List<Double> sprintStops) {
     var hits = a.hits;
+    // Derive combo follow-up membership from post-fight Combos.analyze (immune to same-tick trade
+    // ordering noise and exchange/round boundary artifacts in live ev.combo()).
+    Set<Long> comboFollowSeqs = new HashSet<>();
+    boolean hasStreakAnalysis = a.combos != null && !a.combos.streaks().isEmpty();
+    if (hasStreakAnalysis) {
+      for (var st : a.combos.streaks()) {
+        if (st.side() == Combos.Side.LOCAL && st.combo()) {
+          for (int k = 1; k < st.sequences().size(); k++) {
+            comboFollowSeqs.add(st.sequences().get(k));
+          }
+        }
+      }
+    }
     int opp = 0, resets = 0, comboOpp = 0, comboResets = 0;
     Set<Integer> resetIndices = new HashSet<>();
     int stopPtr = 0;
@@ -249,7 +306,7 @@ public final class CombatBreakdown {
       double dt = curr.time() - prev.time();
       if (prev.sprinting() && dt > 0 && dt <= SPRINT_RESET_MAX_GAP_SECONDS) {
         opp++;
-        boolean inCombo = curr.combo() >= 2;
+        boolean inCombo = hasStreakAnalysis ? comboFollowSeqs.contains(curr.attackSequence()) : curr.combo() >= 2;
         if (inCombo) comboOpp++;
         while (stopPtr < sprintStops.size() && sprintStops.get(stopPtr) <= prev.time()) stopPtr++;
         boolean stoppedBetween =
@@ -710,12 +767,162 @@ public final class CombatBreakdown {
     return points.size() <= 6 ? List.copyOf(points) : List.copyOf(points.subList(0, 6));
   }
 
+  private static ComboProfile buildComboProfile(FightAnalytics a) {
+    var c = a.combos;
+    int localCombos = c.combos(Combos.Side.LOCAL).size();
+    int oppCombos = c.combos(Combos.Side.OPPONENT).size();
+    int longestLocal = c.longest(Combos.Side.LOCAL);
+    int longestOpp = c.longest(Combos.Side.OPPONENT);
+    int longestUnanswered = c.longestUnansweredLocal();
+    int comboHits = c.comboHits(Combos.Side.LOCAL);
+    int totalHits = a.hits.size();
+    double sharePct = ratioPct(comboHits, totalHits);
+    double avgLocal = c.averageCombo(Combos.Side.LOCAL);
+    double avgOpp = c.averageCombo(Combos.Side.OPPONENT);
+    int tradedLocalMarks = 0;
+    for (var m : c.marks()) {
+      if (m.traded() && m.side() == Combos.Side.LOCAL) tradedLocalMarks++;
+    }
+    double rating = Double.NaN;
+    if (totalHits >= 3) {
+      double shareScore = Double.isFinite(sharePct) ? sharePct : 0.0;
+      double lenScore = Math.min(100.0, (Double.isFinite(avgLocal) ? (avgLocal - 1.0) * 35.0 : 0.0));
+      int oppComboHits = c.comboHits(Combos.Side.OPPONENT);
+      double diffScore =
+          (comboHits + oppComboHits) == 0
+              ? 50.0
+              : 100.0 * comboHits / (comboHits + oppComboHits);
+      rating = clampScore(0.45 * shareScore + 0.30 * lenScore + 0.25 * diffScore);
+    }
+    return new ComboProfile(
+        localCombos,
+        oppCombos,
+        longestLocal,
+        longestOpp,
+        longestUnanswered,
+        comboHits,
+        totalHits,
+        sharePct,
+        avgLocal,
+        avgOpp,
+        tradedLocalMarks,
+        rating);
+  }
+
+  private static KnockbackControl buildKnockbackControl(FightAnalytics a) {
+    int eligible = 0, ideal = 0, attempt = 0, early = 0, late = 0, outside = 0, noJump = 0;
+    double absOffsetSum = 0.0;
+    int offsetCount = 0;
+    int kbSamples = 0, kbCandCount = 0, kbNoJumpCount = 0;
+    double kbCandSum = 0.0, kbNoJumpSum = 0.0;
+    int spCandCount = 0, spNoJumpCount = 0;
+    double spCandSum = 0.0, spNoJumpSum = 0.0;
+
+    for (var in : a.incoming) {
+      if (!in.attributed()) continue;
+      String jc = in.jumpClass();
+      if ("EXCLUDED".equals(jc) || "UNAVAILABLE".equals(jc) || "NOT_APPLICABLE".equals(jc)) {
+        continue;
+      }
+      eligible++;
+      boolean isCandidate = "IDEAL_CANDIDATE".equals(jc) || "ATTEMPT_CANDIDATE".equals(jc);
+      switch (jc) {
+        case "IDEAL_CANDIDATE" -> {
+          ideal++;
+          offsetCount++;
+        }
+        case "ATTEMPT_CANDIDATE" -> {
+          attempt++;
+          if (in.jumpOffsetTicks() != null) {
+            long off = in.jumpOffsetTicks();
+            if (off < 0) early++;
+            else if (off > 0) late++;
+            absOffsetSum += Math.abs(off);
+            offsetCount++;
+          }
+        }
+        case "OUTSIDE_WINDOW" -> outside++;
+        case "NO_JUMP" -> noJump++;
+        default -> {}
+      }
+      if (in.knockback() != null) {
+        kbSamples++;
+        if (isCandidate) {
+          kbCandCount++;
+          kbCandSum += in.knockback();
+        } else {
+          kbNoJumpCount++;
+          kbNoJumpSum += in.knockback();
+        }
+      }
+      if (in.speedAfter() != null && in.knockback() != null) {
+        if (isCandidate) {
+          spCandCount++;
+          spCandSum += in.speedAfter();
+        } else {
+          spNoJumpCount++;
+          spNoJumpSum += in.speedAfter();
+        }
+      }
+    }
+
+    double timingRate = ratioPct(ideal + attempt, eligible);
+    double idealShare = ratioPct(ideal, eligible);
+    double meanAbsOff = offsetCount == 0 ? Double.NaN : absOffsetSum / offsetCount;
+    double meanKbCand = kbCandCount == 0 ? Double.NaN : kbCandSum / kbCandCount;
+    double meanKbNo = kbNoJumpCount == 0 ? Double.NaN : kbNoJumpSum / kbNoJumpCount;
+    double meanSpCand = spCandCount < 2 ? Double.NaN : spCandSum / spCandCount;
+    double meanSpNo = spNoJumpCount < 2 ? Double.NaN : spNoJumpSum / spNoJumpCount;
+    double reductionPct =
+        Double.isFinite(meanSpCand) && Double.isFinite(meanSpNo) && meanSpNo > 1e-6
+            ? 100.0 * (1.0 - meanSpCand / meanSpNo)
+            : Double.NaN;
+
+    double rating = Double.NaN;
+    if (eligible >= 3) {
+      double precisionScore =
+          offsetCount == 0
+              ? 0.0
+              : clampScore(100.0 * (1.0 - meanAbsOff / Math.max(1.0, a.fight.policy().jumpWindowTicks())));
+      if (Double.isFinite(reductionPct)) {
+        double redScore = clampScore(50.0 + reductionPct * 1.25);
+        rating = clampScore(0.40 * timingRate + 0.30 * precisionScore + 0.30 * redScore);
+      } else {
+        rating = clampScore(0.55 * timingRate + 0.45 * precisionScore);
+      }
+    }
+    return new KnockbackControl(
+        eligible,
+        ideal,
+        attempt,
+        early,
+        late,
+        outside,
+        noJump,
+        timingRate,
+        idealShare,
+        meanAbsOff,
+        kbSamples,
+        meanKbCand,
+        meanKbNo,
+        meanSpCand,
+        meanSpNo,
+        reductionPct,
+        rating);
+  }
+
+  private static double clampScore(double value) {
+    if (!Double.isFinite(value)) return Double.NaN;
+    return Math.max(0.0, Math.min(100.0, value));
+  }
+
   private static List<Takeaway> buildTakeaways(
       FightAnalytics a,
       HealthPacing health,
       SwordMechanics sword,
       ShieldPunish shields,
-      ExchangeSummary ex) {
+      ExchangeSummary ex,
+      KnockbackControl kb) {
     List<Takeaway> list = new ArrayList<>();
 
     // 1. Exchange openers & trade efficiency
@@ -884,6 +1091,32 @@ public final class CombatBreakdown {
               health.minHp(),
               health.minHpTime());
       list.add(new Takeaway(tone, "Health Pacing", headline, detail));
+    }
+
+    // 4b. Jump-reset & knockback control timing
+    if (kb.eligibleHits() >= 4 && Double.isFinite(kb.rating())) {
+      String tone = kb.rating() >= 65.0 ? "POSITIVE" : kb.rating() < 35.0 ? "NEGATIVE" : "NEUTRAL";
+      String bias =
+          kb.earlyAttempts() > kb.lateAttempts() + 1
+              ? " (tending early)"
+              : kb.lateAttempts() > kb.earlyAttempts() + 1 ? " (tending late)" : "";
+      String redPart =
+          Double.isFinite(kb.speedReductionPct())
+              ? String.format(Locale.ROOT, " | %.0f%% post-hit speed reduction", kb.speedReductionPct())
+              : "";
+      list.add(
+          new Takeaway(
+              tone,
+              "Jump Resets",
+              String.format(Locale.ROOT, "Jump-reset timing %.0f/100", kb.rating()),
+              String.format(
+                  Locale.ROOT,
+                  "Timed %d/%d hits (%d same-tick)%s%s.",
+                  kb.idealResets() + kb.attemptResets(),
+                  kb.eligibleHits(),
+                  kb.idealResets(),
+                  bias,
+                  redPart)));
     }
 
     // 5. Fallback accuracy/reach takeaway for short or older fights
