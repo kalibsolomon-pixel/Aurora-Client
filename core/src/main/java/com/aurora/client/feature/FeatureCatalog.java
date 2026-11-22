@@ -296,7 +296,7 @@ public final class FeatureCatalog {
         classify("vanilla_hud", FairPlay.VANILLA_INFORMATION, "Moves, scales or hides vanilla's boss bar, action bar, titles, subtitles, toasts and advancement pop-ups without adding new information. Off in a fresh install.", "vanillaHudEnabled");
         classify("world_map", FairPlay.VANILLA_INFORMATION, "A full-screen map of terrain you have already visited.");
         classify("resourcepack_browser", FairPlay.COSMETIC, "Downloads resource packs from Modrinth.");
-        classify("miscellaneous", FairPlay.LOCAL_TIMING, "Frame pacing, a frame cap, vsync control and the point within a frame where mouse movement is applied. The rate and content of what is sent to the server are unchanged.");
+        classify("miscellaneous", FairPlay.LOCAL_TIMING, "Frame pacing, a frame cap, vsync control, the point within a frame where mouse movement is applied, and cosmetic tab-list and nametag styling (including your own nametag in third person). The rate and content of what is sent to the server are unchanged.");
         classify("custom_title", FairPlay.COSMETIC, "Aurora's title screen and menu styling.");
         classify("text_fonts", FairPlay.COSMETIC, "Changes the font.");
         classify("theme", FairPlay.COSMETIC, "Changes the colors of Aurora's own screens.");
@@ -315,7 +315,9 @@ public final class FeatureCatalog {
         mixin("VanillaToastMixin", "moving, scaling or hiding toasts and advancement pop-ups", "vanilla_hud").gates("vanillaHudEnabled");
         mixin("GameRendererMixin", "zooming the view", "zoom").gates("zoomEnabled");
         mixin("RenderTargetMixin", "nothing (kept empty for compatibility)");
-        mixin("PlayerListHudMixin", "numeric ping in the tab list", "ping").gates("tabPingEnabled");
+        mixin("PlayerListHudMixin", "numeric ping and styling in the tab list", "ping", "miscellaneous")
+                .gates("tabPingEnabled", "tabListHideHeader", "tabListHideFooter", "tabListHighlightSelf", "tabListCustomBackground");
+        mixin("PlayerTabHeadsMixin", "hiding player heads in the tab list", "miscellaneous").gates("tabListHideHeads");
         mixin("InGameHudFoodMixin", "the saturation overlay on the food bar", "saturation_bar").gates("saturationBarEnabled");
         mixin("MouseMixin", "adjusting zoom with the scroll wheel", "zoom");
         mixin("EntityMixin", "the Free Look camera", "free_look").gates("freeLookEnabled");
@@ -358,6 +360,12 @@ public final class FeatureCatalog {
         mixin("HotbarItemBounceMixin", "the hotbar item bounce", "animations").gates("hotbarBounceEnabled");
         mixin("PlayerEntityRendererMixin", "ping and totem pops under nametags", "ping", "totem_pop")
                 .gates("nametagPingEnabled", "nametagTotemPopsEnabled");
+        mixin("LivingEntityRendererNameTagMixin", "showing your own nametag in third person", "miscellaneous")
+                .gates("nametagStyleShowSelf");
+        mixin("NameTagStyleMixin", "nametag scale and background opacity", "miscellaneous")
+                .gates("nametagStyleCustomBackground");
+        mixin("NameTagShadowMixin", "drop shadow on nametag text", "miscellaneous")
+                .gates("nametagStyleTextShadow");
         mixin("LivingEntityRendererExtractMixin", "entity health labels and hit-color health capture", "player_health", "hit_color")
                 .gates("playerHealthIndicators", "hitColorHealthGradient");
         mixin("LavaClarityMixin", "lava clarity", "pack_tweaks").gates("lavaClarityEnabled");

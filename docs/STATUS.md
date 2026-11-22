@@ -47,6 +47,13 @@ main inventory — and optionally the 9-slot hotbar — as a draggable, scalable
 Vanilla (`inventory.png` / `container/slot`), Solid, and None backgrounds, compact packing,
 optional stack-count hiding, and empty-state auto-hide across 26.1.2, 26.2, and 26.3.
 
+Tab list and nametag polish expands existing Ping and Display Settings controls across 26.1.2,
+26.2, and 26.3 without adding a new feature: Ping's tab-list readout now widens the ping slot so
+3-digit latencies never overlap player names and supports an optional `"ms"` suffix and text
+shadow, while Settings → Display gains Tab List (hide server header/footer/player heads, highlight
+own row, custom background opacity) and Nametags (show own nametag in third person, text shadow,
+custom background opacity, and scale).
+
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's
 profile, input and theme contracts. `CombatBreakdown` adds PvP analysis for 1.9+
