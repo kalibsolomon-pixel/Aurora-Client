@@ -57,10 +57,10 @@ public final class ProfileFieldSet {
 
     /**
      * Fields Aurora has removed (3.5.1, 2026-11-15: entity movement smoothing and the
-     * Better Hitreg parts other than its custom delay). Profiles saved before still carry
-     * them; restore skips them quietly, because nothing is wrong with such a profile. Any
-     * other unknown field still logs a warning. The reload overlay and title fade switches
-     * were perf* fields, which profiles never held.
+     * Better Hitreg parts other than its custom delay; 3.8.1, 2026-11-22: Smooth Camera).
+     * Profiles saved before still carry them; restore skips them quietly, because nothing
+     * is wrong with such a profile. Any other unknown field still logs a warning. The
+     * reload overlay and title fade switches were perf* fields, which profiles never held.
      */
     public static final Set<String> RETIRED = Set.of(
             "entityMovementSmoothingEnabled", "entityMovementSmoothingStrength",
@@ -75,7 +75,8 @@ public final class ProfileFieldSet {
             "hitregColorYourReachNear", "hitregFloorGridSize", "hitregMetronome",
             "hitregMuffleAmount", "hitregScoreLeftKey", "hitregScoreResetKey",
             "hitregScoreRightKey", "hitregScoreSendKey", "hitregSettingsKey",
-            "hitregSharpenAmount", "hitregSwitchHandKey", "hitregTrackFights", "hitregVoidWorld"
+            "hitregSharpenAmount", "hitregSwitchHandKey", "hitregTrackFights", "hitregVoidWorld",
+            "smoothCamera", "smoothCameraStrength"
     );
 
     /** @return {@code true} for a field a later Aurora removed ({@link #RETIRED}). */
