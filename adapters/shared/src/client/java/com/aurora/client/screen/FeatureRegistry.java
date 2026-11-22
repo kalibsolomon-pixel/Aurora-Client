@@ -820,11 +820,21 @@ addWithSettings("hitbox",
                         new BooleanSetting("Show in Tab List",
                                 () -> cfg.tabPingEnabled,
                                 v -> cfg.tabPingEnabled = v).resetDefault("tabPingEnabled", () -> defaults.tabPingEnabled)
-                                .description("Replaces the bar icon with a numeric ping value in the tab list."),
+                                .description("Replaces the bar icon with a numeric ping value in the tab list and widens the ping column so 3-digit values never overlap names."),
+                        new BooleanSetting("Show \"ms\" Suffix",
+                                () -> cfg.tabPingShowMs,
+                                v -> cfg.tabPingShowMs = v).resetDefault("tabPingShowMs", () -> defaults.tabPingShowMs)
+                                .disabled(() -> !cfg.tabPingEnabled)
+                                .description("Appends \"ms\" to numeric ping values in the tab list (e.g. 42ms)."),
+                        new BooleanSetting("Tab Ping Text Shadow",
+                                () -> cfg.tabPingShadow,
+                                v -> cfg.tabPingShadow = v).resetDefault("tabPingShadow", () -> defaults.tabPingShadow)
+                                .disabled(() -> !cfg.tabPingEnabled)
+                                .description("Draws a drop shadow behind numeric ping values in the tab list so they match player names."),
                         new BooleanSetting("Show in Player Nametags",
                                 () -> cfg.nametagPingEnabled,
                                 v -> cfg.nametagPingEnabled = v).resetDefault("nametagPingEnabled", () -> defaults.nametagPingEnabled)
-                                .description("Adds a colored ping value below each player's name.")
+                                .description("Adds a colored ping value next to each player's name.")
                 ),
                 List.of("pingHud", "tabPing", "nametagPing"));
 
@@ -1493,14 +1503,56 @@ addWithSettings("hitbox",
                 () -> cfg.serverListDragReorder,
                 v -> cfg.serverListDragReorder = v).resetDefault("serverListDragReorder", () -> defaults.serverListDragReorder)
                 .description("Lets you reorder servers in the Multiplayer server list by click-and-drag instead of vanilla's up/down arrow buttons. Click and hold a server, drag it to a new position, and release — the new order is saved instantly. Normal clicks still select and join servers as usual.");
+        FeatureSetting tabListHideHeader = new BooleanSetting("Hide Server Header",
+                () -> cfg.tabListHideHeader, v -> cfg.tabListHideHeader = v).resetDefault("tabListHideHeader", () -> defaults.tabListHideHeader)
+                .description("Hides the server-supplied header banner above the multiplayer tab list.");
+        FeatureSetting tabListHideFooter = new BooleanSetting("Hide Server Footer",
+                () -> cfg.tabListHideFooter, v -> cfg.tabListHideFooter = v).resetDefault("tabListHideFooter", () -> defaults.tabListHideFooter)
+                .description("Hides the server-supplied footer banner below the multiplayer tab list.");
+        FeatureSetting tabListHideHeads = new BooleanSetting("Hide Player Heads",
+                () -> cfg.tabListHideHeads, v -> cfg.tabListHideHeads = v).resetDefault("tabListHideHeads", () -> defaults.tabListHideHeads)
+                .description("Hides player face icons in the tab list and reclaims their column width.");
+        FeatureSetting tabListHighlightSelf = new BooleanSetting("Highlight Own Row",
+                () -> cfg.tabListHighlightSelf, v -> cfg.tabListHighlightSelf = v).resetDefault("tabListHighlightSelf", () -> defaults.tabListHighlightSelf)
+                .description("Tints your own row in the tab list with your theme accent so you can spot yourself instantly.");
+        FeatureSetting tabListCustomBg = new BooleanSetting("Custom Background",
+                () -> cfg.tabListCustomBackground, v -> cfg.tabListCustomBackground = v).resetDefault("tabListCustomBackground", () -> defaults.tabListCustomBackground)
+                .description("Overrides vanilla's tab-list backdrop opacity with the slider below.");
+        FeatureSetting tabListBgOpacity = SliderSetting.of("Background Opacity",
+                () -> cfg.tabListBgOpacity, v -> cfg.tabListBgOpacity = v, 0.0, 1.0).resetDefault(() -> defaults.tabListBgOpacity).percent()
+                .disabled(() -> !cfg.tabListCustomBackground)
+                .description("Opacity of the tab-list container and row fills. 0% removes the backing panels completely; 50% matches vanilla.");
+
+        FeatureSetting nametagShowSelf = new BooleanSetting("Show Own Nametag (3rd Person)",
+                () -> cfg.nametagStyleShowSelf, v -> cfg.nametagStyleShowSelf = v).resetDefault("nametagStyleShowSelf", () -> defaults.nametagStyleShowSelf)
+                .description("Renders your own nametag above your head in third-person camera views (F5).");
+        FeatureSetting nametagTextShadow = new BooleanSetting("Text Shadow",
+                () -> cfg.nametagStyleTextShadow, v -> cfg.nametagStyleTextShadow = v).resetDefault("nametagStyleTextShadow", () -> defaults.nametagStyleTextShadow)
+                .description("Draws a drop shadow behind floating nametag text for extra readability, especially with low background opacity.");
+        FeatureSetting nametagCustomBg = new BooleanSetting("Custom Background",
+                () -> cfg.nametagStyleCustomBackground, v -> cfg.nametagStyleCustomBackground = v).resetDefault("nametagStyleCustomBackground", () -> defaults.nametagStyleCustomBackground)
+                .description("Overrides vanilla's nametag background box opacity instead of using Minecraft's global Text Background Opacity.");
+        FeatureSetting nametagBgOpacity = SliderSetting.of("Background Opacity",
+                () -> cfg.nametagStyleBgOpacity, v -> cfg.nametagStyleBgOpacity = v, 0.0, 1.0).resetDefault(() -> defaults.nametagStyleBgOpacity).percent()
+                .disabled(() -> !cfg.nametagStyleCustomBackground)
+                .description("Opacity of the dark plate behind floating nametags. 0% hides the box completely; 25% matches vanilla.");
+        FeatureSetting nametagScale = SliderSetting.of("Nametag Scale",
+                () -> cfg.nametagStyleScale, v -> cfg.nametagStyleScale = v, 0.5, 2.0).resetDefault(() -> defaults.nametagStyleScale)
+                .valueFormatter(v -> String.format(java.util.Locale.ROOT, "%.2fx", v))
+                .description("Uniform size multiplier for floating entity and player nametags.");
+
         FeatureSetting copyDiagnostics = ButtonSetting.semantic("Copy Diagnostics", "Copy",
                 com.aurora.client.diagnostics.DiagnosticsReport::runAndCopy)
                 .description("Closes this menu, measures frame times for 5 seconds, then copies a text report to your clipboard: your mod list, any Aurora feature that could not start and why, the renderer, recent Aurora errors and the frame-time result. Nothing is sent anywhere; paste it where you are asking for help. It contains no account, world or server names.");
         addWithSettings("miscellaneous",
-                "Display and responsiveness controls: smooth camera, frame pacing, a global frame cap, latency, input handling, and server-list dragging. Each keeps its own enable toggle and settings under its section.",
+                "Display and responsiveness controls: smooth camera, frame pacing, a global frame cap, latency, input handling, tab list and nametag styling, and server-list dragging. Each keeps its own enable toggle and settings under its section.",
                         () -> cfg.smoothCamera || cfg.smoothFramePacer || cfg.lowLatencyRender
                         || cfg.inputSamplingDecoupled
-                        || cfg.serverListDragReorder || cfg.frameCapFps > 0,
+                        || cfg.serverListDragReorder || cfg.frameCapFps > 0
+                        || cfg.tabListHideHeader || cfg.tabListHideFooter || cfg.tabListHideHeads
+                        || cfg.tabListHighlightSelf || cfg.tabListCustomBackground
+                        || cfg.nametagStyleShowSelf || cfg.nametagStyleTextShadow
+                        || cfg.nametagStyleCustomBackground || Math.abs(cfg.nametagStyleScale - 1.0) > 1e-4,
                 v -> {
                     cfg.smoothCamera = v;
                     cfg.smoothFramePacer = v;
@@ -1510,7 +1562,18 @@ addWithSettings("hitbox",
                     // The cap is a value setting, not a toggle: master-off
                     // removes it (0 = Off), master-on leaves whatever cap the
                     // user chose (a forced "on" value would be arbitrary).
-                    if (!v) cfg.frameCapFps = 0;
+                    if (!v) {
+                        cfg.frameCapFps = 0;
+                        cfg.tabListHideHeader = false;
+                        cfg.tabListHideFooter = false;
+                        cfg.tabListHideHeads = false;
+                        cfg.tabListHighlightSelf = false;
+                        cfg.tabListCustomBackground = false;
+                        cfg.nametagStyleShowSelf = false;
+                        cfg.nametagStyleTextShadow = false;
+                        cfg.nametagStyleCustomBackground = false;
+                        cfg.nametagStyleScale = 1.0;
+                    }
                 },
                 List.of(
                         new SectionHeaderSetting("Smooth Camera"),
@@ -1524,6 +1587,12 @@ addWithSettings("hitbox",
                         lowLatencyEnabled, disableVSync, adaptiveRenderSleeping,
                         new SectionHeaderSetting("Decoupled Input"),
                         decoupledInputEnabled,
+                        new SectionHeaderSetting("Tab List"),
+                        tabListHideHeader, tabListHideFooter, tabListHideHeads,
+                        tabListHighlightSelf, tabListCustomBg, tabListBgOpacity,
+                        new SectionHeaderSetting("Nametags"),
+                        nametagShowSelf, nametagTextShadow, nametagCustomBg,
+                        nametagBgOpacity, nametagScale,
                         new SectionHeaderSetting("Drag-to-Reorder Servers"),
                         serverListDragEnabled,
                         new SectionHeaderSetting("Support"),
@@ -1535,7 +1604,7 @@ addWithSettings("hitbox",
                         "smoothCamera",
                         "smoothFramePacer", "framePacer", "framePacing", "frameCap",
                         "lowLatencyRender", "disableVSync", "adaptiveRenderSleeping",
-                        "inputSamplingDecoupled", "serverListDragReorder"));
+                        "inputSamplingDecoupled", "tabList", "nametagStyle", "serverListDragReorder"));
 
         // Client optimizations Aurora owns (ADR 0009). Only the switches
         // with a visible trade-off have rows; the rest are config-only
@@ -1592,7 +1661,11 @@ addWithSettings("hitbox",
                         framePacerLowCpu, framePacerSpinThreshold, framePacerParkThreshold).pageSummary("Holds each frame to an even interval for smoother motion."),
                 group("low_latency", "Low Latency", lowLatencyEnabled, disableVSync, adaptiveRenderSleeping).pageSummary("Shortens the delay between your input and the screen."),
                 settingsEntry("gradient_dither").pageSummary("Removes color banding from skies, fog and dark scenes."),
-                settingsEntry("smooth_fog").pageSummary("Softens harsh linear distance fog edges across the horizon."))));
+                settingsEntry("smooth_fog").pageSummary("Softens harsh linear distance fog edges across the horizon."),
+                group("tab_list", "Tab List", tabListHideHeader, tabListHideFooter, tabListHideHeads,
+                        tabListHighlightSelf, tabListCustomBg, tabListBgOpacity).pageSummary("Clean up and restyle the multiplayer player list."),
+                group("nametags", "Nametags", nametagShowSelf, nametagTextShadow, nametagCustomBg,
+                        nametagBgOpacity, nametagScale).pageSummary("Third-person self nametag and floating nametag styling."))));
         SETTINGS_PAGES.add(new SettingsPage("Controls", List.of(
                 group("smooth_camera", "Smooth Camera", smoothCameraEnabled, smoothCameraStrength).pageSummary("Eases mouse look into and out of movement."),
                 group("decoupled_input", "Decoupled Input", decoupledInputEnabled).pageSummary("Applies mouse movement at the very start of each frame."),

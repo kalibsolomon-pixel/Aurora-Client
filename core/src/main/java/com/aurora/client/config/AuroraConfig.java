@@ -714,6 +714,35 @@ public class AuroraConfig {
     public double freeLookSensitivity    = 1.0;  // 0.1..3.0 multiplier on MouseHandler delta
     public boolean saturationBarEnabled  = true;
     public boolean tabPingEnabled        = true;
+    /** Append "ms" to numeric ping values in the tab list (e.g. "42ms"). */
+    public boolean tabPingShowMs         = false;
+    /** Draw drop shadow behind numeric ping values in the tab list. */
+    public boolean tabPingShadow         = true;
+
+    // ---- Tab List & Nametag styling (Display Settings) ----
+    /** Hide server-provided header banner above the multiplayer tab list. */
+    public boolean tabListHideHeader     = false;
+    /** Hide server-provided footer banner below the multiplayer tab list. */
+    public boolean tabListHideFooter     = false;
+    /** Hide player face icons in the tab list and reclaim their column width. */
+    public boolean tabListHideHeads      = false;
+    /** Tint the local player's own row in the tab list with the theme accent. */
+    public boolean tabListHighlightSelf  = false;
+    /** Override vanilla's tab-list backdrop opacity with {@link #tabListBgOpacity}. */
+    public boolean tabListCustomBackground = false;
+    /** Custom tab-list backdrop opacity (0.0 transparent .. 1.0 opaque; vanilla is 0.5). */
+    public double tabListBgOpacity       = 0.5;
+
+    /** Render the local player's own nametag in third-person camera views (F5). */
+    public boolean nametagStyleShowSelf          = false;
+    /** Draw drop shadow behind floating entity/player nametag text. */
+    public boolean nametagStyleTextShadow        = false;
+    /** Override vanilla's nametag background box opacity with {@link #nametagStyleBgOpacity}. */
+    public boolean nametagStyleCustomBackground  = false;
+    /** Custom nametag background opacity (0.0 no box .. 1.0 solid black; vanilla is 0.25). */
+    public double nametagStyleBgOpacity          = 0.25;
+    /** Uniform size multiplier for floating nametags (0.5..2.0; vanilla is 1.0). */
+    public double nametagStyleScale              = 1.0;
     public boolean toggleSprintSneakEnabled = true;
     public boolean toggleSprintSneakHudEnabled = true;
 
