@@ -45,7 +45,7 @@ class MaterialSurfaceContractTest {
         assertFalse(material.contains("windowBevelEnabled"));
         assertFalse(material.contains("backgroundOpacity()"));
         for (String host : new String[]{"AuroraScreen", "FeatureDetailScreen", "ManagerListScreen", "IconPickerScreen",
-                "ProfileOptionsScreen", "ColorPickerScreen", "ResourcePackBrowserScreen"}) {
+                "ProfileOptionsScreen", "ColorPickerScreen", "ResourcePackBrowserScreen", "ScreenshotManagerScreen"}) {
             String code = SourceTree.read("screen/" + host + ".java");
             int dim = code.indexOf("GlassSurface.overlayDim(", code.indexOf("GlassSurface.beginGlassPass()"));
             assertTrue(dim >= 0 && code.indexOf("MaterialSurface.parent(", dim) > dim, host);

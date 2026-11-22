@@ -86,6 +86,11 @@ and disconnecting restores the prior profile unless the player manually switched
 Profiles with bound servers show a globe indicator badge and are searchable by server pattern in
 `ProfileManagerScreen`.
 
+Screenshot Manager (`Settings → General → Screenshots`) adds a themed in-game gallery for
+`screenshots/` with async thumbnail/preview decoding and deferred frame-boundary texture eviction
+(`UiLayerCache.beginFrame()`), filename search, inline rename with validation, press-again delete
+confirmation, OS clipboard image copy, and non-destructive drag-to-crop PNG export.
+
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's
 profile, input and theme contracts. `CombatBreakdown` adds PvP analysis for 1.9+

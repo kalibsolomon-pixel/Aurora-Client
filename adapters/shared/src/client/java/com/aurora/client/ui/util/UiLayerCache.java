@@ -42,6 +42,7 @@ public final class UiLayerCache implements RenderUtil.RectSink {
     public static void beginFrame() {
         for (var cache : RETIRED) cache.dispose();
         RETIRED.clear();
+        com.aurora.client.screenshot.ScreenshotIO.drainRetired();
     }
 
     private NativeImage image;

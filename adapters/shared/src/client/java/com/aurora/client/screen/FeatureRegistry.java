@@ -1902,6 +1902,10 @@ addWithSettings("hitbox",
                 v -> cfg.streamerOpponentColor = v).resetDefault(() -> defaults.streamerOpponentColor)
                 .description("Text color used for masked opponent nametags when Custom Opponent Color is enabled.")
                 .disabled(() -> !cfg.streamerModeEnabled || !cfg.streamerHideOtherNames || !cfg.streamerOpponentColorEnabled);
+        FeatureSetting openScreenshots = mappingAction("Open Screenshot Manager",
+                "Browse, search, rename, delete, copy to clipboard, and crop Minecraft screenshots in-game.",
+                screen -> com.aurora.client.adapter.NativeUi.setScreen(net.minecraft.client.Minecraft.getInstance(),
+                        new ScreenshotManagerScreen(screen)));
         FeatureSetting copyDiagnostics = ButtonSetting.semantic("Copy Diagnostics", "Copy",
                 com.aurora.client.diagnostics.DiagnosticsReport::runAndCopy)
                 .description("Closes this menu, measures frame times for 5 seconds, then copies a text report to your clipboard: your mod list, any Aurora feature that could not start and why, the renderer, recent Aurora errors and the frame-time result. Nothing is sent anywhere; paste it where you are asking for help. It contains no account, world or server names.");
@@ -1966,6 +1970,8 @@ addWithSettings("hitbox",
                         streamerHideOwnSkin, streamerHideServerAddress, streamerHideCoords,
                         streamerHideOtherNames, streamerOpponentLabel, streamerOpponentNumbered,
                         streamerOpponentColorEnabled, streamerOpponentColor,
+                        new SectionHeaderSetting("Screenshots"),
+                        openScreenshots,
                         new SectionHeaderSetting("Support"),
                         copyDiagnostics
                 ),
@@ -2065,6 +2071,7 @@ addWithSettings("hitbox",
                         .resetDefault("reducedMotion", () -> defaults.reducedMotion)
                         .description("Skip overlay fades and make keyboard focus scrolling instant."))
                         .pageSummary("Animation and motion preferences for Aurora's menus."),
+                group("screenshots", "Screenshots", openScreenshots).pageSummary("Browse, search, rename, copy, crop and delete screenshots in-game."),
                 group("search", "Search", searchInstant, searchTolerance).pageSummary("How the search bar finds features and settings."),
                 settingsEntry("custom_title").pageSummary("Aurora's own title screen in place of the vanilla one."),
                 group("server_list", "Drag-to-Reorder Servers", serverListDragEnabled).pageSummary("Reorder servers in the Multiplayer list by dragging."),
