@@ -325,8 +325,8 @@ public final class FeatureCatalog {
         mixin("InGameHudFoodMixin", "the saturation overlay on the food bar", "saturation_bar").gates("saturationBarEnabled");
         mixin("MouseMixin", "adjusting zoom with the scroll wheel", "zoom");
         mixin("EntityMixin", "the Free Look camera", "free_look").gates("freeLookEnabled");
-        mixin("CameraUpdateMixin", "the Free Look camera and camera smoothing", "free_look", "miscellaneous")
-                .gates("freeLookEnabled", "smoothCamera");
+        mixin("CameraUpdateMixin", "the Free Look camera", "free_look")
+                .gates("freeLookEnabled");
         mixin("VertexRenderingMixin", "replacing the vanilla block outline", "block_overlay").gates("blockOverlayEnabled");
         mixin("SimpleOptionMixin", "raising brightness past the vanilla limit", "full_bright").gates("fullBright");
         mixin("EntityRenderDispatcherMixin", "replacing the vanilla hitboxes", "hitbox")

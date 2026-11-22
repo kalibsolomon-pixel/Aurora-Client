@@ -47,10 +47,10 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
     private static final int LABEL_W = 112, FIELD_H = com.aurora.client.ui.util.UiDensity.FIELD_H, PITCH = 22, CAPTION = 14;
     private static final String[] GROUPS = {"Location", "Details"};
     private int frameHeight;
+    private int fieldH = FIELD_H, pitch = PITCH, captionH = CAPTION, groupGap = 8, fieldsTopY;
 
     private int fieldY(int i) {
-        int y0 = top + com.aurora.client.ui.util.UiDensity.HEADER + com.aurora.client.ui.util.UiDensity.HEADER_BODY_GAP;
-        return y0 + (i / 3) * (CAPTION + 3 * PITCH + 8) + CAPTION + (i % 3) * PITCH;
+        return fieldsTopY + (i / 3) * (captionH + 3 * pitch + groupGap) + captionH + (i % 3) * pitch;
     }
 
     @Override protected void init() {
@@ -60,10 +60,21 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
         var frame = com.aurora.client.ui.util.UiDensity.window(width, height);
         panelWidth = frame.width(); left = frame.x(); top = frame.y(); frameHeight = frame.height();
         int edge = com.aurora.client.ui.util.UiDensity.TITLE_X;
+        boolean tightY = frameHeight < 290;
+        int bh = tightY ? 18 : com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H;
+        int bottomPad = tightY ? 8 : com.aurora.client.ui.util.UiDensity.FRAME_EDGE;
+        int by = top + frameHeight - bottomPad - bh;
+        fieldH = tightY ? 15 : FIELD_H;
+        pitch = tightY ? 17 : PITCH;
+        captionH = tightY ? 10 : CAPTION;
+        groupGap = tightY ? 4 : 8;
+        fieldsTopY = top + (tightY ? 34 : com.aurora.client.ui.util.UiDensity.HEADER + com.aurora.client.ui.util.UiDensity.HEADER_BODY_GAP);
+        int labelCol = Math.min(LABEL_W, Math.max(76, (panelWidth - 2 * edge) / 3));
+
         String[] values = {draft.name, draft.x + " " + draft.y + " " + draft.z,
                 draft.dimension, draft.group, draft.description, String.format("%08X", draft.color)};
         for (int i = 0; i < 6; i++) {
-            fields[i] = new EditBox(font, left + edge + LABEL_W, fieldY(i), panelWidth - 2 * edge - LABEL_W, FIELD_H, Component.literal(labels[i]));
+            fields[i] = new EditBox(font, left + edge + labelCol, fieldY(i), panelWidth - 2 * edge - labelCol, fieldH, Component.literal(labels[i]));
             fields[i].setMaxLength(i == 4 ? 256 : 128);
             fields[i].setValue(values[i] == null ? "" : values[i]);
             if (i == 1 || i == 2) {
@@ -79,30 +90,57 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
             }
             addRenderableWidget(fields[i]);
         }
-        int bh = com.aurora.client.ui.util.UiDensity.HEADER_BUTTON_H;
-        int half = (panelWidth - 2 * edge - 6) / 2;
-        int optionsY = fieldY(5) + PITCH + 8;
-        visible = addRenderableWidget(ButtonWidget.semantic(left + edge, optionsY, half, bh,
-                Component.literal(visibilityLabel()), "Shows this waypoint on maps and in-world.",
-                () -> { draft.visible = !draft.visible; visible.setMessage(Component.literal(visibilityLabel())); }));
-        marker = addRenderableWidget(ButtonWidget.semantic(left + edge + half + 6, optionsY, panelWidth - 2 * edge - half - 6, bh,
-                Component.literal(markerLabel()), "Cycles the waypoint marker style.", () -> {
-                    var all = AuroraConfig.WaypointMarker.values();
-                    draft.marker = all[(draft.marker.ordinal() + 1) % all.length];
-                    marker.setMessage(Component.literal(markerLabel()));
-                }));
+        int contentW = panelWidth - 2 * edge;
         WaypointFeature feature = WaypointFeature.get();
         boolean tracked = feature != null && original.id.equals(feature.navigationId());
-        ButtonWidget navigate = addRenderableWidget(ButtonWidget.semantic(left + edge, optionsY + bh + 6, panelWidth - 2 * edge, bh,
-                Component.literal(tracked ? "Stop navigation" : "Navigate to waypoint"),
-                "Selects this waypoint for direction and distance indicators in every view.", () -> {
-                    if (java.util.Objects.equals(scope, WaypointFeature.scopeKey()) && feature != null) {
-                        feature.navigateTo(tracked ? null : original); onClose();
-                    }
-                }));
-        navigate.active = !creating;
+        if (tightY) {
+            // Compact vertical mode (e.g. Scale 3 / 854x480 at 240px GUI height):
+            // fit visibility, marker, and navigate on one balanced row above Cancel/Save.
+            int optionsY = Math.min(fieldY(5) + pitch + 3, by - bh - 4);
+            int gap = 4;
+            int w1 = (contentW - 2 * gap) / 3;
+            int w2 = (contentW - 2 * gap) / 3;
+            int w3 = contentW - w1 - w2 - 2 * gap;
+            visible = addRenderableWidget(ButtonWidget.semantic(left + edge, optionsY, w1, bh,
+                    Component.literal(visibilityLabel()), "Shows this waypoint on maps and in-world.",
+                    () -> { draft.visible = !draft.visible; visible.setMessage(Component.literal(visibilityLabel())); }));
+            marker = addRenderableWidget(ButtonWidget.semantic(left + edge + w1 + gap, optionsY, w2, bh,
+                    Component.literal(markerLabel()), "Cycles the waypoint marker style.", () -> {
+                        var all = AuroraConfig.WaypointMarker.values();
+                        draft.marker = all[(draft.marker.ordinal() + 1) % all.length];
+                        marker.setMessage(Component.literal(markerLabel()));
+                    }));
+            ButtonWidget navigate = addRenderableWidget(ButtonWidget.semantic(left + edge + w1 + gap + w2 + gap, optionsY, w3, bh,
+                    Component.literal(tracked ? "Stop nav" : "Navigate"),
+                    "Selects this waypoint for direction and distance indicators in every view.", () -> {
+                        if (java.util.Objects.equals(scope, WaypointFeature.scopeKey()) && feature != null) {
+                            feature.navigateTo(tracked ? null : original); onClose();
+                        }
+                    }));
+            navigate.active = !creating;
+        } else {
+            int half = (contentW - 6) / 2;
+            int optionsY = fieldY(5) + pitch + 8;
+            visible = addRenderableWidget(ButtonWidget.semantic(left + edge, optionsY, half, bh,
+                    Component.literal(visibilityLabel()), "Shows this waypoint on maps and in-world.",
+                    () -> { draft.visible = !draft.visible; visible.setMessage(Component.literal(visibilityLabel())); }));
+            marker = addRenderableWidget(ButtonWidget.semantic(left + edge + half + 6, optionsY, contentW - half - 6, bh,
+                    Component.literal(markerLabel()), "Cycles the waypoint marker style.", () -> {
+                        var all = AuroraConfig.WaypointMarker.values();
+                        draft.marker = all[(draft.marker.ordinal() + 1) % all.length];
+                        marker.setMessage(Component.literal(markerLabel()));
+                    }));
+            ButtonWidget navigate = addRenderableWidget(ButtonWidget.semantic(left + edge, optionsY + bh + 6, contentW, bh,
+                    Component.literal(tracked ? "Stop navigation" : "Navigate to waypoint"),
+                    "Selects this waypoint for direction and distance indicators in every view.", () -> {
+                        if (java.util.Objects.equals(scope, WaypointFeature.scopeKey()) && feature != null) {
+                            feature.navigateTo(tracked ? null : original); onClose();
+                        }
+                    }));
+            navigate.active = !creating;
+        }
         // Actions anchored to the window's bottom edge; the primary action is rightmost.
-        int bw = 72, by = top + frameHeight - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - bh;
+        int bw = 72;
         addRenderableWidget(ButtonWidget.semantic(left + panelWidth - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - bw - 6 - bw, by, bw, bh,
                 Component.literal("Cancel"), "Discards this edit.", this::onClose));
         addRenderableWidget(ButtonWidget.semantic(left + panelWidth - com.aurora.client.ui.util.UiDensity.FRAME_EDGE - bw, by, bw, bh,
@@ -201,7 +239,8 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
         int radius = AuroraTheme.RADIUS;
         com.aurora.client.ui.component.GlassSurface.window(g, left, top, panelWidth, frameHeight, radius, com.aurora.client.ui.component.MaterialSurface.frameInset(radius), width, height);
         int edge = com.aurora.client.ui.util.UiDensity.TITLE_X;
-        int headerMid = top + com.aurora.client.ui.util.UiDensity.HEADER_TOP + com.aurora.client.ui.util.UiDensity.TOOL / 2;
+        int headerTop = frameHeight < 290 ? 8 : com.aurora.client.ui.util.UiDensity.HEADER_TOP;
+        int headerMid = top + headerTop + com.aurora.client.ui.util.UiDensity.TOOL / 2;
         com.aurora.client.worldmap.MapMarkers.waypoint(g, left + edge + 4, headerMid, draft, false);
         // A validation error replaces the heading in the semantic error color, so
         // it reads as feedback rather than as a renamed dialog.
@@ -210,18 +249,18 @@ public final class WaypointEditScreen extends Screen implements ThemedScreen {
             String fitted = com.aurora.client.ui.util.AuroraFontRenderer.ellipsizeRole(font, heading, panelWidth - 2 * edge - 16,
                     com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE);
             g.text(font, com.aurora.client.ui.util.AuroraFontRenderer.role(fitted, com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
-                    left + edge + 16, com.aurora.client.ui.util.AuroraFontRenderer.roleTextY(font, top + com.aurora.client.ui.util.UiDensity.HEADER_TOP, com.aurora.client.ui.util.UiDensity.TOOL, com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
+                    left + edge + 16, com.aurora.client.ui.util.AuroraFontRenderer.roleTextY(font, top + headerTop, com.aurora.client.ui.util.UiDensity.TOOL, com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE),
                     ThemeManager.color(ThemeToken.ON_SURFACE), false);
         } else {
             g.text(font, com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(font, heading, panelWidth - 2 * edge - 16, 1),
-                    left + edge + 16, com.aurora.client.ui.util.AuroraFontRenderer.textY(font, top + com.aurora.client.ui.util.UiDensity.HEADER_TOP, com.aurora.client.ui.util.UiDensity.TOOL),
+                    left + edge + 16, com.aurora.client.ui.util.AuroraFontRenderer.textY(font, top + headerTop, com.aurora.client.ui.util.UiDensity.TOOL),
                     ThemeManager.color(ThemeToken.STATUS_ERROR), false);
         }
         for (int group = 0; group < 2; group++)
             g.text(font, com.aurora.client.ui.util.AuroraFontRenderer.role(GROUPS[group], com.aurora.client.ui.util.AuroraFontRenderer.Role.HEADING),
-                    left + edge, fieldY(group * 3) - CAPTION,
+                    left + edge, fieldY(group * 3) - captionH,
                     MaterialSurface.color(ThemeToken.ON_BACKGROUND), false);
-        for (int i = 0; i < 6; i++) g.text(font, labels[i], left + edge, com.aurora.client.ui.util.AuroraFontRenderer.textY(font, fieldY(i), FIELD_H),
+        for (int i = 0; i < 6; i++) g.text(font, labels[i], left + edge, com.aurora.client.ui.util.AuroraFontRenderer.textY(font, fieldY(i), fieldH),
                 ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
         super.extractRenderState(g, mx, my, delta);
     }

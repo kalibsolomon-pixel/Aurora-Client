@@ -5,7 +5,6 @@
 package com.aurora.client.mixin;
 
 import com.aurora.client.config.AuroraConfig;
-import com.aurora.client.feature.impl.CameraSmoothFeature;
 import com.aurora.client.feature.impl.FreeLookFeature;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -18,10 +17,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Overrides camera rotation per frame in two cases:
- *  - FreeLook active: re-applies the stored detached yaw/pitch.
- *  - Smooth-camera enabled (and FreeLook off): re-applies an exponentially
- *    smoothed yaw/pitch instead of vanilla's snap-to-latest.
+ * Overrides camera rotation per frame while FreeLook is active so the
+ * stored detached yaw/pitch are re-applied after vanilla camera alignment.
  */
 @Mixin(Camera.class)
 public abstract class CameraUpdateMixin {
@@ -45,7 +42,6 @@ public abstract class CameraUpdateMixin {
 
         if (!(entity instanceof LocalPlayer)) return;
 
-        // Priority: FreeLook wins over smooth camera.
         if (AuroraConfig.get().freeLookEnabled && FreeLookFeature.isActive()) {
             if (FreeLookFeature.isFirstTime() && Minecraft.getInstance().player != null) {
                 LocalPlayer p = Minecraft.getInstance().player;
@@ -53,17 +49,8 @@ public abstract class CameraUpdateMixin {
                 FreeLookFeature.markFirstTime(false);
             }
             this.setRotation(FreeLookFeature.getCameraYaw(), FreeLookFeature.getCameraPitch());
-            return;
         } else {
             FreeLookFeature.markFirstTime(true);
-        }
-
-        // Smooth camera path.
-        if (CameraSmoothFeature.apply((Camera) (Object) this, tickDelta)) {
-            this.setRotation(
-                    CameraSmoothFeature.getSmoothedYaw(),
-                    CameraSmoothFeature.getSmoothedPitch()
-            );
         }
     }
 }

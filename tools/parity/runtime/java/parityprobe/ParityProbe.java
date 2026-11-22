@@ -74,6 +74,7 @@ public final class ParityProbe implements ClientModInitializer {
                     }
                 }
                 if (reachTicks > 0 && client.player != null) reachStep(client);
+                if (StressSuite.isActive()) StressSuite.tick(client);
                 if (reloadStarted != 0 && NativeUi.overlay(client) == null) {
                     System.out.println("[parity-probe] reload overlay cleared after "
                             + (System.nanoTime() - reloadStarted) / 1_000_000 + " ms");
@@ -1068,6 +1069,7 @@ public final class ParityProbe implements ClientModInitializer {
                 x.setDouble(mouse, (left.getInt(screen) + slot.x + 8) * scale);
                 y.setDouble(mouse, (top.getInt(screen) + slot.y + 8) * scale);
             }
+            case "stress-all" -> StressSuite.start(root, client);
             default -> throw new IllegalArgumentException(text);
         }
         System.out.println("[parity-probe] " + text);

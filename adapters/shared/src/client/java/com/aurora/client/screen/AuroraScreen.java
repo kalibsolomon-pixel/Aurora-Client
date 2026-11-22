@@ -894,9 +894,14 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     }
 
     private void refreshContentLayout() {
-        arrangeChrome();
-        if (selectedCategory == 0) arrangeModules(filteredModules());
-        else arrangeSettings();
+        boolean scoped = com.aurora.client.ui.util.AuroraFontRenderer.enterWindowScope(this);
+        try {
+            arrangeChrome();
+            if (selectedCategory == 0) arrangeModules(filteredModules());
+            else arrangeSettings();
+        } finally {
+            if (scoped) com.aurora.client.ui.util.AuroraFontRenderer.exitWindowScope();
+        }
     }
 
     private void arrangeModules(List<Module> modules) {
@@ -2023,22 +2028,27 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         // stale setting/semantic focus before the clicked target reclaims it.
         if (FeatureSetting.cancelActiveCapture()) return true;
         FeatureSetting owner = FeatureSetting.getFocused();
-        if (owner instanceof com.aurora.client.screen.setting.EnumSetting<?>
-                || owner instanceof com.aurora.client.screen.setting.ColorSetting) {
-            if (selectedCategory == 1 && contentViewport().contains(mouseX, mouseY)
-                    && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
-                var box = settingsLayout.bounds(owner);
-                if (box != null && owner.mouseClicked(mouseX, mouseY, button, settingX(box.x()),
-                        (int) box.y(layoutScroll()), settingW(box.width()))) {
-                    if (owner instanceof com.aurora.client.screen.setting.ColorSetting) activeDragSetting = owner;
-                    return true;
+        boolean scoped = com.aurora.client.ui.util.AuroraFontRenderer.enterWindowScope(this);
+        try {
+            if (owner instanceof com.aurora.client.screen.setting.EnumSetting<?>
+                    || owner instanceof com.aurora.client.screen.setting.ColorSetting) {
+                if (selectedCategory == 1 && contentViewport().contains(mouseX, mouseY)
+                        && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
+                    var box = settingsLayout.bounds(owner);
+                    if (box != null && owner.mouseClicked(mouseX, mouseY, button, settingX(box.x()),
+                            (int) box.y(layoutScroll()), settingW(box.width()))) {
+                        if (owner instanceof com.aurora.client.screen.setting.ColorSetting) activeDragSetting = owner;
+                        return true;
+                    }
                 }
+                if (owner.dismissPopup()) return true;
             }
-            if (owner.dismissPopup()) return true;
+            FeatureSetting.clearFocus();
+            semanticHost.dropFocus();
+            if (super.mouseClicked(_ev, _dbl)) return true;
+        } finally {
+            if (scoped) com.aurora.client.ui.util.AuroraFontRenderer.exitWindowScope();
         }
-        FeatureSetting.clearFocus();
-        semanticHost.dropFocus();
-        if (super.mouseClicked(_ev, _dbl)) return true;
 
         // Sidebar chrome (C-2b): tab and Profiles clicks route through their
         // semantic controls — the enabled gate, exactly-one activation click,
@@ -2169,11 +2179,20 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                 }
             }
             var box = settingsLayout.hitTest(mouseX, mouseY, layoutScroll());
-            if (box != null && box.key() instanceof FeatureSetting setting
-                    && setting.mouseClicked(mouseX, mouseY, button, settingX(box.x()), (int) box.y(layoutScroll()), settingW(box.width()))) {
-                activeDragSetting = setting;
-                semanticHost.focusAt(mouseX, mouseY);
-                return true;
+            if (box != null && box.key() instanceof FeatureSetting setting) {
+                boolean settingScoped = com.aurora.client.ui.util.AuroraFontRenderer.enterWindowScope(this);
+                boolean handled;
+                try {
+                    handled = setting.mouseClicked(mouseX, mouseY, button, settingX(box.x()), (int) box.y(layoutScroll()), settingW(box.width()));
+                } finally {
+                    if (settingScoped) com.aurora.client.ui.util.AuroraFontRenderer.exitWindowScope();
+                }
+                if (handled) {
+                    activeDragSetting = setting;
+                    if (FeatureSetting.getFocused() == setting) focusedSettingVisible = true;
+                    semanticHost.focusAt(mouseX, mouseY);
+                    return true;
+                }
             }
         }
 

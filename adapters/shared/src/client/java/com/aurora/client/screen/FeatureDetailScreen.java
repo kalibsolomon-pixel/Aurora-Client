@@ -125,6 +125,15 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
     private boolean restCut;
 
     private void refreshLayout() {
+        boolean scoped = com.aurora.client.ui.util.AuroraFontRenderer.enterWindowScope(this);
+        try {
+            refreshLayoutScoped();
+        } finally {
+            if (scoped) com.aurora.client.ui.util.AuroraFontRenderer.exitWindowScope();
+        }
+    }
+
+    private void refreshLayoutScoped() {
         long fontKey = FeatureSetting.compactMeasurementKey();
         if (compact() && layoutFontKey != fontKey) {
             layoutHeader();
@@ -344,7 +353,7 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
 
     /** Features with a dedicated destination skip the generic settings wrapper. */
     public static Screen destination(Screen parent, FeatureMetadata meta) {
-        return "resourcepack_browser".equals(meta.id)
+        return "resourcepack_browser".equals(meta.id) && AuroraConfig.get().resourcepackBrowserEnabled
                 ? new ResourcePackBrowserScreen(parent) : new FeatureDetailScreen(parent, meta);
     }
 
@@ -487,9 +496,14 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
 
     /** Reset's width follows its label; its right edge stays 6 px left of Done. */
     private void placeReset() {
-        int resetBw = this.font.width(resetBtn.getMessage()) + 22; // the painter ellipsizes past w - 20
-        resetBtn.setWidth(resetBw);
-        resetBtn.setX(doneBtn.getX() - resetBw - 6);
+        boolean scoped = com.aurora.client.ui.util.AuroraFontRenderer.enterWindowScope(this);
+        try {
+            int resetBw = this.font.width(resetBtn.getMessage()) + 22; // the painter ellipsizes past w - 20
+            resetBtn.setWidth(resetBw);
+            resetBtn.setX(doneBtn.getX() - resetBw - 6);
+        } finally {
+            if (scoped) com.aurora.client.ui.util.AuroraFontRenderer.exitWindowScope();
+        }
     }
 
     @Override
@@ -814,17 +828,22 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
         refreshLayout();
         int listX = rowsLayout.viewport().x - ROW_LEFT;
         FeatureSetting owner = FeatureSetting.getFocused();
-        if (owner instanceof com.aurora.client.screen.setting.EnumSetting<?>
-                || owner instanceof com.aurora.client.screen.setting.ColorSetting) {
-            if (FeatureSetting.hostBand().contains(mouseX, mouseY) && button == InputConstants.MOUSE_BUTTON_LEFT) {
-                var box = rowsLayout.bounds(owner);
-                if (box != null && owner.mouseClicked(mouseX, mouseY, button, settingX(listX),
-                        settingY(owner, (int) box.y(layoutScroll())), settingW())) {
-                    if (owner instanceof com.aurora.client.screen.setting.ColorSetting) activeDragSetting = owner;
-                    return true;
+        boolean settingScoped = com.aurora.client.ui.util.AuroraFontRenderer.enterWindowScope(this);
+        try {
+            if (owner instanceof com.aurora.client.screen.setting.EnumSetting<?>
+                    || owner instanceof com.aurora.client.screen.setting.ColorSetting) {
+                if (FeatureSetting.hostBand().contains(mouseX, mouseY) && button == InputConstants.MOUSE_BUTTON_LEFT) {
+                    var box = rowsLayout.bounds(owner);
+                    if (box != null && owner.mouseClicked(mouseX, mouseY, button, settingX(listX),
+                            settingY(owner, (int) box.y(layoutScroll())), settingW())) {
+                        if (owner instanceof com.aurora.client.screen.setting.ColorSetting) activeDragSetting = owner;
+                        return true;
+                    }
                 }
+                if (owner.dismissPopup()) return true;
             }
-            if (owner.dismissPopup()) return true;
+        } finally {
+            if (settingScoped) com.aurora.client.ui.util.AuroraFontRenderer.exitWindowScope();
         }
         FeatureSetting.clearFocus();
         if (this.getFocused() instanceof SemanticActionControl) this.setFocused(null);
@@ -845,24 +864,39 @@ public class FeatureDetailScreen extends Screen implements ThemedScreen, LayoutS
             }
         }
         var fixed = fixedLayout.hitTest(mouseX, mouseY, 0);
-        if (fixed != null && fixedHeaderSetting.mouseClicked(mouseX, mouseY, button, settingX(listX), (int) fixed.top(), settingW())) return true;
-        var box = rowsLayout.hitTest(mouseX, mouseY, layoutScroll());
-        if (box != null && box.key() instanceof FeatureSetting s
-                && s.mouseClicked(mouseX, mouseY, button, settingX(listX), settingY(s, (int) box.y(layoutScroll())), settingW())) {
-            activeDragSetting = s;
-            var controls = s.controlsWithReset();
-            if (!controls.isEmpty()) {
-                SemanticActionControl hit = null;
-                for (SemanticActionControl c : controls) {
-                    if (c.isAvailable() && mouseX >= c.getX() && mouseX < c.getRight()
-                            && mouseY >= c.getY() && mouseY < c.getBottom()) {
-                        hit = c;
-                        break;
-                    }
-                }
-                this.setFocused(hit != null ? hit : controls.get(0));
+        if (fixed != null) {
+            boolean rowScoped = com.aurora.client.ui.util.AuroraFontRenderer.enterWindowScope(this);
+            try {
+                if (fixedHeaderSetting.mouseClicked(mouseX, mouseY, button, settingX(listX), (int) fixed.top(), settingW())) return true;
+            } finally {
+                if (rowScoped) com.aurora.client.ui.util.AuroraFontRenderer.exitWindowScope();
             }
-            return true;
+        }
+        var box = rowsLayout.hitTest(mouseX, mouseY, layoutScroll());
+        if (box != null && box.key() instanceof FeatureSetting s) {
+            boolean rowScoped = com.aurora.client.ui.util.AuroraFontRenderer.enterWindowScope(this);
+            boolean handled;
+            try {
+                handled = s.mouseClicked(mouseX, mouseY, button, settingX(listX), settingY(s, (int) box.y(layoutScroll())), settingW());
+            } finally {
+                if (rowScoped) com.aurora.client.ui.util.AuroraFontRenderer.exitWindowScope();
+            }
+            if (handled) {
+                activeDragSetting = s;
+                var controls = s.controlsWithReset();
+                if (!controls.isEmpty()) {
+                    SemanticActionControl hit = null;
+                    for (SemanticActionControl c : controls) {
+                        if (c.isAvailable() && mouseX >= c.getX() && mouseX < c.getRight()
+                                && mouseY >= c.getY() && mouseY < c.getBottom()) {
+                            hit = c;
+                            break;
+                        }
+                    }
+                    this.setFocused(hit != null ? hit : controls.get(0));
+                }
+                return true;
+            }
         }
         return false;
     }

@@ -28,7 +28,6 @@ public class FeatureManager {
         register(new BlockOverlayFeature());
         register(new ArmorAlertFeature());
         register(new HitboxFeature());
-        register(new CameraSmoothFeature());
         register(new LowLatencyFeature());
         register(new PlaytimeFeature());
         register(new TotemPopFeature());

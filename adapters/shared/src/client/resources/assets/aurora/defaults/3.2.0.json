@@ -27,8 +27,6 @@
   "zoomSmoothness": 0.2,
   "fullBright": false,
   "fullBrightGamma": 500,
-  "smoothCamera": false,
-  "smoothCameraStrength": 0.5,
   "smoothAnimationsEnabled": true,
   "swingAnimationCurve": "LINEAR",
   "swingStyle": "VANILLA",

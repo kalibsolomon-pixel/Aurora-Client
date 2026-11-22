@@ -1,6 +1,7 @@
 package com.aurora.client.screen;
 
 import com.aurora.client.adapter.NativeUi;
+import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.resourcepack.PackFolderTree;
 import com.aurora.client.resourcepack.PackIconLoader;
 import com.aurora.client.theme.ThemeManager;
@@ -94,6 +95,7 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
 
     // Layout geometry
     private int panelX, panelY, panelW, panelH;
+    private int headerButtonsLeftX;
     private int searchX, searchY, searchW, searchH;
     private int crumbY, crumbH;
     private int paneTop, paneH;
@@ -184,12 +186,18 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         int btnH = UiDensity.HEADER_BUTTON_H;
         int btnY = panelY + UiDensity.HEADER_TOP;
 
-        int doneW = 56;
-        int vanillaW = 54;
-        int refreshW = 56;
-        int openW = 74;
-        int modrinthW = 62;
-        int gap = 5;
+        boolean compact = panelW < 390;
+        String openLabel = compact ? "Folder" : "Open folder";
+        String refreshLabel = compact ? "Sync" : "Refresh";
+        // Button reserves 8 px inner pad per side plus border inset; +22 guarantees full un-ellipsized labels.
+        int btnPad = 22;
+        int gap = 4;
+
+        int doneW = Math.max(46, this.font.width("Done") + btnPad);
+        int vanillaW = Math.max(52, this.font.width("Vanilla") + btnPad);
+        int refreshW = Math.max(46, this.font.width(refreshLabel) + btnPad);
+        int openW = Math.max(54, this.font.width(openLabel) + btnPad);
+        int modrinthW = Math.max(60, this.font.width("Modrinth") + btnPad);
 
         int rightEdge = panelX + panelW - pad;
         int doneX = rightEdge - doneW;
@@ -198,8 +206,10 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         int openX = refreshX - gap - openW;
         int modrinthX = openX - gap - modrinthW;
 
-        boolean tight = modrinthX < panelX + pad + 115;
-        if (!tight) {
+        int titleMinRight = panelX + pad + Math.min(96, this.font.width(AuroraFontRenderer.role("Resource Packs", AuroraFontRenderer.Role.TITLE)) + 8);
+        boolean showModrinth = AuroraConfig.get().resourcepackBrowserEnabled && modrinthX >= titleMinRight;
+        headerButtonsLeftX = showModrinth ? modrinthX : openX;
+        if (showModrinth) {
             this.addRenderableWidget(ButtonWidget.semantic(modrinthX, btnY, modrinthW, btnH,
                     Component.literal("Modrinth"),
                     "Browse and install resource packs from Modrinth.",
@@ -207,11 +217,11 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
                     .glassBackground(true));
         }
         this.addRenderableWidget(ButtonWidget.semantic(openX, btnY, openW, btnH,
-                Component.literal("Open folder"),
+                Component.literal(openLabel),
                 "Opens the current resource packs folder in your file manager.",
                 this::openCurrentFolder).glassBackground(true));
         this.addRenderableWidget(ButtonWidget.semantic(refreshX, btnY, refreshW, btnH,
-                Component.literal("Refresh"),
+                Component.literal(refreshLabel),
                 "Re-scans resourcepacks and all subfolders.",
                 () -> {
                     rescanDiskAndModel(true);
@@ -484,10 +494,12 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         int secondary = ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY);
         int accent = MaterialSurface.color(ThemeToken.ACCENT);
 
-        // Header title
-        String headerTitle = "Resource Packs";
+        // Header title (fitted cleanly before the leftmost header button at every GUI scale)
+        int titleX = panelX + UiDensity.TITLE_X;
+        int titleMaxW = Math.max(24, headerButtonsLeftX - titleX - 8);
+        String headerTitle = AuroraFontRenderer.ellipsizeRole(this.font, "Resource Packs", titleMaxW, AuroraFontRenderer.Role.TITLE);
         ctx.text(this.font, AuroraFontRenderer.role(headerTitle, AuroraFontRenderer.Role.TITLE),
-                panelX + UiDensity.TITLE_X,
+                titleX,
                 AuroraFontRenderer.roleTextY(this.font, panelY + UiDensity.HEADER_TOP, UiDensity.TOOL, AuroraFontRenderer.Role.TITLE),
                 onBg, false);
 

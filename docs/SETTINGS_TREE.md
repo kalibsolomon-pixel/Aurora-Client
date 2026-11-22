@@ -463,7 +463,7 @@ Install resource packs from Modrinth.
 - **Open Browser…**: button · search, preview, one-click install. `{action:openPackBrowser}`
 
 #### Display Settings: moved `{card:miscellaneous}`
-No longer a card. Its sections are on the Settings tab (4.3): Frame Pacer, Frame Cap and Low Latency on Display; Smooth Camera and Decoupled Input on Controls; Drag-to-Reorder Servers and Support on General. Each section keeps its own Enabled toggle; the card's combined on/off switch is gone. It stays one feature for fair play and its reset.
+No longer a card. Its sections are on the Settings tab (4.3): Frame Pacer, Frame Cap and Low Latency on Display; Decoupled Input on Controls; Drag-to-Reorder Servers and Support on General. Each section keeps its own Enabled toggle; the card's combined on/off switch is gone. It stays one feature for fair play and its reset.
 
 ### 4.3 Settings tab: four sub-tabs across the top
 
@@ -513,14 +513,23 @@ Simple config-backed setting rows here and on module detail pages show a small r
 
 #### Sub-tab: Controls `{subtab:controls}`
 
-- *Smooth Camera*
-  - **Enabled**: toggle · off · adds inertia to mouse look. `{smoothCamera}`
-  - **Strength**: slider 0.05–1 · 0.5. `{smoothCameraStrength}`
 - *Decoupled Input*
   - **Enabled**: toggle · off · applies mouse movement at the top of each frame. `{inputSamplingDecoupled}`
 - *Aurora Keys*
   - **HUD Editor Key**: key · Right Shift. New row; also in vanilla Controls. `{hudEditorKey}`
   - >> Optional later: a read-only list of every Aurora keybind with links to its feature (section 5). `{new}`
+
+#### Sub-tab: Performance `{subtab:performance}`
+
+Machine settings (ADR 0009): kept out of profiles and out of the defaults resource.
+
+- *Debug Screen*
+  - **Update F3 at Tick Rate**: toggle · on. `{perfDebugEntryCache}`
+- *Maps*
+  - **Cap Minimap Redraws**: toggle · on. `{perfMinimapRefreshCap}`
+- *Background*
+  - **Background Frame Limit**: toggle · off · draws fewer frames while another window has focus. `{perfUnfocusedLimit}`
+  - **Background FPS**: slider 5–120 · 30 · shown only while the limit is on. `{perfUnfocusedFps}`
 
 #### Sub-tab: General `{subtab:general}`
 
