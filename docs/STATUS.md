@@ -40,6 +40,12 @@ with Sodium and Gradient Dithering in one pass; it stands down for VulkanMod and
 shader pack is in use. Checked on 26.1.2, 26.2 and 26.3 (OpenGL; 26.2 and 26.3 also native
 Vulkan); [evidence](reports/2026-11-21-aurora-262-perf-and-smooth-fog.md).
 
+Pack Tweaks additions bring Blaze3D world post-processing (frame-rate-independent temporal motion
+blur and colour saturation, zero shader cost at neutral defaults), client-side Local Time and
+Local Weather (vanilla-equivalent, off by default), Custom Skies (sky presets/color, celestial
+toggles, star brightness, void dark-disc hiding), first-person Fire Overlay height/opacity/hide,
+and Hurt Camera toggle/strength across 26.1.2, 26.2, and 26.3.
+
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's
 profile, input and theme contracts. `CombatBreakdown` adds PvP analysis for 1.9+

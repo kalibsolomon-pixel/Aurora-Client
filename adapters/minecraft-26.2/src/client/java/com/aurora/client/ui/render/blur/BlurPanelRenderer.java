@@ -629,6 +629,7 @@ public final class BlurPanelRenderer {
     }
     public static void beginFrame() {
         PortableBlurRenderer.beginFrame();
+        com.aurora.client.render.WorldPostEffectRenderer.beginFrame();
         GlassStats.flushFrame();
         for (RimMask mask : pendingRimRelease) destroyRimMask(mask);
         pendingRimRelease.clear();
@@ -637,6 +638,7 @@ public final class BlurPanelRenderer {
     }
     public static void shutdown() {
         PortableBlurRenderer.shutdown();
+        com.aurora.client.render.WorldPostEffectRenderer.shutdown();
         releaseRimMasks();
     }
 

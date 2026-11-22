@@ -1526,6 +1526,7 @@ public final class BlurPanelRenderer {
     /** Releases GPU/texture resources. Idempotent; safe on shutdown/reload. */
     public static void shutdown() {
         PortableBlurRenderer.shutdown();
+        com.aurora.client.render.WorldPostEffectRenderer.shutdown();
         releaseOutputs();
         releaseRimMasks();
         deleteChain();
@@ -1875,6 +1876,7 @@ public final class BlurPanelRenderer {
 
     public static void beginFrame() {
         PortableBlurRenderer.beginFrame();
+        com.aurora.client.render.WorldPostEffectRenderer.beginFrame();
         GlassStats.flushFrame();
         // Captures queued by a frame whose GUI was extracted but never rendered
         // (26.1 can skip rendering while the window is inactive) are dropped:

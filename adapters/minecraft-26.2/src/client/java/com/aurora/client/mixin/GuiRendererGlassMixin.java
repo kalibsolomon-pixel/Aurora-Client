@@ -22,6 +22,7 @@ public abstract class GuiRendererGlassMixin {
     @Inject(method = "render()V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;prepare()V"))
     private void aurora$runGlassCaptures(CallbackInfo ci) {
+        com.aurora.client.render.WorldPostEffectRenderer.applyIfNeeded();
         BlurPanelRenderer.runPendingCaptures();
     }
 }

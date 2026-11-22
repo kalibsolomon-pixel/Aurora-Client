@@ -201,7 +201,7 @@ public final class FeatureCatalog {
         module("zoom", "Zoom", "Optical-style zoom bound to a key. Hold it to narrow your field of view and magnify whatever you're looking at.");
         module("full_bright", "Full Bright", "Overrides Minecraft's gamma so dark areas become fully visible. Caves, the underwater, and night-time terrain light up.");
         module("no_fog", "No Fog", "Pushes back the distance fog that normally hides far terrain. You see further across oceans and open landscapes.");
-        module("pack_tweaks", "Pack Tweaks", "A bundle of small quality-of-life visual tweaks — totem particle size, shield rendering, and water/lava clarity.");
+        module("pack_tweaks", "Pack Tweaks", "Quality-of-life visual tweaks — totem particles, shields, fluid clarity, motion blur, saturation, local time/weather, custom skies, fire overlay, and hurt camera.");
         module("player_health", "Health Indicators", "Shows the health of mobs and players above them, as a number or as vanilla's heart bar, and your own health as an exact number on the HUD.");
         module("free_look", "Free Look", "Hold a key to swivel the camera around your character without changing the direction you're actually moving or facing.");
         module("saturation_bar", "Saturation Bar", "Overlays your hidden saturation level on top of the food bar.");
@@ -261,7 +261,7 @@ public final class FeatureCatalog {
         // class; the notes say plainly what they do and that they are on.
         classify("full_bright", FairPlay.VANILLA_INFORMATION, "Extends the vanilla Brightness setting past its maximum, so unlit areas are visible. Off in a fresh install.", "fullBright");
         classify("no_fog", FairPlay.VANILLA_INFORMATION, "Pushes distance fog back, so terrain inside your render distance is visible sooner than in vanilla. Off in a fresh install.", "noFogEnabled");
-        classify("pack_tweaks", FairPlay.COSMETIC, "Totem particle size, first-person shield position and a tint for your own shield's cooldown. Its water and lava clarity switches improve visibility inside fluids and ship off.", "underwaterClarityEnabled", "lavaClarityEnabled");
+        classify("pack_tweaks", FairPlay.COSMETIC, "Totem particle size, shield position and status tint, motion blur, colour saturation, custom skies, fire overlay, and hurt camera. Fluid clarity and client-side local time/weather improve visibility and ship off.", "underwaterClarityEnabled", "lavaClarityEnabled", "localTimeEnabled", "localWeatherEnabled");
         classify("player_health", FairPlay.INFORMATION_ADVANTAGE, "Shows the health of nearby mobs and players above them, and your own health to two decimals. Vanilla does not show other players' health. Players have their own switch, also off.", "playerHealthIndicators", "playerHealthShowPlayers", "playerHealthHudEnabled");
         classify("free_look", FairPlay.INFORMATION_ADVANTAGE, "Lets the camera look around without turning the character, a view vanilla does not allow.", "freeLookEnabled");
         classify("saturation_bar", FairPlay.VANILLA_INFORMATION, "Shows your own saturation on the food bar.");
@@ -354,7 +354,13 @@ public final class FeatureCatalog {
         mixin("LivingEntityRendererExtractMixin", "entity health labels and hit-color health capture", "player_health", "hit_color")
                 .gates("playerHealthIndicators", "hitColorHealthGradient");
         mixin("LavaClarityMixin", "lava clarity", "pack_tweaks").gates("lavaClarityEnabled");
-        mixin("LavaOverlayMixin", "hiding the lava overlay", "pack_tweaks").gates("lavaHideOverlay");
+        mixin("LavaOverlayMixin", "hiding and adjusting the first-person fire and lava overlay", "pack_tweaks")
+                .gates("lavaHideOverlay", "fireOverlayHide");
+        mixin("LocalTimeMixin", "client-side local time override", "pack_tweaks").gates("localTimeEnabled");
+        mixin("LocalWeatherMixin", "client-side local weather override", "pack_tweaks").gates("localWeatherEnabled");
+        mixin("CustomSkyMixin", "custom skies, celestial visibility and star brightness", "pack_tweaks")
+                .gates("customSkyHideVoid");
+        mixin("HurtCamMixin", "hurt camera toggle and strength scaling", "pack_tweaks").gates("hurtCamEnabled");
         mixin("ClientPlayerAttackMixin", "limiting entity health to entities you attacked", "player_health")
                 .gates("playerHealthOnlyAttacked");
         mixin("ClientPlayNetworkHandlerWorldJoinMixin", "clearing per-entity caches when you change worlds");
