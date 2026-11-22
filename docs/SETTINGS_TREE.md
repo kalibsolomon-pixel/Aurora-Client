@@ -30,7 +30,7 @@ These run without a setting of their own, or are part of how Aurora works rather
 - **Aurora styling on vanilla buttons and text fields**: themed buttons on world select, multiplayer and other vanilla screens (tied to Custom Title's hook). `{always:vanillaButtonStyle}`
 - **Flat item icons in Aurora screens**: item icons in Aurora's own lists are drawn flat. `{always:flatItemIcons}`
 - **Numeric ping in the server list**: part of the Ping feature's hook; shows ping as a number in Multiplayer. `{always:serverListPing}`
-- **Automatic latency reduction**: GPU timing used to keep the render queue short; works alongside Settings → Display → Low Latency. `{always:reflex}`
+- **Automatic latency reduction**: GPU timing used to keep the render queue short. Aurora skips its timing queries when paired with an Ephemera build advertising engine ownership. `{always:reflex}`
 - **Per-world cache clearing**: forgets per-entity data (health seen, pops counted) when you change worlds. `{always:worldJoinReset}`
 - **Map refresh on block change**: keeps the minimap and world map current when blocks change. `{always:mapBlockRefresh}`
 - **Aurora Launcher activity report**: only when started by Aurora Launcher; tells the launcher which world or server you are in so it can show Discord status. The mod itself has no Discord code. `{always:launcherBridge}`
@@ -496,6 +496,8 @@ Simple config-backed setting rows here and on module detail pages show a small r
   - **Preview**: one sample line in the current options, with the HUD shadow.
 
 #### Sub-tab: Display `{subtab:display}`
+
+When the paired Ephemera pacer is active, it enforces the Global Frame Cap, the applicable UI FPS Limit, and Minecraft's native cap. Aurora's pacer controls become available again if you switch off the Ephemera pacer. Builds advertising world shader ownership expose Fog and Dithering in Ephemera's Visuals tab.
 
 - *Frame Rate*
   - **Global Frame Cap**: slider 0–2000, typeable · Off · caps the whole game, menus included. `{frameCapFps}`

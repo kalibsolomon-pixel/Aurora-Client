@@ -59,7 +59,7 @@ class FramePacerLowCpuTest {
         int start = ui.indexOf("new BooleanSetting(\"Low CPU (Hybrid only)\"");
         String control = ui.substring(start, ui.indexOf("SliderSetting.ofInt", start));
         assertTrue(control.contains("Park and Spin are unchanged"));
-        assertTrue(control.contains(".disabled(() -> cfg.framePacingStrategy != AuroraConfig.PacingStrategy.HYBRID)"));
+        assertTrue(control.contains(".disabled(() -> EphemeraPacingHook.ownsFramePacing() || cfg.framePacingStrategy != AuroraConfig.PacingStrategy.HYBRID)"));
         assertTrue(control.contains("v -> cfg.framePacerLowCpuMode = v"));
         assertFalse(control.contains("framePacingStrategy ="), "Control never switches strategies");
     }

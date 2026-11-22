@@ -33,12 +33,8 @@ public final class FramePacing {
     public static Decision resolve(int nativeFps, int globalFps, int guiFps,
                                    boolean auroraGui, boolean customPacer, boolean adaptive) {
         boolean nativeActive = nativeFps > 0 && nativeFps < 260;
-        int fps = nativeActive ? nativeFps : 0;
-        if (auroraGui && nativeActive && guiFps > 0 && guiFps < 1000) {
-            fps = Math.min(fps, guiFps);
-        }
+        int fps = effectiveFps(nativeFps, globalFps, guiFps, auroraGui);
         if (globalFps > 0) {
-            fps = fps > 0 ? Math.min(fps, globalFps) : globalFps;
             return new Decision(Owner.FRAME_HEAD, fps);
         }
         if (!nativeActive) return UNLIMITED;
@@ -49,6 +45,24 @@ public final class FramePacing {
             return new Decision(Owner.POST_SWAP, fps);
         }
         return new Decision(Owner.NATIVE, fps);
+    }
+
+    /** Applies the same cap precedence when another engine owns the wait. */
+    public static int effectiveFps(int nativeFps, int globalFps, int guiFps, boolean auroraGui) {
+        int fps = nativeFps > 0 && nativeFps < 260 ? nativeFps : 0;
+        if (auroraGui && fps > 0 && guiFps > 0 && guiFps < 1000) {
+            fps = Math.min(fps, guiFps);
+        }
+        if (globalFps > 0) {
+            fps = fps > 0 ? Math.min(fps, globalFps) : globalFps;
+        }
+        return fps;
+    }
+
+    public void relinquish() {
+        head = UNLIMITED;
+        headWaited = false;
+        reset(UNLIMITED);
     }
 
     /** Returns a deadline to wait for, or zero when arming/inactive/late. */

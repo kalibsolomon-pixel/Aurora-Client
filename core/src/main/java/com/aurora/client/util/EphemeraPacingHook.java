@@ -12,6 +12,7 @@ public final class EphemeraPacingHook {
         void onAfterPark(long requestedNanos, long actualNanos);
         boolean isVulkanAsyncPresentActive();
         int recommendedOvershootMicros();
+        default boolean ownsFramePacing() { return false; }
     }
 
     private static final Bridge NOOP = new Bridge() {
@@ -32,6 +33,10 @@ public final class EphemeraPacingHook {
 
     public static boolean isConnected() {
         return bridge != NOOP;
+    }
+
+    public static boolean ownsFramePacing() {
+        return bridge.ownsFramePacing();
     }
 
     public static void reportAurora(boolean auroraOwnsWait, int effectiveTargetFps, long lastWaitNanos) {

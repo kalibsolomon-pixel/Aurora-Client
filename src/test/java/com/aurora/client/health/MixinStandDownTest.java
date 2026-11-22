@@ -27,11 +27,11 @@ class MixinStandDownTest {
     }
 
     @Test void aBindingStandsDownForTheModItYieldsToAndWithoutTheModItPatches() {
-        var vanilla = new FeatureCatalog.MixinBinding("X", "x", List.of(), List.of(), List.of("sodium", "embeddium"), "");
+        var vanilla = new FeatureCatalog.MixinBinding("X", "x", List.of(), List.of(), List.of("sodium", "embeddium"), "", "");
         assertNull(vanilla.standDownReason(Set.of()::contains));
         assertEquals("handled by embeddium", vanilla.standDownReason(Set.of("embeddium")::contains));
 
-        var patch = new FeatureCatalog.MixinBinding("Y", "y", List.of(), List.of(), List.of(), "sodium");
+        var patch = new FeatureCatalog.MixinBinding("Y", "y", List.of(), List.of(), List.of(), "sodium", "");
         assertEquals("only patches sodium, which is not installed", patch.standDownReason(Set.of()::contains));
         assertNull(patch.standDownReason(Set.of("sodium")::contains));
     }
@@ -132,7 +132,7 @@ class MixinStandDownTest {
             assertEquals("handled by ephemera", FeatureCatalog.mixin(name).standDownReason(loaded::contains),
                     name + " must yield to ephemera");
         }
-        // Aurora keeps SDF text, world shader cosmetics, deferred Aurora fonts, and GUI item baking/glint/flat-faces.
+        // Older releases of Ephemera leave Aurora's item and world shader hooks in charge.
         for (String kept : List.of(
                 "SdfFontManagerMixin", "SdfGlyphRenderStateMixin", "SdfGuiTextMixin",
                 "GradientDitherSourceMixin", "GradientDitherPipelineMixin",
@@ -141,6 +141,33 @@ class MixinStandDownTest {
                 "GuiItemAtlasBakingMixin", "GuiItemAtlasGlintMixin", "GuiItemAtlasFlatFacesMixin")) {
             assertNull(FeatureCatalog.mixin(kept).standDownReason(loaded::contains),
                     kept + " must remain active alongside ephemera");
+        }
+    }
+
+    @Test void pairedEphemeraOwnsGuiItemCadenceAndAutomaticPacingWork() {
+        Set<String> loaded = Set.of("ephemera");
+        for (String name : List.of("TextureManagerAnimationMixin", "ItemStackRenderStateAnimationMixin",
+                "CuboidItemModelAnimationMixin", "GuiItemAtlasBakingMixin", "ItemStackRenderStateGlintMixin",
+                "CuboidItemModelGlintMixin", "GuiItemAtlasGlintMixin", "OversizedItemGlintMixin",
+                "TextureTransformAccessor", "ReflexMinecraftMixin", "GpuDeviceTimestampAccessor")) {
+            var binding = FeatureCatalog.mixin(name);
+            assertNull(binding.standDownReason(loaded::contains), name);
+            assertEquals("handled by ephemera",
+                    binding.standDownReason(loaded::contains, "engine_ownership"::equals), name);
+        }
+        for (String name : List.of("GlintRenderTypesMixin", "SdfGlyphRenderStateMixin", "GuiItemAtlasFlatFacesMixin")) {
+            assertNull(FeatureCatalog.mixin(name).standDownReason(loaded::contains, capability -> true), name);
+        }
+    }
+
+    @Test void worldShaderOwnershipIsAnIndependentVersionCapability() {
+        Set<String> loaded = Set.of("ephemera");
+        for (String name : List.of("GradientDitherSourceMixin", "GradientDitherPipelineMixin",
+                "SmoothFogSourceMixin", "SmoothFogPipelineMixin")) {
+            var binding = FeatureCatalog.mixin(name);
+            assertNull(binding.standDownReason(loaded::contains, "engine_ownership"::equals), name);
+            assertEquals("handled by ephemera",
+                    binding.standDownReason(loaded::contains, "world_visual_ownership"::equals), name);
         }
     }
 

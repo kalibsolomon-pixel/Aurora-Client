@@ -1,13 +1,19 @@
 package com.aurora.client.compat;
 
 import com.aurora.client.AuroraClient;
+import com.aurora.client.adapter.NativeUi;
+import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.util.EphemeraPacingHook;
+import com.aurora.client.util.FramePacing;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.Minecraft;
 
 import java.lang.invoke.MethodHandle;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
+import java.util.function.IntUnaryOperator;
 import java.util.function.Supplier;
 
 /**
@@ -17,9 +23,8 @@ import java.util.function.Supplier;
  *
  * <p>When both Aurora Client and Ephemera are installed:
  * <ul>
- *   <li>Aurora informs Ephemera when Aurora owns blocking frame sleeps and passes its exact
- *       effective target FPS, preventing double-waiting and aligning Ephemera's adaptive terrain
- *       upload budget to Aurora's frame deadline.</li>
+ *   <li>Ephemera reads Aurora's effective cap and VSync preference when it owns frame pacing.
+ *       Older engines receive Aurora's wait reports and frame deadlines.</li>
  *   <li>Aurora queries whether Ephemera's asynchronous Vulkan swapchain presenter is active so
  *       Aurora's Reflex scheduler does not stack redundant stalls on top of overlapped present.</li>
  *   <li>Both pacers share OS park-overshoot measurements so wake reserves adapt faster.</li>
@@ -37,6 +42,7 @@ public final class EphemeraPacingBridge implements EphemeraPacingHook.Bridge {
     private final MethodHandle afterParkHandle;
     private final BooleanSupplier vulkanAsyncPresent;
     private final IntSupplier recommendedOvershootMicros;
+    private final BooleanSupplier ownsFramePacing;
 
     static {
         if (EPHEMERA_PRESENT) {
@@ -53,12 +59,14 @@ public final class EphemeraPacingBridge implements EphemeraPacingHook.Bridge {
                                  MethodHandle beforeWaitHandle,
                                  MethodHandle afterParkHandle,
                                  BooleanSupplier vulkanAsyncPresent,
-                                 IntSupplier recommendedOvershootMicros) {
+                                 IntSupplier recommendedOvershootMicros,
+                                 BooleanSupplier ownsFramePacing) {
         this.reportAuroraHandle = reportAuroraHandle;
         this.beforeWaitHandle = beforeWaitHandle;
         this.afterParkHandle = afterParkHandle;
         this.vulkanAsyncPresent = vulkanAsyncPresent;
         this.recommendedOvershootMicros = recommendedOvershootMicros;
+        this.ownsFramePacing = ownsFramePacing;
     }
 
     private static boolean detectPresent() {
@@ -83,10 +91,39 @@ public final class EphemeraPacingBridge implements EphemeraPacingHook.Bridge {
             statusLineSupplier = (Supplier<String>) s;
         }
         if (report != null) {
-            EphemeraPacingHook.install(new EphemeraPacingBridge(report, before, after, vkAsync, overshoot));
+            BooleanSupplier owner = registerFrameLimits(map);
+            EphemeraPacingHook.install(new EphemeraPacingBridge(report, before, after, vkAsync, overshoot, owner));
             bound = true;
             AuroraClient.LOGGER.info("[Ephemera] Connected cooperative frame-pacer bridge");
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static BooleanSupplier registerFrameLimits(Map<?, ?> map) {
+        if (map.get("setAuroraLimits") instanceof BiConsumer<?, ?> register
+                && map.get("ownsAuroraPacing") instanceof BooleanSupplier owner) {
+            try {
+                ((BiConsumer<IntUnaryOperator, BooleanSupplier>) register).accept(
+                        EphemeraPacingBridge::effectiveCap, EphemeraPacingBridge::forceVsyncOff);
+                return owner;
+            } catch (RuntimeException e) {
+                AuroraClient.LOGGER.warn("[Ephemera] Could not hand off frame pacing", e);
+            }
+        }
+        return () -> false;
+    }
+
+    private static int effectiveCap(int nativeFps) {
+        Minecraft client = Minecraft.getInstance();
+        var screen = client == null ? null : NativeUi.screen(client);
+        boolean auroraGui = screen != null && screen.getClass().getName().startsWith("com.aurora.client.screen");
+        AuroraConfig cfg = AuroraConfig.get();
+        return FramePacing.effectiveFps(nativeFps, cfg.frameCapFps, cfg.guiFpsLimit, auroraGui);
+    }
+
+    private static boolean forceVsyncOff() {
+        AuroraConfig cfg = AuroraConfig.get();
+        return cfg.lowLatencyRender && cfg.disableVSync;
     }
 
     /** Triggers class initialization so {@code whenAvailable} subscribes; zero work after bind. */
@@ -158,5 +195,10 @@ public final class EphemeraPacingBridge implements EphemeraPacingHook.Bridge {
         } catch (Throwable ignored) {
             return 0;
         }
+    }
+
+    @Override
+    public boolean ownsFramePacing() {
+        return ownsFramePacing.getAsBoolean();
     }
 }
