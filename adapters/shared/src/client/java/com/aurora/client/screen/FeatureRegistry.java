@@ -1746,6 +1746,40 @@ addWithSettings("hitbox",
                 .valueFormatter(v -> String.format(java.util.Locale.ROOT, "%.2fx", v))
                 .description("Uniform size multiplier for floating entity and player nametags.");
 
+        FeatureSetting soundVolumesEnabled = new BooleanSetting("Per-Sound Volume",
+                () -> cfg.soundVolumesEnabled, v -> cfg.soundVolumesEnabled = v).resetDefault("soundVolumesEnabled", () -> defaults.soundVolumesEnabled)
+                .description("Enables per-sound volume attenuation (0–100% only; sounds can be lowered or muted, never boosted above vanilla).");
+        FeatureMetadata soundMixerMeta = new FeatureMetadata(
+                "sound_volume_mixer",
+                "Sound Volume Mixer",
+                "Lower or mute individual Minecraft sounds (0–100% attenuation only). Search any sound id or adjust recently played sounds.",
+                () -> cfg.soundVolumesEnabled,
+                v -> cfg.soundVolumesEnabled = v,
+                List.of(new SoundVolumeSetting()),
+                List.of("soundVolumes"));
+        FeatureSetting openSoundMixer = ButtonSetting.semantic("Open Sound Volume Mixer…",
+                () -> {
+                    var mc = net.minecraft.client.Minecraft.getInstance();
+                    if (mc != null) {
+                        com.aurora.client.adapter.NativeUi.setScreen(mc,
+                                FeatureDetailScreen.destination(com.aurora.client.adapter.NativeUi.screen(mc), soundMixerMeta));
+                    }
+                })
+                .disabled(() -> !cfg.soundVolumesEnabled)
+                .description(() -> {
+                    int n = cfg.soundVolumes == null ? 0 : cfg.soundVolumes.size();
+                    return n == 0
+                            ? "Search every Minecraft sound and lower or mute noisy ones (0–100% only)."
+                            : n + (n == 1 ? " sound currently attenuated." : " sounds currently attenuated.");
+                });
+        FeatureSetting clearSoundOverrides = ButtonSetting.semantic("Reset All Sound Overrides", "Reset",
+                () -> {
+                    if (cfg.soundVolumes != null) cfg.soundVolumes.clear();
+                    AuroraConfig.save();
+                })
+                .disabled(() -> cfg.soundVolumes == null || cfg.soundVolumes.isEmpty())
+                .description("Restores every customized sound back to 100% vanilla volume.");
+
         FeatureSetting copyDiagnostics = ButtonSetting.semantic("Copy Diagnostics", "Copy",
                 com.aurora.client.diagnostics.DiagnosticsReport::runAndCopy)
                 .description("Closes this menu, measures frame times for 5 seconds, then copies a text report to your clipboard: your mod list, any Aurora feature that could not start and why, the renderer, recent Aurora errors and the frame-time result. Nothing is sent anywhere; paste it where you are asking for help. It contains no account, world or server names.");
@@ -1800,6 +1834,8 @@ addWithSettings("hitbox",
                         nametagBgOpacity, nametagScale,
                         new SectionHeaderSetting("Drag-to-Reorder Servers"),
                         serverListDragEnabled,
+                        new SectionHeaderSetting("Sound Volumes"),
+                        soundVolumesEnabled, openSoundMixer, clearSoundOverrides,
                         new SectionHeaderSetting("Support"),
                         copyDiagnostics
                 ),
@@ -1809,7 +1845,7 @@ addWithSettings("hitbox",
                         "smoothCamera",
                         "smoothFramePacer", "framePacer", "framePacing", "frameCap",
                         "lowLatencyRender", "disableVSync", "adaptiveRenderSleeping",
-                        "inputSamplingDecoupled", "tabList", "nametagStyle", "serverListDragReorder"));
+                        "inputSamplingDecoupled", "tabList", "nametagStyle", "serverListDragReorder", "soundVolumes"));
 
         // Client optimizations Aurora owns (ADR 0009). Only the switches
         // with a visible trade-off have rows; the rest are config-only
@@ -1875,6 +1911,9 @@ addWithSettings("hitbox",
                 group("smooth_camera", "Smooth Camera", smoothCameraEnabled, smoothCameraStrength).pageSummary("Eases mouse look into and out of movement."),
                 group("decoupled_input", "Decoupled Input", decoupledInputEnabled).pageSummary("Applies mouse movement at the very start of each frame."),
                 group("aurora_keys", "Aurora Keys", hudEditorKey).pageSummary("Keys that open Aurora's own screens."))));
+        SETTINGS_PAGES.add(new SettingsPage("Sound", List.of(
+                group("sound_volumes", "Per-Sound Volume", soundVolumesEnabled, openSoundMixer, clearSoundOverrides)
+                        .pageSummary("Lower or mute individual Minecraft sounds (0–100% attenuation only)."))));
         FeatureSetting searchInstant = new BooleanSetting("Instant Search",
                 () -> cfg.searchInstant, v -> { cfg.searchInstant = v; AuroraConfig.save(); }).resetDefault("searchInstant", () -> defaults.searchInstant)
                 .description("Focuses the search bar when the Aurora menu opens or you return to the Features tab, so you can type straight away.");

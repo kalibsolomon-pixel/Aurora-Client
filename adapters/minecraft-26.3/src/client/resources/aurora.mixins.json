@@ -89,6 +89,7 @@
     "AbstractButtonMixin",
     "EditBoxMixin",
     "ServerListDragReorderMixin",
+    "SoundVolumeMixin",
     "MultiplayerServerListWidgetMixin",
     "ClientLevelWorldMapMixin",
     "ReflexMinecraftMixin",

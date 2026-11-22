@@ -296,7 +296,7 @@ public final class FeatureCatalog {
         classify("vanilla_hud", FairPlay.VANILLA_INFORMATION, "Moves, scales or hides vanilla's boss bar, action bar, titles, subtitles, toasts and advancement pop-ups without adding new information. Off in a fresh install.", "vanillaHudEnabled");
         classify("world_map", FairPlay.VANILLA_INFORMATION, "A full-screen map of terrain you have already visited.");
         classify("resourcepack_browser", FairPlay.COSMETIC, "Downloads resource packs from Modrinth.");
-        classify("miscellaneous", FairPlay.LOCAL_TIMING, "Frame pacing, a frame cap, vsync control, the point within a frame where mouse movement is applied, and cosmetic tab-list and nametag styling (including your own nametag in third person). The rate and content of what is sent to the server are unchanged.");
+        classify("miscellaneous", FairPlay.LOCAL_TIMING, "Frame pacing, a frame cap, vsync control, the point within a frame where mouse movement is applied, cosmetic tab-list and nametag styling (including your own nametag in third person), and cosmetic per-sound volume attenuation (0–100% only). The rate and content of what is sent to the server are unchanged.");
         classify("custom_title", FairPlay.COSMETIC, "Aurora's title screen and menu styling.");
         classify("text_fonts", FairPlay.COSMETIC, "Changes the font.");
         classify("theme", FairPlay.COSMETIC, "Changes the colors of Aurora's own screens.");
@@ -424,6 +424,7 @@ public final class FeatureCatalog {
         mixin("AbstractButtonMixin", "Aurora styling on vanilla buttons", "custom_title").gates("customTitleScreen");
         mixin("EditBoxMixin", "Aurora styling on text fields", "custom_title").gates("customTitleScreen");
         mixin("ServerListDragReorderMixin", "drag-to-reorder in the server list", "miscellaneous").gates("serverListDragReorder");
+        mixin("SoundVolumeMixin", "per-sound volume attenuation (0–100%)", "miscellaneous").gates("soundVolumesEnabled");
         mixin("MultiplayerServerListWidgetMixin", "numeric ping in the server list", "ping");
         mixin("ClientLevelWorldMapMixin", "refreshing the maps when a block changes", "world_map", "minimap");
         mixin("ReflexMinecraftMixin", "automatic latency reduction");

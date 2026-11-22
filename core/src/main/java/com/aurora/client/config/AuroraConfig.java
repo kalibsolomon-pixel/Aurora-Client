@@ -1266,6 +1266,12 @@ public class AuroraConfig {
      */
     public boolean serverListDragReorder = true;
 
+    // ---- Per-Sound Volume (0–100% attenuation only, cosmetic) ----
+    /** Master toggle for per-sound volume attenuation (0–100% only; never amplifies). */
+    public boolean soundVolumesEnabled = true;
+    /** Sound event id (e.g. "minecraft:block.portal.ambient") -> attenuation multiplier in [0.0, 1.0]. */
+    public java.util.Map<String, Float> soundVolumes = new java.util.LinkedHashMap<>();
+
     // ---- Keystrokes HUD Module ----
     /** Master toggle for the keystrokes overlay. */
     public boolean keystrokesEnabled = false;

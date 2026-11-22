@@ -60,6 +60,11 @@ Local Weather (vanilla-equivalent, off by default), Custom Skies (sky presets/co
 toggles, star brightness, void dark-disc hiding), first-person Fire Overlay height/opacity/hide,
 and Hurt Camera toggle/strength across 26.1.2, 26.2, and 26.3.
 
+Per-Sound Volume (Settings → Sound, cosmetic, 0–100% attenuation only) lets players lower or mute
+individual Minecraft sounds through a searchable mixer with customized, recently played, and
+common-sound lists across 26.1.2, 26.2, and 26.3, strictly clamped to 0–100% so sounds can never
+be amplified above vanilla.
+
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's
 profile, input and theme contracts. `CombatBreakdown` adds PvP analysis for 1.9+
