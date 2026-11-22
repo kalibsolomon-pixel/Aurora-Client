@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
+import java.util.function.ObjIntConsumer;
 
 /**
  * Bridges Aurora's config-as-source-of-truth keybinds (raw SDL ints
@@ -176,6 +177,23 @@ public final class AuroraKeybinds {
         }
         // Every live binding, so a plain key can tell when a combo on it outranks it.
         VanillaKeyCombos.rebuildRegistry(com.aurora.client.config.profile.ProfileManager.getInstance().hotkeys());
+    }
+
+    /** Visits every registered Aurora mapping alongside its live config binding. */
+    public static void forEach(ObjIntConsumer<KeyMapping> visitor) {
+        for (int i = 0; i < ENTRIES.size(); i++) {
+            Entry e = ENTRIES.get(i);
+            visitor.accept(e.mapping, e.getter.getAsInt());
+        }
+    }
+
+    /** Allocation-free hash of every Aurora binding's live config value. */
+    public static long fingerprint(long seed) {
+        long h = seed * 31L + ENTRIES.size();
+        for (int i = 0; i < ENTRIES.size(); i++) {
+            h = h * 31L + ENTRIES.get(i).getter.getAsInt();
+        }
+        return h;
     }
 
     /**

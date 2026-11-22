@@ -143,7 +143,7 @@ public final class FeatureRegistry {
                 () -> cfg.pulsarEnabled, v -> cfg.pulsarEnabled = v,
                 List.of(mappingAction("Open Pulsar", "Review recordings, analytics and capture settings.", screen ->
                                 com.aurora.client.adapter.NativeUi.setScreen(net.minecraft.client.Minecraft.getInstance(), new dev.phenomena.gui.screens.PhenomenaScreen(screen))),
-                        new KeybindSetting("Dashboard key", () -> cfg.pulsarKey, v -> cfg.pulsarKey = v).resetDefault(() -> defaults.pulsarKey),
+                        new KeybindSetting("Dashboard key", () -> cfg.pulsarKey, v -> cfg.pulsarKey = v).resetDefault(() -> defaults.pulsarKey).keyId("key.aurora.pulsar"),
                         new BooleanSetting("Automatic capture", () -> cfg.pulsarSettings.tracking, v -> cfg.pulsarSettings.tracking = v).resetDefault(() -> defaults.pulsarSettings.tracking),
                         new BooleanSetting("Record finished fights", () -> cfg.pulsarSettings.recording, v -> cfg.pulsarSettings.recording = v).resetDefault(() -> defaults.pulsarSettings.recording),
                         new BooleanSetting("Anonymize reports", () -> cfg.pulsarSettings.anonymizeExports, v -> cfg.pulsarSettings.anonymizeExports = v).resetDefault(() -> defaults.pulsarSettings.anonymizeExports)));
@@ -161,7 +161,7 @@ public final class FeatureRegistry {
                                 v -> cfg.worldMapShowWaypointNames = v).resetDefault("worldMapShowWaypointNames", () -> defaults.worldMapShowWaypointNames),
                         new SectionHeaderSetting("Capture & Caching"),
                         new KeybindSetting("Open Key",
-                                () -> cfg.worldMapKey, v -> cfg.worldMapKey = v).resetDefault(() -> defaults.worldMapKey)
+                                () -> cfg.worldMapKey, v -> cfg.worldMapKey = v).resetDefault(() -> defaults.worldMapKey).keyId("key.aurora.world_map")
                                 .description("The key that opens the fullscreen world map. Drag to pan, scroll to zoom, and use the dimension button to browse other dimensions' saved terrain. Press ESC or Backspace while rebinding to clear it."),
                         SliderSetting.ofInt("Capture Budget",
                                 () -> cfg.worldMapCaptureBudget, v -> cfg.worldMapCaptureBudget = v, 1, 8).resetDefault(() -> defaults.worldMapCaptureBudget)
@@ -183,7 +183,7 @@ public final class FeatureRegistry {
                 () -> cfg.zoomEnabled, v -> cfg.zoomEnabled = v,
                 List.of(
                         new KeybindSetting("Hold Key",
-                                () -> cfg.zoomKey, v -> cfg.zoomKey = v).resetDefault(() -> defaults.zoomKey)
+                                () -> cfg.zoomKey, v -> cfg.zoomKey = v).resetDefault(() -> defaults.zoomKey).keyId("key.aurora.zoom")
                                 .description("The key you hold to activate zoom. Release to return to normal view instantly. Press ESC or Backspace while rebinding to clear it."),
                         SliderSetting.of("Zoom Level",
                                 () -> cfg.zoomLevel, v -> cfg.zoomLevel = v, 1.5, 50.0).resetDefault(() -> defaults.zoomLevel)
@@ -347,7 +347,7 @@ public final class FeatureRegistry {
                 () -> cfg.freeLookEnabled, v -> cfg.freeLookEnabled = v,
                 List.of(
                         new KeybindSetting("Hold Key",
-                                () -> cfg.freeLookKey, v -> cfg.freeLookKey = v).resetDefault(() -> defaults.freeLookKey)
+                                () -> cfg.freeLookKey, v -> cfg.freeLookKey = v).resetDefault(() -> defaults.freeLookKey).keyId("key.aurora.free_look")
                                 .description("Hold this key to detach the camera so you can look around freely; release to restore your original view. Press ESC or Backspace while rebinding to clear it."),
                         SliderSetting.of("Camera Sensitivity",
                                 () -> cfg.freeLookSensitivity,
@@ -399,10 +399,10 @@ public final class FeatureRegistry {
                         new ColorSetting("Text Color", () -> cfg.toggleSprintSneakTextColor == null ? 0xFFFFFFFF : cfg.toggleSprintSneakTextColor, v -> cfg.toggleSprintSneakTextColor = v).resetDefault(() -> cfg.toggleSprintSneakTextColor, () -> defaults.toggleSprintSneakTextColor, () -> defaults.toggleSprintSneakTextColor == null ? 0xFFFFFFFF : defaults.toggleSprintSneakTextColor)
                                 .description("Text color for this HUD only. Reset restores its default color."),
                         new KeybindSetting("Toggle Sprint Key",
-                                () -> cfg.toggleSprintKey, v -> cfg.toggleSprintKey = v).resetDefault(() -> defaults.toggleSprintKey)
+                                () -> cfg.toggleSprintKey, v -> cfg.toggleSprintKey = v).resetDefault(() -> defaults.toggleSprintKey).keyId("key.aurora.toggle_sprint")
                                 .description("Press once to start sprinting, again to stop."),
                         new KeybindSetting("Toggle Sneak Key",
-                                () -> cfg.toggleSneakKey, v -> cfg.toggleSneakKey = v).resetDefault(() -> defaults.toggleSneakKey)
+                                () -> cfg.toggleSneakKey, v -> cfg.toggleSneakKey = v).resetDefault(() -> defaults.toggleSneakKey).keyId("key.aurora.toggle_sneak")
                                 .description("Press once to start sneaking, again to stop."),
                         new BooleanSetting("Show Status HUD",
                                 () -> cfg.toggleSprintSneakHudEnabled,
@@ -578,7 +578,7 @@ addWithSettings("hitbox",
                 List.of(
                         new SectionHeaderSetting("General"),
                         new KeybindSetting("Toggle Key",
-                                () -> cfg.hitboxToggleKey, v -> cfg.hitboxToggleKey = v).resetDefault(() -> defaults.hitboxToggleKey)
+                                () -> cfg.hitboxToggleKey, v -> cfg.hitboxToggleKey = v).resetDefault(() -> defaults.hitboxToggleKey).keyId("key.aurora.hitbox_toggle")
                                 .description("Optional. Toggles both self and target hitbox halves on/off. Defaults to unbound."),
                         new BooleanSetting("Show Eye-Level Line",
                                 () -> cfg.hitboxEyeLine, v -> cfg.hitboxEyeLine = v).resetDefault("hitboxEyeLine", () -> defaults.hitboxEyeLine)
@@ -835,7 +835,7 @@ addWithSettings("hitbox",
                         new ColorSetting("Text Color", () -> cfg.totemPopTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.totemPopTextColor, v -> cfg.totemPopTextColor = v).resetDefault(() -> cfg.totemPopTextColor, () -> defaults.totemPopTextColor, () -> defaults.totemPopTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.totemPopTextColor)
                                 .description("Text color for this HUD only. Reset restores its default color."),
                         new KeybindSetting("Reset Counter Key",
-                                () -> cfg.totemResetKey, v -> cfg.totemResetKey = v).resetDefault(() -> defaults.totemResetKey)
+                                () -> cfg.totemResetKey, v -> cfg.totemResetKey = v).resetDefault(() -> defaults.totemResetKey).keyId("key.aurora.totem_reset")
                                 .description("Press to clear self pops and all tracked players. Defaults to unbound."),
                         new BooleanSetting("Show Other Players",
                                 () -> cfg.totemShowOthers, v -> cfg.totemShowOthers = v).resetDefault("totemShowOthers", () -> defaults.totemShowOthers)
@@ -916,10 +916,10 @@ addWithSettings("hitbox",
                                 })
                                 .description("Adds a waypoint at the player's current block position."),
                         new KeybindSetting("Drop Key",
-                                () -> cfg.waypointDropKey, v -> cfg.waypointDropKey = v).resetDefault(() -> defaults.waypointDropKey)
+                                () -> cfg.waypointDropKey, v -> cfg.waypointDropKey = v).resetDefault(() -> defaults.waypointDropKey).keyId("key.aurora.waypoint_drop")
                                 .description("Press to drop a waypoint at your current position. Defaults to unbound."),
                         new KeybindSetting("Open Manager Key",
-                                () -> cfg.waypointManagerKey, v -> cfg.waypointManagerKey = v).resetDefault(() -> defaults.waypointManagerKey)
+                                () -> cfg.waypointManagerKey, v -> cfg.waypointManagerKey = v).resetDefault(() -> defaults.waypointManagerKey).keyId("key.aurora.waypoint_manager")
                                 .description("Press to open the Waypoint Manager screen. Defaults to unbound."),
                         new EnumSetting<>("Display Style", AuroraConfig.WaypointDisplay.class,
                                 () -> cfg.waypointDisplay, v -> cfg.waypointDisplay = v).resetDefault(() -> defaults.waypointDisplay)
@@ -963,7 +963,7 @@ addWithSettings("hitbox",
                 () -> cfg.minimapEnabled, v -> cfg.minimapEnabled = v,
                 List.of(
                         new KeybindSetting("Toggle Key",
-                                () -> cfg.minimapToggleKey, v -> cfg.minimapToggleKey = v).resetDefault(() -> defaults.minimapToggleKey)
+                                () -> cfg.minimapToggleKey, v -> cfg.minimapToggleKey = v).resetDefault(() -> defaults.minimapToggleKey).keyId("key.aurora.minimap_toggle")
                                 .description("Press to show or hide the minimap HUD overlay, independently of the fullscreen World Map. Defaults to unbound."),
 
                         new SectionHeaderSetting("Shape & Size"),
@@ -1581,7 +1581,7 @@ addWithSettings("hitbox",
         // Interface or Display Settings, so their config fields, defaults,
         // fair-play notes and resets do not change.
         FeatureSetting hudEditorKey = new KeybindSetting("HUD Editor Key",
-                () -> cfg.hudEditorKey, v -> cfg.hudEditorKey = v).resetDefault(() -> defaults.hudEditorKey)
+                () -> cfg.hudEditorKey, v -> cfg.hudEditorKey = v).resetDefault(() -> defaults.hudEditorKey).keyId("key.aurora.hud_editor")
                 .description("Opens the HUD editor in game, where you move and resize HUD modules; its Aurora Settings button leads here. Also listed in Minecraft's Controls. Press ESC or Backspace while rebinding to clear it.");
         SETTINGS_PAGES.add(new SettingsPage("Appearance", List.of(
                 settingsEntry("theme").pageSummary("The accent, window tint and glass of every Aurora screen."),

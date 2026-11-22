@@ -95,6 +95,9 @@ lookup must wait, not fail.
 | `menu` | Disconnect to Aurora's title screen |
 | `chat-open` | Open the chat screen over recent lines (add lines with `server tellraw @a ...`) |
 | `multiplayer` | Open vanilla's server list |
+| `profile-hotkey <name> <key>` | Create the profile if missing and bind its hotkey (stored SDL/KeyCombo int) |
+| `profile-options <name>` | Open `ProfileOptionsScreen` for that profile |
+| `controls` | Open vanilla's `KeyBindsScreen` and log Aurora/profile extra conflict detection |
 | `inventory` / `hover-slot 0` | Open the survival inventory / park the GUI pointer on an inventory slot, showing its tooltip |
 | `reload-resources` | Start the reload F3+T starts (`Minecraft.reloadResourcePacks()`); logs `reload-resources finished` once every listener has applied |
 | `stop` | Shut down normally |

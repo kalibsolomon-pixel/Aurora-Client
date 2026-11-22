@@ -77,6 +77,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     private static final int LOWER_BTN_Y = CARD_H - INSET - BTN_H;
     private static final String GEAR_GLYPH = IconCatalog.glyph("settings");
     private static final String KEYBOARD_GLYPH = IconCatalog.glyph("keyboard");
+    private static final String WARNING_GLYPH = IconCatalog.glyph("warning");
     private static final String ADD_GLYPH = IconCatalog.glyph("add");
 
     /**
@@ -506,13 +507,23 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         MaterialSurface.selection(ctx, chipX, chipY, chipW, BTN_H, radius, capturing || hotkey.isFocused(),
                 chipHot ? 1f : 0f);
         int binding = manager.hotkey(name);
+        List<String> conflicts = !capturing && binding >= 0
+                ? com.aurora.client.util.KeybindConflictLookup.conflictsForProfile(name, binding)
+                : List.of();
+        boolean hasConflict = !conflicts.isEmpty();
+        if (hasConflict && !hotkey.isFocused()) {
+            com.aurora.client.ui.util.RenderUtil.drawRoundedOutlineAA(ctx, chipX, chipY, chipW, BTN_H, radius, 1f,
+                    ThemeManager.withAlpha(ThemeManager.color(ThemeToken.STATUS_WARNING), 0xCC));
+        }
         String label = capturing ? captureLabel(capture.pending()) : binding >= 0 ? keyName(binding) : "Set hotkey";
         // An unbound hotkey is an invitation, not a disabled field: primary text, "Set hotkey".
         int textCol = ThemeManager.color(ThemeToken.ON_BACKGROUND);
         String fitted = AuroraFontRenderer.ellipsize(this.font, label, chipW - 20, 0);
         int contentW = 14 + this.font.width(fitted);
         int cx = chipX + (chipW - contentW) / 2;
-        MaterialIconRenderer.drawIcon(ctx, this.font, KEYBOARD_GLYPH, cx + 5f, chipY + BTN_H / 2f, 10f, textCol);
+        MaterialIconRenderer.drawIcon(ctx, this.font, hasConflict ? WARNING_GLYPH : KEYBOARD_GLYPH,
+                cx + 5f, chipY + BTN_H / 2f, 10f,
+                hasConflict ? ThemeManager.color(ThemeToken.STATUS_WARNING) : textCol);
         ctx.text(this.font, fitted, cx + 14, AuroraFontRenderer.textY(this.font, chipY, BTN_H), textCol, false);
         if (chipHot) {
             hoveredChip = name;
@@ -544,7 +555,15 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     private void commitCapture(String name, int binding) {
         stopCapture();
         if (ProfileManager.getInstance().setHotkey(name, binding)) {
-            flash(binding >= 0 ? keyName(binding) + " switches to " + name : "Cleared the hotkey for " + name);
+            if (binding >= 0) {
+                String warn = com.aurora.client.util.KeybindConflicts.summary(
+                        com.aurora.client.util.KeybindConflictLookup.conflictsForProfile(name, binding));
+                flash(warn != null
+                        ? keyName(binding) + " switches to " + name + " (" + warn + ")"
+                        : keyName(binding) + " switches to " + name);
+            } else {
+                flash("Cleared the hotkey for " + name);
+            }
         }
     }
 
@@ -578,7 +597,11 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
                     Component.literal("Hotkey for " + k),
                     () -> Component.literal("Sets the key that switches to this profile in game."),
                     () -> {
-                        return Component.literal(hotkeyName(ProfileManager.getInstance().hotkey(k)));
+                        int hk = ProfileManager.getInstance().hotkey(k);
+                        String base = hotkeyName(hk);
+                        String warn = hk >= 0 ? com.aurora.client.util.KeybindConflicts.tooltip(
+                                com.aurora.client.util.KeybindConflictLookup.conflictsForProfile(k, hk)) : null;
+                        return Component.literal(warn != null ? base + ". " + warn : base);
                     },
                     () -> true,
                     () -> {
@@ -1015,9 +1038,23 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         // One tooltip key for every chip: a frame with no chip under the
         // pointer passes an empty rect, which resets the dwell.
         boolean capturing = hoveredChip != null && hoveredChip.equals(capturingHotkey);
-        FeatureSetting.hoverTooltip(hoveredChip, capturing
-                        ? "Press the key that switches to this profile in game. Hold Ctrl, Shift or Alt first for a combination. Esc or Backspace clears it."
-                        : "Click to set the key that switches to this profile in game.",
+        String chipTip;
+        if (capturing) {
+            chipTip = "Press the key that switches to this profile in game. Hold Ctrl, Shift or Alt first for a combination. Esc or Backspace clears it.";
+        } else {
+            String conflictTip = null;
+            if (hoveredChip != null) {
+                int hk = ProfileManager.getInstance().hotkey(hoveredChip);
+                if (hk >= 0) {
+                    conflictTip = com.aurora.client.util.KeybindConflicts.tooltip(
+                            com.aurora.client.util.KeybindConflictLookup.conflictsForProfile(hoveredChip, hk));
+                }
+            }
+            chipTip = conflictTip != null
+                    ? conflictTip + " — Click to change."
+                    : "Click to set the key that switches to this profile in game.";
+        }
+        FeatureSetting.hoverTooltip(hoveredChip, chipTip,
                 hoveredChip == null ? -1000 : hoveredChipX, hoveredChipY, btnW(), BTN_H, mouseX, mouseY);
 
         // Toast (above the editor here — this screen's historical order;
