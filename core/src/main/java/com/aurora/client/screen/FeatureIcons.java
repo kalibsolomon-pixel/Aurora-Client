@@ -35,6 +35,7 @@ public final class FeatureIcons {
         ICONS.put("info_module",           "\uE88E"); // info
         ICONS.put("cps",                   "\uE323"); // mouse
         ICONS.put("armor_hud",             "\uF014"); // gpp_maybe (shield / alert)
+        ICONS.put("inventory_hud",         "\uF19C"); // backpack
         ICONS.put("scoreboard",            "\uEBD0"); // scoreboard (Material Symbols Rounded)
         ICONS.put("vanilla_hud",           "\uE66B"); // space_dashboard
         ICONS.put("reach_display",         "\uE41C"); // straighten (ruler)

@@ -61,6 +61,7 @@ Changing a default does not change an existing install: a player who already had
 | Info HUD | Vanilla equivalent | Shows FPS, coordinates, time, biome and similar readouts that the F3 screen also has. |
 | CPS | Vanilla equivalent | Counts your own clicks. |
 | Armor HUD | Vanilla equivalent | Shows your own armor, hands and their durability. |
+| Inventory HUD | Vanilla equivalent | Shows your own inventory slots on the HUD. Off in a fresh install. |
 | Reach Display | Vanilla equivalent | Shows the distance of your own last hit. |
 | Potion HUD | Vanilla equivalent | Lists your own active effects, as the vanilla effect icons do. |
 | Ping | Vanilla equivalent | Shows latency as numbers: your own, and other players' as the tab list already reports it. |

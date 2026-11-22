@@ -62,7 +62,7 @@ class AuroraScreenNavigationTest {
         // C-5: the layout pair joined the hosted chrome.
         assertTrue(src.contains("layoutControls[0] = layoutControl(0);"));
         assertTrue(src.contains("layoutControls[1] = layoutControl(1);"));
-        // Module cards: one control per ModuleManager module (35 tiles).
+        // Module cards: one control per ModuleManager module (36 tiles).
         // The Settings sub-tabs: one navigation control per page.
         assertTrue(src.contains("for (int i = 0; i < pageControls.length; i++) pageControls[i] = pageControl(i);"));
         assertTrue(src.contains("for (Module m : ModuleManager.getInstance().getModules()) {\n            tileControls.put(m.id, tileControl(m));"));

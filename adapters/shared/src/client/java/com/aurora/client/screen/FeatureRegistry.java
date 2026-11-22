@@ -772,6 +772,40 @@ addWithSettings("hitbox",
                                 () -> cfg.armorHudBgColor, v -> cfg.armorHudBgColor = v).resetDefault(() -> defaults.armorHudBgColor)
                 ));
 
+        addWithSettings("inventory_hud",
+                "Displays your main 27-slot inventory grid on the HUD — and optionally your hotbar — so you can check supplies, pearls, totems, and blocks at a glance without opening the inventory screen.",
+                () -> cfg.inventoryHudEnabled, v -> cfg.inventoryHudEnabled = v,
+                List.of(
+                        new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
+                                () -> cfg.inventoryHudBgMode, v -> cfg.inventoryHudBgMode = v).resetDefault(() -> defaults.inventoryHudBgMode)
+                                .valueDescriptions(bg -> switch (bg) {
+                                    case NONE -> "No backdrop behind the items.";
+                                    case SOLID -> "Draws a translucent panel with subtle slot dividers using the color below.";
+                                    case VANILLA -> "Uses Minecraft's own inventory panel and slot textures so resource packs theme it automatically.";
+                                }),
+                        new ColorSetting("Background Color (when SOLID)",
+                                () -> cfg.inventoryHudBgColor, v -> cfg.inventoryHudBgColor = v).resetDefault(() -> defaults.inventoryHudBgColor)
+                                .disabled(() -> cfg.inventoryHudBgMode != AuroraConfig.HudBackground.SOLID),
+                        new BooleanSetting("Compact Mode",
+                                () -> cfg.inventoryHudCompact, v -> cfg.inventoryHudCompact = v).resetDefault("inventoryHudCompact", () -> defaults.inventoryHudCompact)
+                                .description("Packs only occupied items into a tight grid instead of keeping the fixed 9×3 slot positions."),
+                        new BooleanSetting("Show Hotbar",
+                                () -> cfg.inventoryHudShowHotbar, v -> cfg.inventoryHudShowHotbar = v).resetDefault("inventoryHudShowHotbar", () -> defaults.inventoryHudShowHotbar)
+                                .description("Adds the 9 hotbar slots below the main inventory."),
+                        new BooleanSetting("Show Stack Counts",
+                                () -> cfg.inventoryHudShowCounts, v -> cfg.inventoryHudShowCounts = v).resetDefault("inventoryHudShowCounts", () -> defaults.inventoryHudShowCounts)
+                                .description("Displays item stack counts in each slot. Durability bars and cooldown overlays stay visible."),
+                        new BooleanSetting("Hide When Empty",
+                                () -> cfg.inventoryHudHideWhenEmpty, v -> cfg.inventoryHudHideWhenEmpty = v).resetDefault("inventoryHudHideWhenEmpty", () -> defaults.inventoryHudHideWhenEmpty)
+                                .description("Hides the overlay during gameplay whenever all displayed slots are empty."),
+                        new SectionHeaderSetting("Layout"),
+                        ButtonSetting.semantic("Open HUD Editor", () -> {
+                            var mc = net.minecraft.client.Minecraft.getInstance();
+                            com.aurora.client.adapter.NativeUi.setScreen(mc, new com.aurora.client.screen.HudEditorScreen());
+                        }).description("Drag, resize, lock or hide the Inventory HUD like any other HUD module.")
+                ),
+                List.of("inventoryHud"));
+
         addWithSettings("reach_display",
                 "Shows the exact distance to the last entity you attacked. A practical tool for understanding your effective reach in PvP and for spotting suspiciously long reaches from others. Updates each time you land a hit.",
                 () -> cfg.reachEnabled, v -> cfg.reachEnabled = v,

@@ -42,6 +42,11 @@ with Sodium and Gradient Dithering in one pass; it stands down for VulkanMod and
 shader pack is in use. Checked on 26.1.2, 26.2 and 26.3 (OpenGL; 26.2 and 26.3 also native
 Vulkan); [evidence](reports/2026-11-21-aurora-262-perf-and-smooth-fog.md).
 
+Inventory HUD (`inventory_hud`, off by default, Vanilla equivalent) renders the player's 27-slot
+main inventory — and optionally the 9-slot hotbar — as a draggable, scalable HUD module with
+Vanilla (`inventory.png` / `container/slot`), Solid, and None backgrounds, compact packing,
+optional stack-count hiding, and empty-state auto-hide across 26.1.2, 26.2, and 26.3.
+
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's
 profile, input and theme contracts. `CombatBreakdown` adds PvP analysis for 1.9+
