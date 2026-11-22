@@ -836,6 +836,8 @@
   "itemPhysicsFlatOnGround": true,
   "itemPhysicsTumbleStrength": 1.0,
   "serverListDragReorder": true,
+  "soundVolumesEnabled": true,
+  "soundVolumes": {},
   "keystrokesEnabled": true,
   "keystrokesKeyStyle": "FLAT",
   "keystrokesShowMovement": true,

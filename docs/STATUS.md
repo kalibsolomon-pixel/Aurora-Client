@@ -40,6 +40,11 @@ with Sodium and Gradient Dithering in one pass; it stands down for VulkanMod and
 shader pack is in use. Checked on 26.1.2, 26.2 and 26.3 (OpenGL; 26.2 and 26.3 also native
 Vulkan); [evidence](reports/2026-11-21-aurora-262-perf-and-smooth-fog.md).
 
+Per-Sound Volume (Settings → Sound, cosmetic, 0–100% attenuation only) lets players lower or mute
+individual Minecraft sounds through a searchable mixer with customized, recently played, and
+common-sound lists across 26.1.2, 26.2, and 26.3, strictly clamped to 0–100% so sounds can never
+be amplified above vanilla.
+
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's
 profile, input and theme contracts. `CombatBreakdown` adds PvP analysis for 1.9+
