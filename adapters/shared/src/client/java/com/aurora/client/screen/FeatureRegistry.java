@@ -220,7 +220,8 @@ public final class FeatureRegistry {
                                 () -> cfg.fogDistanceMultiplier,
                                 v -> cfg.fogDistanceMultiplier = v, 1.0, 100.0).resetDefault(() -> defaults.fogDistanceMultiplier)
                                 .description("Multiplies how far the fog starts. 1x is vanilla; higher values progressively clear the haze for a longer view distance. The visible range is still capped by your Render Distance, so increases beyond that point only reduce fog density, not draw distance.")
-                ));
+                ),
+                List.of("noFog", "fogDistanceMultiplier"));
 
         // ---- Pack Tweaks ----
         // Single feature consolidating the old totem_tweaks, shield_tweaks,
@@ -564,7 +565,8 @@ public final class FeatureRegistry {
                                 () -> cfg.sprintHudBgMode, v -> cfg.sprintHudBgMode = v).resetDefault(() -> defaults.sprintHudBgMode),
                         new ColorSetting("HUD Background Color (when SOLID)",
                                 () -> cfg.sprintHudBgColor, v -> cfg.sprintHudBgColor = v).resetDefault(() -> defaults.sprintHudBgColor)
-                ));
+                ),
+                List.of("toggleSprintSneak", "toggleSprintKey", "toggleSneakKey", "sprintHud"));
 
         // ---- Alerts (combined: armor durability + effect expiry) ----
         // Single feature consolidating the two alert sources. Each renders
@@ -866,7 +868,8 @@ addWithSettings("hitbox",
                         new BooleanSetting("Playtime per-World",
                                 () -> cfg.infoPlaytimePerWorld, v -> cfg.infoPlaytimePerWorld = v).resetDefault("infoPlaytimePerWorld", () -> defaults.infoPlaytimePerWorld)
                                 .description("On = show time spent in the current world / server only. Off = show the global lifetime total.")
-                ));
+                ),
+                List.of("info", "showCoords", "showFps", "showTime"));
 
         addWithSettings("cps",
                 "Shows your current clicks-per-second as a HUD counter. Handy for practicing a consistent attack rhythm in PvP, verifying a clicking technique, or just satisfying curiosity about your click speed.",
@@ -913,7 +916,8 @@ addWithSettings("hitbox",
                                 }),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.armorHudBgColor, v -> cfg.armorHudBgColor = v).resetDefault(() -> defaults.armorHudBgColor)
-                ));
+                ),
+                List.of("armorHud", "armorHorizontal", "armorShowDurabilityBars", "armorDurabilityFormat"));
 
         addWithSettings("inventory_hud",
                 "Displays your main 27-slot inventory grid on the HUD — and optionally your hotbar — so you can check supplies, pearls, totems, and blocks at a glance without opening the inventory screen.",
@@ -959,7 +963,8 @@ addWithSettings("hitbox",
                                 () -> cfg.reachBgMode, v -> cfg.reachBgMode = v).resetDefault(() -> defaults.reachBgMode),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.reachBgColor, v -> cfg.reachBgColor = v).resetDefault(() -> defaults.reachBgColor)
-                ));
+                ),
+                List.of("reach"));
 
         addWithSettings("potion_hud",
                 "A cleaner replacement for the default status-effect icons, listing your active potion effects with a readable countdown timer. Makes it easy to track when buffs like Strength or Fire Resistance are about to expire so you can re-apply them in time.",
@@ -976,7 +981,8 @@ addWithSettings("hitbox",
                                 .disabled(() -> cfg.potionBgMode != AuroraConfig.HudBackground.VANILLA),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.potionBgColor, v -> cfg.potionBgColor = v).resetDefault(() -> defaults.potionBgColor)
-                ));
+                ),
+                List.of("potion"));
 
         addWithSettings("ping",
                 "Surfaces connection latency as real numbers instead of the vague signal-bar icon — as a HUD readout, as a value in the tab list, and optionally under player nametags. Knowing actual ping helps you account for hit registration delay on a server and spot laggy players.",
@@ -1054,7 +1060,8 @@ addWithSettings("hitbox",
                                             com.aurora.client.feature.impl.TotemPopFeature.get();
                                     if (f != null) f.resetAll();
                                 })
-                ));
+                ),
+                List.of("totemPop", "totemShowOthers", "totemTopOthers", "totemReset", "nametagTotemPops"));
 
         // ---- Better Hitreg (BetterHitreg by Jass, integrated with permission) ----
         // Only the custom client-side hitreg remains (owner direction
@@ -1143,7 +1150,8 @@ addWithSettings("hitbox",
                                 .description("Maximum horizontal distance for minimap and in-world markers. The world map follows its viewport."),
                         new ColorSetting("Death Waypoint Color",
                                 () -> cfg.deathWaypointColor, v -> cfg.deathWaypointColor = v).resetDefault(() -> defaults.deathWaypointColor)
-                ));
+                ),
+                List.of("waypoint", "deathWaypoint"));
 
         addWithSettings("minimap",
                 "A top-down map of the world around you, shown as a HUD overlay. Renders terrain sampled from loaded chunks, with waypoints and nearby entities drawn as colored dots. Optional circular frame, auto-rotation to match your facing, and a compass so you always know where north is.",
@@ -1331,7 +1339,8 @@ addWithSettings("hitbox",
         addWithSettings("particles",
                 "Per-particle control over every vanilla particle type — hide ones you find distracting, resize the rest, or recolor them with a custom tint. Use the search bar to quickly find a specific particle by name. Great for cutting visual clutter (e.g. hiding explosion or splash-potion particles in busy fights) or reducing particle load for a small FPS gain.",
                 () -> cfg.particleControlsEnabled, v -> cfg.particleControlsEnabled = v,
-                List.of(new ParticleConfigSetting(particleRows)));
+                List.of(new ParticleConfigSetting(particleRows)),
+                List.of("particle"));
 
         addWithSettings("item_scale",
                 "Customize the scale, rotation (pitch, yaw, roll), and screen translation of individual item models. Type any item name in the search bar and click '+' to start customizing its model to fit your visual preferences.",
@@ -1379,6 +1388,7 @@ addWithSettings("hitbox",
                                         com.aurora.client.adapter.NativeUi.setScreen(mc, new ResourcePackBrowserScreen(com.aurora.client.adapter.NativeUi.screen(mc)));
                                     }
                                 })
+                                .disabled(() -> !cfg.resourcepackBrowserEnabled)
                                 .description("Opens the Modrinth resource-pack browser. Search, preview, and install packs straight into your game.")
                 ));
 
@@ -1538,7 +1548,8 @@ addWithSettings("hitbox",
                 "Caps the framerate while an Aurora screen is open, independent of Minecraft's main FPS cap. A lower limit keeps the UI smooth while freeing GPU time for the world behind it.",
                 () -> cfg.guiFpsLimit != 1000,
                 v -> cfg.guiFpsLimit = v ? 60 : 1000,
-                List.of(uiFpsLimit));
+                List.of(uiFpsLimit),
+                List.of("guiFpsLimit"));
 
         // Three categories, each covering several animations (owner, 2026-11-18): the hands
         // and held items, using and switching items, and the camera and your own avatar.
@@ -1630,7 +1641,7 @@ addWithSettings("hitbox",
                                 .description("Backwards Walk: players' bodies turn toward the way they walk, backwards too, with the head turning further, as in 1.8. It applies to every player you see, you included. Sneak: your own crouch keeps 1.8's taller silhouette, in third person and in your inventory. Only how models are drawn on your screen changes; hitboxes and movement are vanilla.")
                 ),
                 java.util.List.of(
-                        "smoothAnimations", "swingStyle", "anim",
+                        "smoothAnimations", "swingAnimationCurve", "swingStyle", "anim",
                         "viewBobAmplitude", "idleSway",
                         "damageTilt", "hotbarBounce"));
 
@@ -1785,14 +1796,6 @@ addWithSettings("hitbox",
         // History: the former standalone Settings-tab tiles were merged
         // into this entry on 2026-09-10 and shown as a Modules-grid card
         // until the pages replaced it.
-        FeatureSetting smoothCameraEnabled = new BooleanSetting("Enabled",
-                () -> cfg.smoothCamera,
-                v -> cfg.smoothCamera = v).resetDefault("smoothCamera", () -> defaults.smoothCamera)
-                .description("Adds inertia to your mouse look so the camera eases into and out of movement instead of stopping instantly. Gives panning a weighty, cinematic feel — great for recording or relaxed play. Note: it adds aim latency, so competitive players usually leave it off.");
-        FeatureSetting smoothCameraStrength = SliderSetting.of("Strength",
-                () -> cfg.smoothCameraStrength, v -> cfg.smoothCameraStrength = v, 0.05, 1.0).resetDefault(() -> defaults.smoothCameraStrength)
-                .description("How much smoothing is applied. Low values add a barely-there glide that still feels responsive; high values produce heavy, floaty camera drift with noticeable lag between your mouse and the view. Start around 0.2-0.3 if you want subtle smoothing.")
-                .disabled(() -> !cfg.smoothCamera); // a dependent control follows its switch (2026-11-14)
         FeatureSetting framePacerEnabled = new BooleanSetting("Enabled",
                 () -> cfg.smoothFramePacer,
                 v -> cfg.smoothFramePacer = v).resetDefault("smoothFramePacer", () -> defaults.smoothFramePacer)
@@ -1981,8 +1984,8 @@ addWithSettings("hitbox",
                 com.aurora.client.diagnostics.DiagnosticsReport::runAndCopy)
                 .description("Closes this menu, measures frame times for 5 seconds, then copies a text report to your clipboard: your mod list, any Aurora feature that could not start and why, the renderer, recent Aurora errors and the frame-time result. Nothing is sent anywhere; paste it where you are asking for help. It contains no account, world or server names.");
         addWithSettings("miscellaneous",
-                "Display and responsiveness controls: smooth camera, frame pacing, a global frame cap, latency, input handling, tab list and nametag styling, server-list dragging, per-sound volume, and Streamer Mode privacy masking. Each keeps its own enable toggle and settings under its section.",
-                        () -> cfg.smoothCamera || cfg.smoothFramePacer || cfg.lowLatencyRender
+                "Display and responsiveness controls: frame pacing, a global frame cap, latency, input handling, tab list and nametag styling, server-list dragging, per-sound volume, and Streamer Mode privacy masking. Each keeps its own enable toggle and settings under its section.",
+                        () -> cfg.smoothFramePacer || cfg.lowLatencyRender
                         || cfg.inputSamplingDecoupled
                         || cfg.serverListDragReorder || cfg.frameCapFps > 0
                         || cfg.tabListHideHeader || cfg.tabListHideFooter || cfg.tabListHideHeads
@@ -1991,7 +1994,6 @@ addWithSettings("hitbox",
                         || cfg.nametagStyleCustomBackground || Math.abs(cfg.nametagStyleScale - 1.0) > 1e-4
                         || cfg.soundVolumesEnabled || cfg.streamerModeEnabled,
                 v -> {
-                    cfg.smoothCamera = v;
                     cfg.smoothFramePacer = v;
                     cfg.lowLatencyRender = v;
                     cfg.inputSamplingDecoupled = v;
@@ -2015,8 +2017,6 @@ addWithSettings("hitbox",
                     }
                 },
                 List.of(
-                        new SectionHeaderSetting("Smooth Camera"),
-                        smoothCameraEnabled, smoothCameraStrength,
                         new SectionHeaderSetting("Frame Pacer"),
                         framePacerEnabled, framePacingStrategy, framePacerLowCpu,
                         framePacerSpinThreshold, framePacerParkThreshold,
@@ -2049,7 +2049,6 @@ addWithSettings("hitbox",
                 // Union of the original tiles' config fields (see the
                 // resetByPrefix comment on pack_tweaks for prefix rules).
                 List.of(
-                        "smoothCamera",
                         "smoothFramePacer", "framePacer", "framePacing", "frameCap",
                         "lowLatencyRender", "disableVSync", "adaptiveRenderSleeping",
                         "inputSamplingDecoupled", "tabList", "nametagStyle", "serverListDragReorder", "soundVolumes", "streamer"));
@@ -2120,7 +2119,6 @@ addWithSettings("hitbox",
                 group("nametags", "Nametags", nametagShowSelf, nametagTextShadow, nametagCustomBg,
                         nametagBgOpacity, nametagScale).pageSummary("Third-person self nametag and floating nametag styling."))));
         SETTINGS_PAGES.add(new SettingsPage("Controls", List.of(
-                group("smooth_camera", "Smooth Camera", smoothCameraEnabled, smoothCameraStrength).pageSummary("Eases mouse look into and out of movement."),
                 group("decoupled_input", "Decoupled Input", decoupledInputEnabled).pageSummary("Applies mouse movement at the very start of each frame."),
                 group("aurora_keys", "Aurora Keys", hudEditorKey).pageSummary("Keys that open Aurora's own screens."))));
         SETTINGS_PAGES.add(new SettingsPage("Sound", List.of(
@@ -2135,7 +2133,8 @@ addWithSettings("hitbox",
                 .description("How many typos a search word can have and still find a match. Exact only finds exact matches; short words always need to be exact.");
         SETTINGS_PAGES.add(new SettingsPage("Performance", List.of(
                 group("debug_screen", "Debug Screen", debugEntryCache).pageSummary("Makes the F3 screen cheaper to draw."),
-                group("maps", "Maps", minimapRefreshCap).pageSummary("Limits how often the minimap redraws its terrain."))));
+                group("maps", "Maps", minimapRefreshCap).pageSummary("Limits how often the minimap redraws its terrain."),
+                group("background", "Background", unfocusedLimit, unfocusedFps).pageSummary("Slows drawing while another window has focus."))));
         FeatureSetting resourcepackFolders = new BooleanSetting("Resource Pack Folders",
                 () -> cfg.resourcepackFoldersEnabled, v -> { cfg.resourcepackFoldersEnabled = v; AuroraConfig.save(); })
                 .resetDefault("resourcepackFoldersEnabled", () -> defaults.resourcepackFoldersEnabled)

@@ -93,7 +93,7 @@ public class AuroraConfig {
      * config whose name starts with {@code camelCasePrefix} back to its
      * factory-default value. Used by the per-feature "Reset" affordances
      * in the Aurora UI; matching is by camelCase prefix so a feature id
-     * like {@code smooth_camera} cleanly resets {@code smoothCamera*}.
+     * like {@code free_look} cleanly resets {@code freeLook*}.
      *
      * <p>Silently ignores fields that fail to reflect (e.g. transient
      * collections that GSON skipped) — never throws to a caller.
@@ -374,8 +374,6 @@ public class AuroraConfig {
         HYBRID,     // park -> spin (longer spin window than PARK)
         SPIN        // pure busy loop (max precision, wastes a core)
     }
-    public boolean smoothCamera = false;
-    public double smoothCameraStrength = 0.5; // 0.05 = very smooth, 1.0 = instant
     public boolean smoothAnimationsEnabled = false;
     public AnimationCurve swingAnimationCurve = AnimationCurve.QUARTIC_OUT;
     // viewBobCurve was removed 2026-11-18: vanilla's bobView no longer takes a

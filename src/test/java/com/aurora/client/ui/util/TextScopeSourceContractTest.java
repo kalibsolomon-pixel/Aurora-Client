@@ -100,4 +100,21 @@ class TextScopeSourceContractTest {
         org.junit.jupiter.api.Assertions.assertTrue(mixin.contains("method = {\"init(II)V\", \"resize(II)V\"}, at = @At(\"HEAD\")"));
         org.junit.jupiter.api.Assertions.assertTrue(mixin.contains("method = {\"init(II)V\", \"resize(II)V\"}, at = @At(\"RETURN\")"));
     }
+
+    @Test void interactiveLayoutRefreshesMeasureInsideTheScope() {
+        // Input handlers (mouseClicked, mouseDragged, mouseScrolled) run outside
+        // ScreenTextScopeMixin's render scope; refreshing layout there without
+        // entering the window scope flips AURORA_ONLY to vanilla widths and shifts
+        // hitboxes away from the rendered controls.
+        for (String screen : List.of(
+                "screen/AuroraScreen.java",
+                "screen/FeatureDetailScreen.java",
+                "screen/ManagerListScreen.java")) {
+            String src = SourceTree.read(screen);
+            assertTrue(src.contains("AuroraFontRenderer.enterWindowScope(this)"),
+                    screen + " must open the window text scope when refreshing layout during input");
+            assertTrue(src.contains("AuroraFontRenderer.exitWindowScope()"),
+                    screen + " must close the window text scope in a finally block");
+        }
+    }
 }

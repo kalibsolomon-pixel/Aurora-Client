@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 PREFIXES = tuple("""
-zoom fullBright smoothCamera smoothAnimations swing viewBob idleSway animationCurve anim
+zoom fullBright smoothAnimations swing viewBob idleSway animationCurve anim
 hitColor glintColor info armor effectExpiry toolDurability freeLook saturationBar
 tabPing tabList nametagStyle toggleSprint toggleSneak blockOverlay potion totem shield itemScale
 mainHand offHand playerHealth noFog fogDistance underwater lava

@@ -292,6 +292,15 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
     protected final int cellY(int slot) { return (int) rowsLayout.at(slot).y(layoutScroll()); }
 
     private void refreshLayout(List<T> rows, int listX) {
+        boolean scoped = com.aurora.client.ui.util.AuroraFontRenderer.enterWindowScope(this);
+        try {
+            refreshLayoutScoped(rows, listX);
+        } finally {
+            if (scoped) com.aurora.client.ui.util.AuroraFontRenderer.exitWindowScope();
+        }
+    }
+
+    private void refreshLayoutScoped(List<T> rows, int listX) {
         int lead = leadingRowCount(), cols = Math.max(1, columns());
         int height = rowHeight(), rowGap = rowGap(), colGap = columnGap();
         int top = listTop(), clipTop = listClipTop(), clipBottom = listClipBottom(), width = listWidth();
@@ -903,8 +912,13 @@ public abstract class ManagerListScreen<T> extends Screen implements ThemedScree
         // the band keeps fresh bounds (see layoutRenameField) yet its
         // clipped-away pixels are not actionable; a click outside the band
         // must reach the rows/toolbar, never a hidden editor.
-        if (rowsLayout.viewport().contains(mouseX, mouseY)
+        boolean editorScoped = com.aurora.client.ui.util.AuroraFontRenderer.enterWindowScope(this);
+        try {
+            if (rowsLayout.viewport().contains(mouseX, mouseY)
                 && editorClickFirst(_ev, _doubleClicked)) return true;
+        } finally {
+            if (editorScoped) com.aurora.client.ui.util.AuroraFontRenderer.exitWindowScope();
+        }
 
         // Screen-specific pre-row controls (the Profile create button).
         if (rowAreaClickFirst(mouseX, mouseY)) return true;
