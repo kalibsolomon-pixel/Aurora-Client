@@ -104,8 +104,8 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
                     SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new EnumSetting<>", -1).length - 1;
-            assertEquals(31, count,
-                    "production EnumSetting construction sites (inventory drift guard; 29→31 with the Health and Ping HUDs' Background, 2026-11-19; 25→24 with Swing Style's removal, 2026-10-30; 24→25 with Text's Weight, 2026-11-12; 25→27 with the Alerts' two module-background dropdowns, 2026-11-12; 27→29 with Hit Color's Flash Style and the Scoreboard HUD's Background, 2026-11-12; 29→30 with Keystrokes' Key Style, 2026-11-17; 31→30 with Window Bevel's retirement, 2026-11-18; 30→29 with View Bob Curve's removal, 2026-11-18)");
+            assertEquals(32, count,
+                    "production EnumSetting construction sites (inventory drift guard; 31→32 with Chat's Timestamp Format, 2026-11-21; 29→31 with the Health and Ping HUDs' Background, 2026-11-19; 25→24 with Swing Style's removal, 2026-10-30; 24→25 with Text's Weight, 2026-11-12; 25→27 with the Alerts' two module-background dropdowns, 2026-11-12; 27→29 with Hit Color's Flash Style and the Scoreboard HUD's Background, 2026-11-12; 29→30 with Keystrokes' Key Style, 2026-11-17; 31→30 with Window Bevel's retirement, 2026-11-18; 30→29 with View Bob Curve's removal, 2026-11-18)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }
@@ -209,7 +209,8 @@ class RolloutStatesTest {
             // Settings tab's Controls page (it was vanilla-Controls-only).
             // 18 → 12 on 2026-11-15: Better Hitreg's six keybind rows were
             // removed with everything but its custom hitreg.
-            assertEquals(12, count,
+            // 12 → 13 on 2026-11-21: Chat Peek Key added with Chat Suite.
+            assertEquals(13, count,
                     "production KeybindSetting construction sites (inventory drift guard)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());

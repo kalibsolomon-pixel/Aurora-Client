@@ -1426,6 +1426,70 @@ addWithSettings("hitbox",
                                 () -> cfg.keystrokesBgColor, v -> cfg.keystrokesBgColor = v).resetDefault(() -> defaults.keystrokesBgColor)
                 ));
 
+        addWithSettings("chat",
+                "Enhances Minecraft's chat locally without sending any messages or packets: compact duplicate lines, local timestamps, online player chat heads, in-chat search (Ctrl+F), click-to-copy, hold-to-peek while moving, longer history, and per-server session history.",
+                () -> cfg.chatEnabled, v -> cfg.chatEnabled = v,
+                List.of(
+                        new SectionHeaderSetting("Formatting & Readability"),
+                        new BooleanSetting("Compact Duplicate Messages",
+                                () -> cfg.chatCompactDuplicates,
+                                v -> cfg.chatCompactDuplicates = v).resetDefault("chatCompactDuplicates", () -> defaults.chatCompactDuplicates)
+                                .description("Merges repeated chat messages within the lookback window into a single line with a [xN] counter."),
+                        SliderSetting.ofInt("Duplicate Lookback",
+                                () -> cfg.chatCompactWindow,
+                                v -> cfg.chatCompactWindow = v, 1, 50).resetDefault(() -> defaults.chatCompactWindow)
+                                .description("How many recent messages to scan when collapsing repeated chat lines.")
+                                .disabled(() -> !cfg.chatCompactDuplicates),
+                        new BooleanSetting("Timestamps",
+                                () -> cfg.chatTimestampsEnabled,
+                                v -> cfg.chatTimestampsEnabled = v).resetDefault("chatTimestampsEnabled", () -> defaults.chatTimestampsEnabled)
+                                .description("Prepends your local wall-clock time to each incoming chat message."),
+                        new EnumSetting<>("Timestamp Format",
+                                AuroraConfig.ChatTimestampFormat.class,
+                                () -> cfg.chatTimestampFormat,
+                                v -> cfg.chatTimestampFormat = v).resetDefault(() -> defaults.chatTimestampFormat)
+                                .labels(AuroraConfig.ChatTimestampFormat::getLabel)
+                                .description("Choose between 24-hour (HH:mm), 24-hour with seconds (HH:mm:ss), or 12-hour (h:mm AM/PM).")
+                                .disabled(() -> !cfg.chatTimestampsEnabled),
+                        new BooleanSetting("Player Chat Heads",
+                                () -> cfg.chatHeadsEnabled,
+                                v -> cfg.chatHeadsEnabled = v).resetDefault("chatHeadsEnabled", () -> defaults.chatHeadsEnabled)
+                                .description("Draws the sender's player head inline before messages sent by players currently on the server."),
+                        new SectionHeaderSetting("Search, Copy & Peek"),
+                        new BooleanSetting("In-Chat Search",
+                                () -> cfg.chatSearchEnabled,
+                                v -> cfg.chatSearchEnabled = v).resetDefault("chatSearchEnabled", () -> defaults.chatSearchEnabled)
+                                .description("Adds a live search bar inside the chat screen (press Ctrl+F to focus, Escape to clear)."),
+                        new BooleanSetting("Click-to-Copy Message",
+                                () -> cfg.chatCopyEnabled,
+                                v -> cfg.chatCopyEnabled = v).resetDefault("chatCopyEnabled", () -> defaults.chatCopyEnabled)
+                                .description("Right-click or Ctrl+Left-click any chat message while chat is open to copy its clean text to your clipboard."),
+                        new BooleanSetting("Chat Peek",
+                                () -> cfg.chatPeekEnabled,
+                                v -> cfg.chatPeekEnabled = v).resetDefault("chatPeekEnabled", () -> defaults.chatPeekEnabled)
+                                .description("Hold the Chat Peek key while playing to view full focused-height chat without opening the chat screen or stopping movement."),
+                        new KeybindSetting("Chat Peek Key",
+                                () -> cfg.chatPeekKey,
+                                v -> cfg.chatPeekKey = v).resetDefault(() -> defaults.chatPeekKey)
+                                .description("Hold this key in-world to peek at full chat while keeping full movement control. Press ESC or Backspace while rebinding to clear it.")
+                                .disabled(() -> !cfg.chatPeekEnabled),
+                        new SectionHeaderSetting("History"),
+                        SliderSetting.ofInt("Chat History Limit",
+                                () -> cfg.chatHistoryLimit,
+                                v -> cfg.chatHistoryLimit = v, 100, 5000).resetDefault(() -> defaults.chatHistoryLimit)
+                                .description("Maximum number of chat lines retained in memory (vanilla default is 100)."),
+                        new BooleanSetting("Per-Server Chat History",
+                                () -> cfg.chatPerServerHistory,
+                                v -> cfg.chatPerServerHistory = v).resetDefault("chatPerServerHistory", () -> defaults.chatPerServerHistory)
+                                .description("Saves recent chat lines per server/world locally and restores them above a session divider when you rejoin."),
+                        SliderSetting.ofInt("Saved Lines Per Server",
+                                () -> cfg.chatPerServerMaxSaved,
+                                v -> cfg.chatPerServerMaxSaved = v, 50, 500).resetDefault(() -> defaults.chatPerServerMaxSaved)
+                                .description("Maximum number of chat lines stored on disk for each server or singleplayer world.")
+                                .disabled(() -> !cfg.chatPerServerHistory)
+                ),
+                List.of("chat"));
+
         // ---- Display Settings ----
         // One catalog feature (fair play, mixin health, one reset) whose
         // rows have no screen of their own: the Settings tab's pages show

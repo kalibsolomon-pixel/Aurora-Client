@@ -80,6 +80,8 @@
     "AbstractButtonMixin",
     "EditBoxMixin",
     "ServerListDragReorderMixin",
+    "ChatComponentSuiteMixin",
+    "ChatScreenSuiteMixin",
     "MultiplayerServerListWidgetMixin",
     "ClientLevelWorldMapMixin",
     "ReflexMinecraftMixin",

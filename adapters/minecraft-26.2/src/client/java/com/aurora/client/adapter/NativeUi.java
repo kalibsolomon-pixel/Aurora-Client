@@ -16,4 +16,5 @@ public final class NativeUi {
     public static RenderTarget mainTarget(Minecraft client) { return client.gameRenderer.mainRenderTarget(); }
     /** Opens a folder or file in the system's file manager. */
     public static void openPath(java.nio.file.Path path) { net.minecraft.util.Util.getPlatform().openPath(path); }
+    public static net.minecraft.client.gui.components.ChatComponent chat(Minecraft client) { return client.gui.hud.getChat(); }
 }

@@ -874,5 +874,18 @@
   "minimapCoordColor": -1,
   "worldMapEnabled": false,
   "worldMapKey": 28,
-  "resourcepackBrowserEnabled": true
+  "resourcepackBrowserEnabled": true,
+  "chatEnabled": false,
+  "chatCompactDuplicates": true,
+  "chatCompactWindow": 8,
+  "chatTimestampsEnabled": true,
+  "chatTimestampFormat": "HH_MM",
+  "chatSearchEnabled": true,
+  "chatCopyEnabled": true,
+  "chatHeadsEnabled": true,
+  "chatPeekEnabled": true,
+  "chatPeekKey": -1,
+  "chatHistoryLimit": 1000,
+  "chatPerServerHistory": true,
+  "chatPerServerMaxSaved": 200
 }
