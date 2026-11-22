@@ -220,19 +220,151 @@ public final class FeatureRegistry {
         // legible. Master toggle is ON if ANY sub-feature flag is on; the
         // setter flips all sub-flags together.
         addWithSettings("pack_tweaks",
-                "A bundle of small quality-of-life visual tweaks — totem particle size, shield rendering, and water/lava clarity. Toggling the bundle on enables all of them; expand it to fine-tune each one individually.",
+                "Quality-of-life visual tweaks — totem particle size, shield rendering, fluid clarity, motion blur, colour saturation, local time and weather, custom skies, fire overlay, and hurt camera.",
                 () -> cfg.totemTweaksEnabled
                         || cfg.shieldTweaksEnabled
                         || cfg.shieldStatusEnabled
-                        || cfg.underwaterClarityEnabled || cfg.lavaClarityEnabled,
+                        || cfg.underwaterClarityEnabled || cfg.lavaClarityEnabled
+                        || cfg.motionBlurStrength > 0.001
+                        || Math.abs(cfg.colorSaturation - 1.0) > 0.001
+                        || cfg.localTimeEnabled || cfg.localWeatherEnabled
+                        || cfg.customSkyMode != AuroraConfig.CustomSkyMode.VANILLA
+                        || !cfg.customSkyShowSun || !cfg.customSkyShowMoon || !cfg.customSkyShowStars
+                        || cfg.customSkyHideVoid
+                        || cfg.fireOverlayHide || Math.abs(cfg.fireOverlayHeight) > 1e-4
+                        || Math.abs(cfg.fireOverlayOpacity - 0.9) > 1e-4
+                        || !cfg.hurtCamEnabled || Math.abs(cfg.hurtCamStrength - 1.0) > 1e-4,
                 v -> {
                     cfg.totemTweaksEnabled       = v;
                     cfg.shieldTweaksEnabled      = v;
                     cfg.shieldStatusEnabled      = v;
                     cfg.underwaterClarityEnabled = v;
                     cfg.lavaClarityEnabled       = v;
+                    if (!v) {
+                        cfg.motionBlurStrength = 0.0;
+                        cfg.colorSaturation = 1.0;
+                        cfg.localTimeEnabled = false;
+                        cfg.localWeatherEnabled = false;
+                        cfg.customSkyMode = AuroraConfig.CustomSkyMode.VANILLA;
+                        cfg.customSkyShowSun = true;
+                        cfg.customSkyShowMoon = true;
+                        cfg.customSkyShowStars = true;
+                        cfg.customSkyStarBrightness = 1.0;
+                        cfg.customSkyHideVoid = false;
+                        cfg.fireOverlayHide = false;
+                        cfg.fireOverlayHeight = 0.0;
+                        cfg.fireOverlayOpacity = 0.9;
+                        cfg.hurtCamEnabled = true;
+                        cfg.hurtCamStrength = 1.0;
+                    }
                 },
                 java.util.Arrays.asList(
+                        new SectionHeaderSetting("Post-Processing"),
+                        SliderSetting.of("Motion Blur",
+                                () -> cfg.motionBlurStrength,
+                                v -> cfg.motionBlurStrength = v, 0.0, 0.85).resetDefault(() -> defaults.motionBlurStrength)
+                                .valueFormatter(v -> v <= 0.001 ? "Off" : Math.round(v * 100.0) + "%")
+                                .description("Frame-rate-independent temporal motion blur applied to the world only — HUD and menus stay sharp. 0% turns it off with zero shader cost."),
+                        SliderSetting.of("Colour Saturation",
+                                () -> cfg.colorSaturation,
+                                v -> cfg.colorSaturation = v, 0.0, 2.0).resetDefault(() -> defaults.colorSaturation).percent()
+                                .description("Adjusts world colour vibrance from 0% (grayscale) through 100% (vanilla) up to 200% (vivid). Leaves HUD and menus untouched."),
+
+                        new SectionHeaderSetting("Local Time & Weather"),
+                        new BooleanSetting("Override Local Time",
+                                () -> cfg.localTimeEnabled,
+                                v -> cfg.localTimeEnabled = v).resetDefault("localTimeEnabled", () -> defaults.localTimeEnabled)
+                                .description("Locks your client-side sky and lighting to a fixed time of day without affecting servers. Off in a fresh install."),
+                        SliderSetting.ofInt("Time of Day (ticks)",
+                                () -> cfg.localTimeTicks,
+                                v -> cfg.localTimeTicks = v, 0, 23999).resetDefault(() -> defaults.localTimeTicks)
+                                .valueFormatter(v -> {
+                                    int t = v.intValue();
+                                    if (t == 0) return "0 (Sunrise)";
+                                    if (t == 6000) return "6000 (Noon)";
+                                    if (t == 12000) return "12000 (Sunset)";
+                                    if (t == 18000) return "18000 (Midnight)";
+                                    return t + " ticks";
+                                })
+                                .disabled(() -> !cfg.localTimeEnabled)
+                                .description("0 = Sunrise, 6000 = Noon, 12000 = Sunset, 18000 = Midnight."),
+                        new BooleanSetting("Override Local Weather",
+                                () -> cfg.localWeatherEnabled,
+                                v -> cfg.localWeatherEnabled = v).resetDefault("localWeatherEnabled", () -> defaults.localWeatherEnabled)
+                                .description("Overrides rendered rain and thunder locally on your client. Off in a fresh install."),
+                        new EnumSetting<>("Local Weather",
+                                AuroraConfig.LocalWeather.class,
+                                () -> cfg.localWeatherMode,
+                                v -> cfg.localWeatherMode = v).resetDefault(() -> defaults.localWeatherMode)
+                                .valueDescriptions(w -> switch (w) {
+                                    case CLEAR -> "Clear skies with no rain or thunder.";
+                                    case RAIN -> "Steady rainfall locally on your screen.";
+                                    case THUNDER -> "Storm clouds and thunder locally on your screen.";
+                                })
+                                .disabled(() -> !cfg.localWeatherEnabled),
+
+                        new SectionHeaderSetting("Custom Skies"),
+                        new EnumSetting<>("Sky Style",
+                                AuroraConfig.CustomSkyMode.class,
+                                () -> cfg.customSkyMode,
+                                v -> cfg.customSkyMode = v).resetDefault(() -> defaults.customSkyMode)
+                                .valueDescriptions(m -> switch (m) {
+                                    case VANILLA -> "Vanilla sky dome and horizon colors.";
+                                    case CLEAR_DAY -> "Clean azure daytime sky dome.";
+                                    case SUNSET -> "Warm amber-coral sunset sky with horizon glow.";
+                                    case AURORA_NIGHT -> "Deep indigo night sky with subtle cyan horizon glow and boosted stars.";
+                                    case CUSTOM_COLOR -> "Uses the Custom Sky Color selected below.";
+                                }),
+                        new ColorSetting("Custom Sky Color",
+                                () -> cfg.customSkyColor,
+                                v -> cfg.customSkyColor = v).resetDefault(() -> defaults.customSkyColor)
+                                .disabled(() -> cfg.customSkyMode != AuroraConfig.CustomSkyMode.CUSTOM_COLOR),
+                        new BooleanSetting("Show Sun",
+                                () -> cfg.customSkyShowSun,
+                                v -> cfg.customSkyShowSun = v).resetDefault("customSkyShowSun", () -> defaults.customSkyShowSun),
+                        new BooleanSetting("Show Moon",
+                                () -> cfg.customSkyShowMoon,
+                                v -> cfg.customSkyShowMoon = v).resetDefault("customSkyShowMoon", () -> defaults.customSkyShowMoon),
+                        new BooleanSetting("Show Stars",
+                                () -> cfg.customSkyShowStars,
+                                v -> cfg.customSkyShowStars = v).resetDefault("customSkyShowStars", () -> defaults.customSkyShowStars),
+                        SliderSetting.of("Star Brightness",
+                                () -> cfg.customSkyStarBrightness,
+                                v -> cfg.customSkyStarBrightness = v, 0.0, 3.0).resetDefault(() -> defaults.customSkyStarBrightness)
+                                .valueFormatter(v -> String.format(java.util.Locale.ROOT, "%.2fx", v))
+                                .disabled(() -> !cfg.customSkyShowStars)
+                                .description("Boosts or dims star visibility in the night sky."),
+                        new BooleanSetting("Hide Void Dark Sky",
+                                () -> cfg.customSkyHideVoid,
+                                v -> cfg.customSkyHideVoid = v).resetDefault("customSkyHideVoid", () -> defaults.customSkyHideVoid)
+                                .description("Hides the pitch-black lower sky disc that appears below sea level."),
+
+                        new SectionHeaderSetting("Fire Overlay & Hurt Camera"),
+                        new BooleanSetting("Hide Fire Overlay",
+                                () -> cfg.fireOverlayHide,
+                                v -> cfg.fireOverlayHide = v).resetDefault("fireOverlayHide", () -> defaults.fireOverlayHide)
+                                .description("Hides the first-person on-fire overlay without enabling Lava Clarity."),
+                        SliderSetting.of("Fire Height Offset",
+                                () -> cfg.fireOverlayHeight,
+                                v -> cfg.fireOverlayHeight = v, -0.50, 0.20).resetDefault(() -> defaults.fireOverlayHeight)
+                                .valueFormatter(v -> String.format(java.util.Locale.ROOT, "%+.2f", v))
+                                .disabled(() -> cfg.fireOverlayHide)
+                                .description("Lowers (negative) or raises (positive) the first-person fire flames. Try -0.30 for classic PvP low fire."),
+                        SliderSetting.of("Fire Opacity",
+                                () -> cfg.fireOverlayOpacity,
+                                v -> cfg.fireOverlayOpacity = v, 0.0, 1.0).resetDefault(() -> defaults.fireOverlayOpacity).percent()
+                                .disabled(() -> cfg.fireOverlayHide)
+                                .description("Opacity of the first-person fire overlay (90% is vanilla)."),
+                        new BooleanSetting("Hurt Camera",
+                                () -> cfg.hurtCamEnabled,
+                                v -> cfg.hurtCamEnabled = v).resetDefault("hurtCamEnabled", () -> defaults.hurtCamEnabled)
+                                .description("Turn off to remove camera tilt/shake completely whenever you take damage."),
+                        SliderSetting.of("Hurt Camera Strength",
+                                () -> cfg.hurtCamStrength,
+                                v -> cfg.hurtCamStrength = v, 0.0, 2.0).resetDefault(() -> defaults.hurtCamStrength).percent()
+                                .disabled(() -> !cfg.hurtCamEnabled)
+                                .description("Scales the intensity of the damage camera shake (100% is vanilla)."),
+
                         new SectionHeaderSetting("Particles / Presentation"),
                         SliderSetting.ofInt("Particle Size %",
                                 () -> cfg.totemParticleScale,
@@ -278,10 +410,10 @@ public final class FeatureRegistry {
                                 () -> cfg.lavaFogMultiplier,
                                 v -> cfg.lavaFogMultiplier = v, 1.0, 50.0).resetDefault(() -> defaults.lavaFogMultiplier)
                                 .description("Pushes back the thick orange fog when your head is submerged in lava, letting you see further through it. Invaluable for spotting ancient debris or an exit while swimming lava in the Nether. Higher = clearer."),
-                        new BooleanSetting("Hide 1st Person Fire",
+                        new BooleanSetting("Hide 1st Person Fire (Lava Clarity)",
                                 () -> cfg.lavaHideOverlay,
                                 v -> cfg.lavaHideOverlay = v).resetDefault("lavaHideOverlay", () -> defaults.lavaHideOverlay)
-                                .description("Hides the orange tint when submerged. Also hides the on-fire screen tint.")
+                                .description("Hides the orange tint when submerged while Lava Clarity is active.")
                 ),
                 // Prefixes match camelCase config field names via
                 // AuroraConfig.resetByPrefix (String.startsWith). The broad
@@ -292,7 +424,9 @@ public final class FeatureRegistry {
                 java.util.Arrays.asList(
                         "totemTweaks", "totemParticle", "shield",
                         "underwaterClarity", "underwaterFog",
-                        "lavaClarity", "lavaFog", "lavaHide"));
+                        "lavaClarity", "lavaFog", "lavaHide",
+                        "motionBlur", "colorSaturation", "localTime", "localWeather",
+                        "customSky", "fireOverlay", "hurtCam"));
 
         addWithSettings("player_health",
                 "Shows how much health nearby mobs and players have left, either as a precise number or as vanilla's own heart bar, and your own health to two decimals on the HUD. Each has its own switch. Great for judging whether one more hit will finish a target — in PvP and against tanky mobs alike.",

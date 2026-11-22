@@ -925,6 +925,51 @@ public class AuroraConfig {
     public double  lavaFogMultiplier = 8.0;
     public boolean lavaHideOverlay = false;   // true = cancel orange overlay entirely
 
+    // ---- Pack Tweaks additions: post-processing, local time/weather, custom skies, fire, hurt cam ----
+    /** Temporal motion blur strength (0.0 Off .. 0.85). Cosmetic. */
+    public double motionBlurStrength = 0.0;
+    /** World colour saturation multiplier (0.0 grayscale .. 1.0 vanilla .. 2.0 vibrant). Cosmetic. */
+    public double colorSaturation = 1.0;
+
+    /** Override rendered client-side time of day (vanilla-equivalent, off by default). */
+    public boolean localTimeEnabled = false;
+    /** Local time of day in ticks (0 sunrise, 6000 noon, 12000 sunset, 18000 midnight). */
+    public int localTimeTicks = 6000;
+
+    public enum LocalWeather { CLEAR, RAIN, THUNDER }
+    /** Override rendered client-side weather (vanilla-equivalent, off by default). */
+    public boolean localWeatherEnabled = false;
+    /** Client-side weather preset when {@link #localWeatherEnabled} is true. */
+    public LocalWeather localWeatherMode = LocalWeather.CLEAR;
+
+    public enum CustomSkyMode { VANILLA, CLEAR_DAY, SUNSET, AURORA_NIGHT, CUSTOM_COLOR }
+    /** Sky dome preset or custom color override (cosmetic). */
+    public CustomSkyMode customSkyMode = CustomSkyMode.VANILLA;
+    /** Sky dome color used when {@link #customSkyMode} is {@link CustomSkyMode#CUSTOM_COLOR}. */
+    public int customSkyColor = 0xFF1A2850;
+    /** Render the sun in the sky. */
+    public boolean customSkyShowSun = true;
+    /** Render the moon in the sky. */
+    public boolean customSkyShowMoon = true;
+    /** Render stars in the night/custom sky. */
+    public boolean customSkyShowStars = true;
+    /** Multiplier on star brightness (0.0..3.0; 1.0 = vanilla). */
+    public double customSkyStarBrightness = 1.0;
+    /** Hide the dark void horizon disc rendered below Y=63. */
+    public boolean customSkyHideVoid = false;
+
+    /** Hide the first-person fire overlay completely (independent of Lava Clarity). */
+    public boolean fireOverlayHide = false;
+    /** Vertical offset for the first-person fire overlay (-0.50 low fire .. 0.20). */
+    public double fireOverlayHeight = 0.0;
+    /** Opacity of the first-person fire overlay (0.0..1.0; 0.9 = vanilla). */
+    public double fireOverlayOpacity = 0.9;
+
+    /** Enable/disable camera hurt shake (false cancels hurt camera shake completely). */
+    public boolean hurtCamEnabled = true;
+    /** Strength multiplier on camera hurt shake (0.0..2.0; 1.0 = vanilla). */
+    public double hurtCamStrength = 1.0;
+
     // Per-module background settings
     /** Default plain HUD backdrop; legacy AURORA modes migrate to SOLID. */
     public HudBackground infoBgMode = HudBackground.SOLID;

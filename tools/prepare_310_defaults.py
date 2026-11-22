@@ -12,6 +12,7 @@ zoom fullBright smoothCamera smoothAnimations swing viewBob idleSway animationCu
 hitColor glintColor info armor effectExpiry toolDurability freeLook saturationBar
 tabPing tabList nametagStyle toggleSprint toggleSneak blockOverlay potion totem shield itemScale
 mainHand offHand playerHealth noFog fogDistance underwater lava
+motionBlur colorSaturation localTime localWeather customSky fireOverlay hurtCam
 cps reach sprintHud waypointDisplay waypointBeam waypointLabel waypointBlock
 waypointShow deathWaypoint crosshair hitbox particle containerPreview itemPhysics
 keystrokes minimap worldMapShow resourcepackBrowser pulsar scoreboard vanillaHud inventoryHud

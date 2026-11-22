@@ -46,7 +46,7 @@ Changing a default does not change an existing install: a player who already had
 | Zoom | Vanilla equivalent | Narrows the field of view while a key is held, as the vanilla spyglass does. |
 | Full Bright | Vanilla equivalent | Extends the vanilla Brightness setting past its maximum, so unlit areas are visible. Off in a fresh install. |
 | No Fog | Vanilla equivalent | Pushes distance fog back, so terrain inside your render distance is visible sooner than in vanilla. Off in a fresh install. |
-| Pack Tweaks | Cosmetic | Totem particle size, first-person shield position and a tint for your own shield's cooldown. Its water and lava clarity switches improve visibility inside fluids and ship off. |
+| Pack Tweaks | Cosmetic | Totem particle size, shield position and status tint, motion blur, colour saturation, custom skies, fire overlay, and hurt camera. Fluid clarity and client-side local time/weather improve visibility and ship off. |
 | Health Indicators | Information advantage | Shows the health of nearby mobs and players above them, and your own health to two decimals. Vanilla does not show other players' health. Players have their own switch, also off. |
 | Free Look | Information advantage | Lets the camera look around without turning the character, a view vanilla does not allow. |
 | Saturation Bar | Vanilla equivalent | Shows your own saturation on the food bar. |
