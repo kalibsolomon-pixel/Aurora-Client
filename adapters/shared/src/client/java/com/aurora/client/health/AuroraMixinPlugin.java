@@ -1,5 +1,7 @@
 package com.aurora.client.health;
 
+import com.aurora.client.compat.EphemeraOwnership;
+import net.fabricmc.loader.api.FabricLoader;
 import org.objectweb.asm.tree.ClassNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +59,7 @@ public final class AuroraMixinPlugin implements IMixinConfigPlugin {
         // patch into another mod applies only when that mod is installed.
         var binding = com.aurora.client.feature.FeatureCatalog.mixin(name);
         String reason = binding == null ? null
-                : binding.standDownReason(net.fabricmc.loader.api.FabricLoader.getInstance()::isModLoaded);
+                : binding.standDownReason(FabricLoader.getInstance()::isModLoaded, EphemeraOwnership::has);
         if (reason == null) return true;
         MixinHealth.noteStoodDown(name, reason);
         return false;

@@ -1,11 +1,13 @@
 package com.aurora.client.screen;
 
 import com.aurora.client.AuroraClient;
+import com.aurora.client.compat.EphemeraOwnership;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.feature.FeatureCatalog;
 import com.aurora.client.config.profile.ProfileManager;
 import com.aurora.client.screen.setting.*;
 import com.aurora.client.theme.ThemeMode;
+import com.aurora.client.util.EphemeraPacingHook;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -1799,7 +1801,10 @@ addWithSettings("hitbox",
         FeatureSetting framePacerEnabled = new BooleanSetting("Enabled",
                 () -> cfg.smoothFramePacer,
                 v -> cfg.smoothFramePacer = v).resetDefault("smoothFramePacer", () -> defaults.smoothFramePacer)
-                .description("A high-precision replacement for Minecraft's built-in FPS cap. Vanilla's limiter spaces frames unevenly, which you feel as micro-stutter even at high FPS. The Frame Pacer holds each frame to a near-exact interval, so motion looks visibly smoother at the same average framerate. Set your FPS cap in vanilla Video Settings; this controls *how* that cap is enforced.");
+                .description(() -> EphemeraPacingHook.ownsFramePacing()
+                        ? "Ephemera is pacing frames. Adjust its pacer under Settings → Performance → Ephemera Engine."
+                        : "Spaces frames evenly at the FPS cap set in Video Settings.")
+                .disabled(EphemeraPacingHook::ownsFramePacing);
         FeatureSetting framePacingStrategy = new EnumSetting<>("Strategy",
                 AuroraConfig.PacingStrategy.class,
                 () -> cfg.framePacingStrategy,
@@ -1809,20 +1814,22 @@ addWithSettings("hitbox",
                     case PARK -> "Default. Sleeps for most of the wait, spinning only the final half-millisecond. Measured the most stable frame times of any strategy at 60 fps while using the least CPU - cool and quiet with nothing given up.";
                     case HYBRID -> "Sleeps until the configured Park Threshold, then spins to the deadline. Low CPU uses the shorter Spin Threshold instead. Kept for existing manual configurations.";
                     case SPIN -> "Pure busy-loop. Maximum precision (sub-microsecond) but wastes a CPU core. Useful for benchmarking only.";
-                });
+                }).disabled(EphemeraPacingHook::ownsFramePacing);
         FeatureSetting framePacerLowCpu = new BooleanSetting("Low CPU (Hybrid only)",
                 () -> cfg.framePacerLowCpuMode,
                 v -> cfg.framePacerLowCpuMode = v).resetDefault("framePacerLowCpuMode", () -> defaults.framePacerLowCpuMode)
                 .description("Hybrid only: parks until the configured Spin Threshold, shortening its planned spin window. Park and Spin are unchanged. Timing precision and actual CPU effects depend on the system.")
-                .disabled(() -> cfg.framePacingStrategy != AuroraConfig.PacingStrategy.HYBRID);
+                .disabled(() -> EphemeraPacingHook.ownsFramePacing() || cfg.framePacingStrategy != AuroraConfig.PacingStrategy.HYBRID);
         FeatureSetting framePacerSpinThreshold = SliderSetting.ofInt("Spin Threshold (µs)",
                 () -> cfg.framePacerSpinThresholdMicros,
                 v -> cfg.framePacerSpinThresholdMicros = v, 100, 2000).resetDefault(() -> defaults.framePacerSpinThresholdMicros)
-                .description("Planned spin tail in microseconds for Park, and for Hybrid with Low CPU enabled. Manual values are preserved; actual timing and CPU use depend on the system. Spin ignores this threshold.");
+                .description("Planned spin tail in microseconds for Park, and for Hybrid with Low CPU enabled. Manual values are preserved; actual timing and CPU use depend on the system. Spin ignores this threshold.")
+                .disabled(EphemeraPacingHook::ownsFramePacing);
         FeatureSetting framePacerParkThreshold = SliderSetting.ofInt("Park Threshold (µs)",
                 () -> cfg.framePacerParkThresholdMicros,
                 v -> cfg.framePacerParkThresholdMicros = v, 1000, 8000).resetDefault(() -> defaults.framePacerParkThresholdMicros)
-                .description("Planned spin window in microseconds for Hybrid with Low CPU off. A higher value reserves more active spinning. Park and Spin ignore this threshold.");
+                .description("Planned spin window in microseconds for Hybrid with Low CPU off. A higher value reserves more active spinning. Park and Spin ignore this threshold.")
+                .disabled(EphemeraPacingHook::ownsFramePacing);
         FeatureSetting globalFrameCap = SliderSetting.ofInt("Global Frame Cap",
                 () -> cfg.frameCapFps, v -> cfg.frameCapFps = v, 0, 2000).resetDefault(() -> defaults.frameCapFps)
                 .editableValue()
@@ -1837,7 +1844,8 @@ addWithSettings("hitbox",
                 .description("Turns off vertical sync, removing the frame-buffering delay it adds for the lowest possible input lag. The trade-off is screen tearing (a horizontal seam during fast motion) unless your monitor has a variable refresh rate like G-Sync or FreeSync. Leave on if you see tearing.");
         FeatureSetting adaptiveRenderSleeping = new BooleanSetting("Adaptive Render Sleeping (Reflex-style)",
                 () -> cfg.adaptiveRenderSleeping, v -> cfg.adaptiveRenderSleeping = v).resetDefault("adaptiveRenderSleeping", () -> defaults.adaptiveRenderSleeping)
-                .description("Moves the frame-rate limiter's wait from the end of the frame to the very start of the next one, so the CPU sleeps just before your input is applied and the frame is built — keeping the GPU render queue short. Requires this section's Enabled toggle plus the Frame Pacer above being on with a non-Vanilla strategy.");
+                .description("Moves the frame-rate limiter's wait from the end of the frame to the very start of the next one, so the CPU sleeps just before your input is applied and the frame is built — keeping the GPU render queue short. Requires this section's Enabled toggle plus the Frame Pacer above being on with a non-Vanilla strategy.")
+                .disabled(EphemeraPacingHook::ownsFramePacing);
         FeatureSetting decoupledInputEnabled = new BooleanSetting("Enabled",
                 () -> cfg.inputSamplingDecoupled,
                 v -> cfg.inputSamplingDecoupled = v).resetDefault("inputSamplingDecoupled", () -> defaults.inputSamplingDecoupled)
@@ -2102,7 +2110,7 @@ addWithSettings("hitbox",
         SETTINGS_PAGES.add(new SettingsPage("Appearance", List.of(
                 settingsEntry("theme").pageSummary("The accent, window tint and glass of every Aurora screen."),
                 settingsEntry("text_fonts").pageSummary("The typeface and style of Aurora's text, and where it applies."))));
-        SETTINGS_PAGES.add(new SettingsPage("Display", List.of(
+        List<FeatureMetadata> displayEntries = new ArrayList<>(List.of(
                 group("frame_rate", "Frame Rate", globalFrameCap, uiFpsLimit).pageSummary("Framerate caps for the game and for Aurora's menus."),
                 group("frame_pacer", "Frame Pacer", framePacerEnabled, framePacingStrategy,
                         framePacerLowCpu, framePacerSpinThreshold, framePacerParkThreshold).pageSummary("Holds each frame to an even interval for smoother motion."),
@@ -2111,13 +2119,21 @@ addWithSettings("hitbox",
                         streamerHideOwnSkin, streamerHideServerAddress, streamerHideCoords,
                         streamerHideOtherNames, streamerOpponentLabel, streamerOpponentNumbered,
                         streamerOpponentColorEnabled, streamerOpponentColor)
-                        .pageSummary("Masks your username, skin, coordinates, server address, and optionally opponent nametags on your screen."),
-                settingsEntry("gradient_dither").pageSummary("Removes color banding from skies, fog and dark scenes."),
-                settingsEntry("smooth_fog").pageSummary("Softens harsh linear distance fog edges across the horizon."),
+                        .pageSummary("Masks your username, skin, coordinates, server address, and optionally opponent nametags on your screen.")));
+        if (EphemeraOwnership.ownsWorldVisuals()) {
+            displayEntries.add(group("world_visuals", "World Visuals", mappingAction("Open Ephemera Settings",
+                    "Adjust Gradient Dithering and Smooth Fog in Ephemera's Visuals tab.",
+                    com.aurora.client.compat.EphemeraBridge::openConfigScreen)));
+        } else {
+            displayEntries.add(settingsEntry("gradient_dither").pageSummary("Removes color banding from skies, fog and dark scenes."));
+            displayEntries.add(settingsEntry("smooth_fog").pageSummary("Softens harsh linear distance fog edges across the horizon."));
+        }
+        displayEntries.addAll(List.of(
                 group("tab_list", "Tab List", tabListHideHeader, tabListHideFooter, tabListHideHeads,
                         tabListHighlightSelf, tabListCustomBg, tabListBgOpacity).pageSummary("Clean up and restyle the multiplayer player list."),
                 group("nametags", "Nametags", nametagShowSelf, nametagTextShadow, nametagCustomBg,
-                        nametagBgOpacity, nametagScale).pageSummary("Third-person self nametag and floating nametag styling."))));
+                        nametagBgOpacity, nametagScale).pageSummary("Third-person self nametag and floating nametag styling.")));
+        SETTINGS_PAGES.add(new SettingsPage("Display", List.copyOf(displayEntries)));
         SETTINGS_PAGES.add(new SettingsPage("Controls", List.of(
                 group("decoupled_input", "Decoupled Input", decoupledInputEnabled).pageSummary("Applies mouse movement at the very start of each frame."),
                 group("aurora_keys", "Aurora Keys", hudEditorKey).pageSummary("Keys that open Aurora's own screens."))));
