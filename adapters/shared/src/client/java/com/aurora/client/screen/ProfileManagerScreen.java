@@ -78,6 +78,7 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
     private static final String GEAR_GLYPH = IconCatalog.glyph("settings");
     private static final String KEYBOARD_GLYPH = IconCatalog.glyph("keyboard");
     private static final String ADD_GLYPH = IconCatalog.glyph("add");
+    private static final String SERVER_GLYPH = IconCatalog.glyph("public");
 
     /**
      * Pending create: "New profile" turns its card into an editor in place
@@ -311,7 +312,16 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
             var matcher = com.aurora.client.search.SearchMatcher.query(query, tolerance);
             List<String> rows = new ArrayList<>();
             for (String name : all) {
-                if (com.aurora.client.search.SearchMatcher.matches(matcher, name)) rows.add(name);
+                boolean hit = com.aurora.client.search.SearchMatcher.matches(matcher, name);
+                if (!hit) {
+                    for (String srv : ProfileManager.getInstance().servers(name)) {
+                        if (com.aurora.client.search.SearchMatcher.matches(matcher, srv)) {
+                            hit = true;
+                            break;
+                        }
+                    }
+                }
+                if (hit) rows.add(name);
             }
             memoQuery = query;
             memoTolerance = tolerance;
@@ -462,6 +472,20 @@ public class ProfileManagerScreen extends ManagerListScreen<String> {
         } else if (!rowGlassDrawn.getOrDefault(name, false)) {
             if (isActive) MaterialSurface.selection(ctx, x, y, w, CARD_H, radius, true, 0);
             else paintFlatRow(ctx, x, y, w);
+        }
+
+        // Server auto-switch badge (top-left) when this profile binds one or more servers.
+        List<String> boundServers = manager.servers(name);
+        if (!boundServers.isEmpty()) {
+            int badgeX = x + 3, badgeY = y + 3;
+            MaterialIconRenderer.drawIcon(ctx, this.font, SERVER_GLYPH, badgeX + GEAR / 2f, badgeY + GEAR / 2f, 11f,
+                    ThemeManager.color(isActive ? ThemeToken.ACCENT : ThemeToken.ON_BACKGROUND_SECONDARY));
+            if (pointerIn(mouseX, mouseY, badgeX, badgeY, GEAR, GEAR)) {
+                com.aurora.client.ui.component.TooltipPresenter.offer(
+                        "servers:" + name,
+                        "Auto-switches for: " + com.aurora.client.config.profile.ServerPatternMatcher.formatPatterns(boundServers),
+                        badgeX, badgeY, GEAR, GEAR);
+            }
         }
 
         // Settings glyph — opens the profile's options.
