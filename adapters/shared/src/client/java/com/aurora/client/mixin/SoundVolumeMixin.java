@@ -27,14 +27,13 @@ public abstract class SoundVolumeMixin {
             cancellable = true
     )
     private void aurora$attenuateSoundVolume(SoundInstance sound, CallbackInfoReturnable<Float> cir) {
-        if (sound == null) return;
+        AuroraConfig cfg = AuroraConfig.get();
+        if (!cfg.soundVolumesEnabled || sound == null) return;
         Identifier id = sound.getIdentifier();
         if (id == null) return;
         String key = id.toString();
         RecentSoundLog.record(key);
 
-        AuroraConfig cfg = AuroraConfig.get();
-        if (!cfg.soundVolumesEnabled) return;
         Map<String, Float> overrides = cfg.soundVolumes;
         if (overrides == null || overrides.isEmpty()) return;
 

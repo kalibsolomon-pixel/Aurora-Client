@@ -1,10 +1,12 @@
 package com.aurora.client.util.reflex;
 
-import org.lwjgl.glfw.GLFW;
+import com.aurora.client.util.EphemeraPacingHook;
+import com.aurora.client.util.FramePacing;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
+import java.util.concurrent.locks.LockSupport;
 
 import static com.aurora.client.AuroraClient.LOGGER;
 
@@ -21,12 +23,15 @@ public class ReflexScheduler {
     private final float alpha = 0.2f;
     private final AutomaticReflexPolicy automatic = new AutomaticReflexPolicy();
     private boolean capabilitiesChecked;
-    private Long estimateCpuTime = null;
+    private boolean hasCpuEstimate = false;
+    private long estimateCpuTimeNs = 0L;
 
     private final int gpuWindowSize = 60;
     private final long[] gpuTimeRingBuffer = new long[gpuWindowSize];
     private int ringBufferIndex = 0;
     private int validSamples = 0;
+    private boolean gpuEstimateDirty = true;
+    private long cachedGpuEstimateNs = 0L;
 
     public Deque<GpuTimeCollector> gpuTimeCollectorDeque = new ArrayDeque<>();
 
@@ -52,10 +57,11 @@ public class ReflexScheduler {
     }
 
     public void updateCpuTime(long cpuTimeNs) {
-        if (estimateCpuTime == null) {
-            estimateCpuTime = cpuTimeNs;
+        if (!hasCpuEstimate) {
+            estimateCpuTimeNs = cpuTimeNs;
+            hasCpuEstimate = true;
         } else {
-            estimateCpuTime = (long) (alpha * cpuTimeNs + (1 - alpha) * estimateCpuTime);
+            estimateCpuTimeNs = (long) (alpha * cpuTimeNs + (1 - alpha) * estimateCpuTimeNs);
         }
     }
 
@@ -64,10 +70,12 @@ public class ReflexScheduler {
         gpuTimeRingBuffer[ringBufferIndex] = gpuTimeNs;
         ringBufferIndex = (ringBufferIndex + 1) % gpuWindowSize;
         validSamples = Math.min(validSamples + 1, gpuWindowSize);
+        gpuEstimateDirty = true;
     }
 
-    public Long getEstimateGpuTime() {
-        if (validSamples == 0) return null;
+    private long getEstimateGpuTimePrimitive() {
+        if (validSamples == 0) return -1L;
+        if (!gpuEstimateDirty) return cachedGpuEstimateNs;
 
         float weightedSum = 0;
         float weightSum = 0;
@@ -76,17 +84,26 @@ public class ReflexScheduler {
             weightedSum += gpuTimeRingBuffer[idx] * gpuWeights[i];
             weightSum += gpuWeights[i];
         }
-        return (long) (weightedSum / weightSum);
+        cachedGpuEstimateNs = (long) (weightedSum / weightSum);
+        gpuEstimateDirty = false;
+        return cachedGpuEstimateNs;
     }
 
-    private Long calculateWaitTime() {
+    public Long getEstimateGpuTime() {
+        long est = getEstimateGpuTimePrimitive();
+        return est < 0L ? null : est;
+    }
 
+    private long calculateWaitTimeNanos() {
         Iterator<GpuTimeCollector> gpuTimeCollectorIterator = gpuTimeCollectorDeque.iterator();
         while (gpuTimeCollectorIterator.hasNext()) {
             GpuTimeCollector gpuTimeCollector = gpuTimeCollectorIterator.next();
             if (gpuTimeCollector.startQueryInserted && gpuTimeCollector.endQueryInserted) {
                 gpuTimeCollector.startQueryCheck();
                 if (gpuTimeCollector.endQueryCheck()) {
+                    if (gpuTimeCollector.endTimeSystem != null && gpuTimeCollector.startTimeSystem != null) {
+                        updateGpuTime(gpuTimeCollector.endTimeSystem - gpuTimeCollector.startTimeSystem);
+                    }
                     gpuTimeCollectorIterator.remove();
                     collectorPool.returnObject(gpuTimeCollector);
                 }
@@ -96,50 +113,49 @@ public class ReflexScheduler {
             }
         }
 
-        if (gpuTimeCollectorDeque.isEmpty()) {
-            return null;
-        } else {
-            if (getEstimateGpuTime() == null || estimateCpuTime == null) {
-                return null;
-            }
-
-            long waitTime;
-            if (gpuTimeCollectorDeque.getLast().startTimeSystem == null) {
-                waitTime = getEstimateGpuTime() * gpuTimeCollectorDeque.size() - estimateCpuTime;
-            } else {
-                waitTime = gpuTimeCollectorDeque.getLast().startTimeSystem
-                        + getEstimateGpuTime() * gpuTimeCollectorDeque.size()
-                        - estimateCpuTime - System.nanoTime();
-            }
-
-
-            if (waitTime > 0) {
-                return waitTime;
-            } else {
-                return null;
-            }
+        if (gpuTimeCollectorDeque.isEmpty() || !hasCpuEstimate) {
+            return 0L;
         }
-    }
+        long gpuEst = getEstimateGpuTimePrimitive();
+        if (gpuEst <= 0L) {
+            return 0L;
+        }
 
-    private static final double NS_TO_SECONDS = 1e-9;
+        long waitTime;
+        Long oldestStart = gpuTimeCollectorDeque.getLast().startTimeSystem;
+        if (oldestStart == null) {
+            waitTime = gpuEst * gpuTimeCollectorDeque.size() - estimateCpuTimeNs;
+        } else {
+            waitTime = oldestStart + gpuEst * gpuTimeCollectorDeque.size() - estimateCpuTimeNs - System.nanoTime();
+        }
+        return Math.max(0L, waitTime);
+    }
 
     public void waitBeforeRender() {
         // Measurements determine the pacing budget. No wait in menus, while paused,
         // or out of focus; no sleep until we have a useful GPU-bound queue.
-        Long wait = calculateWaitTime(); // retire completed samples even during warmup / CPU-bound frames
-        Long gpu = getEstimateGpuTime();
+        long wait = calculateWaitTimeNanos(); // retire completed samples even during warmup / CPU-bound frames
+        long gpu = getEstimateGpuTimePrimitive();
         var client = net.minecraft.client.Minecraft.getInstance();
-        if (gpu == null || estimateCpuTime == null || client.player == null
+        if (gpu <= 0L || !hasCpuEstimate || client.player == null
                 || com.aurora.client.adapter.NativeUi.screen(client) != null || !client.isWindowActive() || client.isPaused()) {
             return;
         }
-        long budget = AutomaticReflexPolicy.waitBudget(estimateCpuTime, gpu, validSamples, gpuTimeCollectorDeque.size());
+        int pending = gpuTimeCollectorDeque.size();
+        if (FramePacing.INSTANCE.didHeadWaitThisFrame()) {
+            return;
+        }
+        if (EphemeraPacingHook.isVulkanAsyncPresentActive() && pending <= 2) {
+            return;
+        }
+        long budget = AutomaticReflexPolicy.waitBudget(estimateCpuTimeNs, gpu, validSamples, pending);
         long deadline = System.nanoTime() + budget;
-        while (budget > 0) {
+        while (budget > 0L && wait > 0L) {
             long remaining = deadline - System.nanoTime();
-            if (wait == null || remaining <= 0) break;
-            GLFW.glfwWaitEventsTimeout(Math.min(wait, remaining) * NS_TO_SECONDS);
-            wait = calculateWaitTime();
+            if (remaining <= 0L) break;
+            LockSupport.parkNanos(Math.min(wait, remaining));
+            if (Thread.currentThread().isInterrupted()) break;
+            wait = calculateWaitTimeNanos();
         }
     }
 
@@ -155,10 +171,7 @@ public class ReflexScheduler {
         }
 
         GpuTimeCollector gpuTimeCollector = collectorPool.borrow();
-        gpuTimeCollector.setCallback(
-                null, () -> {
-                    updateGpuTime(gpuTimeCollector.endTimeSystem - gpuTimeCollector.startTimeSystem);
-                });
+        gpuTimeCollector.setCallback(null, null);
         gpuTimeCollector.startQueryInsert();
         gpuTimeCollectorDeque.addFirst(gpuTimeCollector);
         currentOperateGpuTimeCollector = gpuTimeCollector;

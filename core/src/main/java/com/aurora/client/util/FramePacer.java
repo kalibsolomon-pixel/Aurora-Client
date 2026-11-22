@@ -175,24 +175,44 @@ public final class FramePacer {
     }
 
     /**
-     * Two-stage wait: park while far away, spin once within
-     * {@code spinWindowMicros} of the target. The audit measured no
-     * precision gain over {@link #waitUntilPark} (whose shorter spin tail
-     * already covers the last half-millisecond) for the longer spin window's
-     * extra CPU.
+     * Two-stage wait: park while far away using an adaptive wake-overshoot reserve
+     * and bounded interrupt-safe re-parking (preventing long busy-spins after early
+     * wakeups and preventing OS timer-granularity oversleeps), then spin to target.
      */
     public static void waitUntilHybrid(double target, int spinWindowMicros) {
-        // Stage 1 — park until the planned spin window begins.
         double now = com.aurora.client.util.FrameClock.seconds();
-        double parkUntil = target - spinWindowMicros / 1_000_000.0;
-        if (parkUntil > now) {
-            long parkNanos = (long) ((parkUntil - now) * 1_000_000_000.0);
-            if (parkNanos > 0) LockSupport.parkNanos(parkNanos);
+        if (now >= target) return;
+
+        int effectiveMicros = AdaptivePacerCalibrator.INSTANCE.effectiveSpinWindowMicros(spinWindowMicros);
+        double reserveSec = effectiveMicros / 1_000_000.0;
+        double reparkThresholdSec = reserveSec + 0.00075;
+
+        // Stage 1 — park while safely outside the adaptive spin window (bounded re-park on early wake).
+        int parks = 0;
+        while (parks < 3) {
+            double remaining = target - now;
+            if (remaining <= reserveSec) break;
+            if (parks > 0 && (Thread.currentThread().isInterrupted() || remaining <= reparkThresholdSec)) {
+                break;
+            }
+            long parkNanos = (long) ((remaining - reserveSec) * 1_000_000_000.0);
+            if (parkNanos <= 0L) break;
+            long before = System.nanoTime();
+            LockSupport.parkNanos(parkNanos);
+            long actual = System.nanoTime() - before;
+            AdaptivePacerCalibrator.INSTANCE.observePark(parkNanos, actual);
+            EphemeraPacingHook.onAfterPark(parkNanos, actual);
+            parks++;
+            now = com.aurora.client.util.FrameClock.seconds();
+            effectiveMicros = AdaptivePacerCalibrator.INSTANCE.effectiveSpinWindowMicros(spinWindowMicros);
+            reserveSec = effectiveMicros / 1_000_000.0;
+            reparkThresholdSec = reserveSec + 0.00075;
         }
 
-        // Stage 2 — spin to target.
-        while (com.aurora.client.util.FrameClock.seconds() < target) {
+        // Stage 2 — precision spin to exact target deadline.
+        while (now < target) {
             Thread.onSpinWait();
+            now = com.aurora.client.util.FrameClock.seconds();
         }
     }
 

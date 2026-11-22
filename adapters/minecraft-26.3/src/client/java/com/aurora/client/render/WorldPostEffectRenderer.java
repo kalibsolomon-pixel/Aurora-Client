@@ -52,6 +52,10 @@ public final class WorldPostEffectRenderer {
             .build();
 
     private static final List<AutoCloseable> retired = new ArrayList<>();
+    private static final ByteBuffer paramScratch = ByteBuffer.allocateDirect(PARAM_BYTES).order(ByteOrder.nativeOrder());
+    private static final GpuBuffer[] passUniforms = new GpuBuffer[2];
+    private static final float[] lastBlend = {Float.NaN, Float.NaN};
+    private static final float[] lastSat = {Float.NaN, Float.NaN};
     private static GpuBuffer triangle;
     private static GpuTexture texA, texB;
     private static GpuTextureView viewA, viewB;
@@ -66,6 +70,7 @@ public final class WorldPostEffectRenderer {
         if (failed) return;
         AuroraConfig cfg = AuroraConfig.get();
         if (!PackTweaksMath.isPostEffectActive(cfg.motionBlurStrength, cfg.colorSaturation)) {
+            if (texA != null || texB != null) retireTextures();
             historyValid = false;
             lastFrameNanos = 0L;
             return;
@@ -90,25 +95,33 @@ public final class WorldPostEffectRenderer {
         }
 
         try {
-            ensureResources(main.width, main.height);
-            float blend = historyValid ? PackTweaksMath.motionBlurBlend(cfg.motionBlurStrength, dt) : 0.0f;
+            boolean needHistory = PackTweaksMath.clampMotionBlur(cfg.motionBlurStrength) > 0.001;
+            ensureResources(main.width, main.height, needHistory);
+            float blend = (needHistory && historyValid) ? PackTweaksMath.motionBlurBlend(cfg.motionBlurStrength, dt) : 0.0f;
             float sat = (float) PackTweaksMath.clampSaturation(cfg.colorSaturation);
+
+            if (!needHistory) {
+                runPass(0, main.getColorTextureView(), viewA, viewA, 0.0f, 1.0f);
+                runPass(1, viewA, viewA, main.getColorTextureView(), 0.0f, sat);
+                historyValid = false;
+                return;
+            }
 
             GpuTextureView histRead = useAAsHistory ? viewA : viewB;
             GpuTextureView histWrite = useAAsHistory ? viewB : viewA;
 
-            runPass(main.getColorTextureView(), histRead, histWrite, blend, 1.0f);
-            runPass(histWrite, histWrite, main.getColorTextureView(), 0.0f, sat);
+            runPass(0, main.getColorTextureView(), histRead, histWrite, blend, 1.0f);
+            runPass(1, histWrite, histWrite, main.getColorTextureView(), 0.0f, sat);
 
             useAAsHistory = !useAAsHistory;
-            historyValid = PackTweaksMath.clampMotionBlur(cfg.motionBlurStrength) > 0.001;
+            historyValid = true;
         } catch (Throwable t) {
             failed = true;
             com.aurora.client.AuroraClient.LOGGER.warn("[PackTweaks] World post-effect shader unavailable; disabling for session", t);
         }
     }
 
-    private static void ensureResources(int width, int height) {
+    private static void ensureResources(int width, int height, boolean needHistory) {
         var device = RenderSystem.getDevice();
         if (triangle == null) {
             ByteBuffer vertices = ByteBuffer.allocateDirect(36).order(ByteOrder.nativeOrder());
@@ -118,27 +131,50 @@ public final class WorldPostEffectRenderer {
             triangle = device.createBuffer(() -> "Aurora world post triangle",
                     GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, vertices);
         }
-        if (texA != null && texW == width && texH == height && !texA.isClosed() && !texB.isClosed()) {
-            return;
-        }
-        retireTextures();
         int usage = GpuTexture.USAGE_RENDER_ATTACHMENT | GpuTexture.USAGE_TEXTURE_BINDING;
-        texA = device.createTexture("aurora:world_post_a", usage, GpuFormat.RGBA8_UNORM, width, height, 1, 1);
-        viewA = device.createTextureView(texA);
-        texB = device.createTexture("aurora:world_post_b", usage, GpuFormat.RGBA8_UNORM, width, height, 1, 1);
-        viewB = device.createTextureView(texB);
-        texW = width;
-        texH = height;
-        historyValid = false;
+        if (texA == null || texW != width || texH != height || texA.isClosed()) {
+            retireTextures();
+            texA = device.createTexture("aurora:world_post_a", usage, GpuFormat.RGBA8_UNORM, width, height, 1, 1);
+            viewA = device.createTextureView(texA);
+            texW = width;
+            texH = height;
+            historyValid = false;
+        }
+        if (needHistory) {
+            if (texB == null || texB.isClosed()) {
+                texB = device.createTexture("aurora:world_post_b", usage, GpuFormat.RGBA8_UNORM, width, height, 1, 1);
+                viewB = device.createTextureView(texB);
+                historyValid = false;
+            }
+        } else if (texB != null || viewB != null) {
+            if (viewB != null) retired.add(viewB);
+            if (texB != null) retired.add(texB);
+            viewB = null;
+            texB = null;
+        }
     }
 
-    private static void runPass(GpuTextureView input, GpuTextureView history, GpuTextureView output,
+    private static GpuBuffer uniformFor(int slot, float blend, float saturation) {
+        GpuBuffer current = passUniforms[slot];
+        if (current != null && !current.isClosed()
+                && Math.abs(blend - lastBlend[slot]) < 0.002f
+                && Math.abs(saturation - lastSat[slot]) < 1e-4f) {
+            return current;
+        }
+        if (current != null) retired.add(current);
+        paramScratch.clear();
+        paramScratch.putFloat(blend).putFloat(saturation).putFloat(0f).putFloat(0f).flip();
+        GpuBuffer next = RenderSystem.getDevice().createBuffer(() -> "Aurora world post params",
+                GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, paramScratch);
+        passUniforms[slot] = next;
+        lastBlend[slot] = blend;
+        lastSat[slot] = saturation;
+        return next;
+    }
+
+    private static void runPass(int slot, GpuTextureView input, GpuTextureView history, GpuTextureView output,
                                 float blend, float saturation) {
-        ByteBuffer data = ByteBuffer.allocateDirect(PARAM_BYTES).order(ByteOrder.nativeOrder());
-        data.putFloat(blend).putFloat(saturation).putFloat(0f).putFloat(0f).flip();
-        GpuBuffer uniform = RenderSystem.getDevice().createBuffer(() -> "Aurora world post params",
-                GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, data);
-        retired.add(uniform);
+        GpuBuffer uniform = uniformFor(slot, blend, saturation);
         var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
         try (var pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
                 () -> "Aurora world post", output, Optional.empty())) {
@@ -165,12 +201,19 @@ public final class WorldPostEffectRenderer {
     }
 
     public static void beginFrame() {
+        if (retired.isEmpty()) return;
         for (AutoCloseable r : retired) closeQuietly(r);
         retired.clear();
     }
 
     public static void shutdown() {
         retireTextures();
+        for (int i = 0; i < passUniforms.length; i++) {
+            if (passUniforms[i] != null) retired.add(passUniforms[i]);
+            passUniforms[i] = null;
+            lastBlend[i] = Float.NaN;
+            lastSat[i] = Float.NaN;
+        }
         if (triangle != null) retired.add(triangle);
         triangle = null;
         beginFrame();

@@ -82,13 +82,22 @@ public final class FeatureRegistry {
                 com.aurora.client.compat.EphemeraBridge.openConfigScreen(
                         com.aurora.client.adapter.NativeUi.screen(net.minecraft.client.Minecraft.getInstance())))
                 .description(com.aurora.client.compat.EphemeraBridge::statusSummary));
+        String currentCategory = null;
         for (com.aurora.client.compat.EphemeraBridge.OptionInfo opt : com.aurora.client.compat.EphemeraBridge.options()) {
+            String cat = opt.category();
+            if (cat != null && !cat.isEmpty() && !cat.equals(currentCategory)) {
+                rows.add(new SectionHeaderSetting(cat));
+                currentCategory = cat;
+            }
             String key = opt.key();
+            String desc = opt.requiresRestart()
+                    ? opt.description() + " (Requires restart.)"
+                    : opt.description();
             rows.add(new BooleanSetting(opt.label(),
                     () -> com.aurora.client.compat.EphemeraBridge.getBoolean(key),
                     v -> com.aurora.client.compat.EphemeraBridge.setBoolean(key, v))
                     .resetDefault(opt::defaultValue)
-                    .description(opt.description()));
+                    .description(desc));
         }
         FeatureMetadata ephemeraGroup = group("ephemera_engine", "Ephemera Engine",
                 rows.toArray(FeatureSetting[]::new))

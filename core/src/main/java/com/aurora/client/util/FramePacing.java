@@ -11,11 +11,18 @@ public final class FramePacing {
     public record PostSwap(boolean cancelNative, double waitTarget) {}
 
     private static final Decision UNLIMITED = new Decision(Owner.NONE, 0);
+    private static final PostSwap NO_CANCEL = new PostSwap(false, 0.0);
+    private static final PostSwap CANCEL_NO_WAIT = new PostSwap(true, 0.0);
     public static final FramePacing INSTANCE = new FramePacing();
     private Decision head = UNLIMITED;
     private Decision scheduled = UNLIMITED;
     private double nextTarget;
     private boolean headWaited;
+
+    /** True when the most recent frame executed a frame-head pacing wait. */
+    public boolean didHeadWaitThisFrame() {
+        return headWaited;
+    }
 
     /**
      * Native 260 (or greater) skips limitDisplayFPS in Minecraft 1.21.11.
@@ -65,17 +72,17 @@ public final class FramePacing {
     public PostSwap postSwap(Decision current, double now) {
         if (head.owner() == Owner.FRAME_HEAD) {
             if (current.fps() > 0 && head.fps() <= current.fps()) {
-                return new PostSwap(headWaited, 0.0);
+                return headWaited ? CANCEL_NO_WAIT : NO_CANCEL;
             }
             reset(current);
-            return new PostSwap(false, 0.0);
+            return NO_CANCEL;
         }
         if (current.owner() != Owner.POST_SWAP) {
             reset(current);
-            return new PostSwap(false, 0.0);
+            return NO_CANCEL;
         }
         double target = advance(current, now);
-        return new PostSwap(target != 0.0, target);
+        return target != 0.0 ? new PostSwap(true, target) : NO_CANCEL;
     }
 
     private void reset(Decision decision) {
@@ -84,7 +91,8 @@ public final class FramePacing {
     }
 
     // Preserve the existing deadline calculation, park/spin dispatch point,
-    // and late-frame reanchoring; only ownership/target changes reset it.
+    // and late-frame reanchoring; gently damp mildly late frames (0 < lateness <= 0.5 * period)
+    // so minor blips do not trigger a short-frame sawtooth oscillation.
     private double advance(Decision decision, double now) {
         double frameTime = 1.0 / decision.fps();
         if (!scheduled.equals(decision)) reset(decision);
@@ -94,7 +102,13 @@ public final class FramePacing {
             return 0.0;
         }
         double target = nextTarget;
-        nextTarget += frameTime;
+        if (now > nextTarget) {
+            // Mildly late: still return the past target (immediate exit, keeps ownership) and
+            // blend half the lateness into the next deadline to avoid long-short stutter.
+            nextTarget = nextTarget + frameTime + (now - nextTarget) * 0.5;
+        } else {
+            nextTarget += frameTime;
+        }
         return target;
     }
 }

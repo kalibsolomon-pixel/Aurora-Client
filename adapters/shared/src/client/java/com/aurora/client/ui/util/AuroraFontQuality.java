@@ -162,14 +162,19 @@ public final class AuroraFontQuality {
         // Whatever could not be swapped (a failed load, or a provider no longer in any font set)
         // counts as current, so a stale entry never makes every frame retry.
         int now = guiScale();
+        rasterScale = now;
         synchronized (SCALES) {
             SCALES.replaceAll((provider, at) -> now);
         }
-        if (manager instanceof com.aurora.client.ui.text.SdfFontSets.Lifecycle sdf) {
-            sdf.aurora$refreshSdf(options);
+        checkedRegistrations = REGISTRATIONS.get();
+        checkedScale = now;
+        if (!replaced.isEmpty()) {
+            if (manager instanceof com.aurora.client.ui.text.SdfFontSets.Lifecycle sdf) {
+                sdf.aurora$refreshSdf(options);
+            }
+            com.aurora.client.AuroraClient.LOGGER.info("[Fonts] Re-rasterized {} Aurora font provider(s) for GUI scale {}",
+                    replaced.size(), rasterScale);
         }
-        com.aurora.client.AuroraClient.LOGGER.info("[Fonts] Re-rasterized {} Aurora font provider(s) for GUI scale {}",
-                replaced.size(), rasterScale);
     }
 
     private static GlyphProvider load(TrueTypeGlyphProviderDefinition definition, Minecraft mc) {

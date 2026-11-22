@@ -50,6 +50,10 @@ public final class InventoryModule extends HudModule {
 
     /** Reused per-frame scratch (render thread only). */
     private final ItemStack[] scratch = new ItemStack[InventoryHudLayout.TOTAL_WITH_HOTBAR];
+    /** True while inside {@link #render} so width/height/backgroundAlpha/renderContent share one inventory scan. */
+    private boolean frameScratchValid;
+    private int frameNonEmpty;
+    private boolean frameEditor;
 
     /** Lazily created editor sample stacks when the player's inventory is empty. */
     private ItemStack[] sampleFixed;
@@ -92,6 +96,7 @@ public final class InventoryModule extends HudModule {
     }
 
     private int activeCount(Minecraft client, boolean showHotbar) {
+        if (frameScratchValid) return frameNonEmpty;
         int live = countLiveItems(client, showHotbar);
         if (live > 0) return live;
         if (isEditor(client)) return sampleItemCount(showHotbar);
@@ -112,6 +117,10 @@ public final class InventoryModule extends HudModule {
     @Override
     protected float backgroundAlpha() {
         AuroraConfig cfg = AuroraConfig.get();
+        if (frameScratchValid) {
+            if (frameEditor) return 1f;
+            return (cfg.inventoryHudHideWhenEmpty && frameNonEmpty == 0) ? 0f : 1f;
+        }
         Minecraft client = Minecraft.getInstance();
         if (isEditor(client)) return 1f;
         if (client == null || client.player == null) return 0f;
@@ -119,6 +128,27 @@ public final class InventoryModule extends HudModule {
             return 0f;
         }
         return 1f;
+    }
+
+    @Override
+    public void render(GuiGraphicsExtractor ctx, Minecraft client, int screenW, int screenH) {
+        if (!enabled) return;
+        AuroraConfig cfg = AuroraConfig.get();
+        if (!cfg.inventoryHudEnabled || client == null || client.font == null) return;
+        boolean editor = isEditor(client);
+        if (client.player == null && !editor) return;
+
+        int nonEmpty = populateScratch(client, cfg.inventoryHudShowHotbar, cfg.inventoryHudCompact, editor);
+        if (nonEmpty == 0 && !editor && cfg.inventoryHudHideWhenEmpty) return;
+
+        frameNonEmpty = nonEmpty;
+        frameEditor = editor;
+        frameScratchValid = true;
+        try {
+            super.render(ctx, client, screenW, screenH);
+        } finally {
+            frameScratchValid = false;
+        }
     }
 
     @Override
@@ -153,7 +183,9 @@ public final class InventoryModule extends HudModule {
         boolean vanillaBg = isVanillaBg();
         boolean solidBg = cfg.inventoryHudBgMode == AuroraConfig.HudBackground.SOLID;
 
-        int nonEmpty = populateScratch(client, showHotbar, compact, editor);
+        int nonEmpty = frameScratchValid
+                ? frameNonEmpty
+                : populateScratch(client, showHotbar, compact, editor);
         if (nonEmpty == 0 && !editor && cfg.inventoryHudHideWhenEmpty) return;
 
         if (vanillaBg) {
