@@ -286,14 +286,14 @@ class ConformanceManifestTest {
         int modules = com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.MODULES).size();
         // enums (Text Renderer, Client Font, UI FPS Limit, Frame Pacer
         // Strategy) + accent + the Surfaces caption + Display Settings
-        // toggles + HUD Editor key + Open Screenshot Manager + Copy Diagnostics
-        int hosted = 4 + 10 + 1 + 8 + 1 + 1 + 1;
+        // toggles + HUD Editor key + Open Screenshot Manager + Resource Pack Folders toggle/button + Copy Diagnostics
+        int hosted = 4 + 10 + 1 + 8 + 1 + 1 + 2 + 1;
         int pages = 4;                                      // Appearance, Display, Controls, General
         int screenOwned = 2 + 1 + 2 + pages + modules + 0 + 2; // tabs, profiles, layout, sub-tabs, tiles, nav, toggles
         assertEquals(38, modules, "FeatureCatalog module tile count");
-        assertEquals(26, hosted, "component-owned hosted controls");
+        assertEquals(28, hosted, "component-owned hosted controls");
         assertEquals(49, screenOwned, "screen-owned chrome controls");
-        assertEquals(75, hosted + screenOwned, "AuroraScreen total semantic controls");
+        assertEquals(77, hosted + screenOwned, "AuroraScreen total semantic controls");
 
         String src = read(SRC + "screen/AuroraScreen.java");
         assertEquals(8, countOccurrences(src, "semanticHost.register("),

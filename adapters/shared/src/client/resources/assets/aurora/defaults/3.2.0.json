@@ -945,5 +945,6 @@
   "chatPeekKey": -1,
   "chatHistoryLimit": 1000,
   "chatPerServerHistory": true,
-  "chatPerServerMaxSaved": 200
+  "chatPerServerMaxSaved": 200,
+  "resourcepackFoldersEnabled": true
 }

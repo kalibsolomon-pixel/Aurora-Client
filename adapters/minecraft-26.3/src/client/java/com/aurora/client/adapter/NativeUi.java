@@ -17,4 +17,12 @@ public final class NativeUi {
     /** Opens a folder or file in the system's file manager (26.3 moved it to Blaze3D). */
     public static void openPath(java.nio.file.Path path) { com.mojang.blaze3d.Blaze3D.openPath(path); }
     public static net.minecraft.client.gui.components.ChatComponent chat(Minecraft client) { return client.gui.hud.getChat(); }
+    /** Reads {@code pack.png} bytes from a resource pack, or null when absent. */
+    public static byte[] readPackIconPng(net.minecraft.server.packs.repository.Pack pack) {
+        try (var res = pack.openMetadata()) {
+            var supplier = res.getRootResource("pack.png");
+            if (supplier == null) return null;
+            try (var in = supplier.get()) { return in.readAllBytes(); }
+        } catch (Exception ignored) { return null; }
+    }
 }

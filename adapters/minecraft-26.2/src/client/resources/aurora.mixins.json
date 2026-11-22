@@ -109,6 +109,8 @@
     "KeyMappingComboMixin",
     "KeyBindsScreenComboMixin",
     "KeyBindsListEntryConflictMixin",
+    "FolderRepositorySourceMixin",
+    "PackSelectionScreenMixin",
     "LevelLoadTrackerMixin",
     "OcclusionFrameMixin",
     "OcclusionBodyMixin",

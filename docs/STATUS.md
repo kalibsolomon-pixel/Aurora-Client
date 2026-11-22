@@ -7,6 +7,8 @@ Updated 2026-11-21. See [ROADMAP](ROADMAP.md) for the order of work,
 
 Pulsar accuracy pass fixes inclusive exchange/round end-boundary combo splitting (`Combos`), prevents live same-tick trade combo inflation (`CombatEngine`), pairs knockback `VELOCITY` packets across `[tick - 1, tick + 1]` without double-claiming and with strongest-impulse tie-breaking (`FightAnalytics`), aligns combo sprint-reset attribution with post-fight `Combos` streaks, and exposes fact-backed **Combo Rating** and **Jump-Reset / Knockback Control Rating** (`CombatBreakdown.ComboProfile` & `KnockbackControl`) across the in-game dashboard (`FlowPage`, `DefensePage`) and offline HTML reports (`ReportExporter`).
 
+Folder-Aware Resource Pack Manager (`resourcepackFoldersEnabled`, on by default, cosmetic) discovers resource packs nested inside organizing subfolders under `resourcepacks/` (path-qualified `file/<folder>/<name>` IDs while keeping top-level vanilla IDs untouched) and adds Aurora's themed `ResourcePackManagerScreen` with folder navigation, clickable breadcrumbs, global recursive search, async pack icon loading, and load-order reordering from both **Options → Resource Packs** and **Settings → General → Resource Packs**.
+
 UI cache refinement crops static captures to their panel/body bounds, keeps
 unified chrome through screenshot suppression, retires screen textures after
 deferred draws, and reuses one prepared setting-tooltip layout. The optional

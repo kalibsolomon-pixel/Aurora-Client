@@ -447,6 +447,10 @@ public final class FeatureCatalog {
         mixin("KeyMappingComboMixin", "Ctrl, Shift and Alt combos on key bindings");
         mixin("KeyBindsScreenComboMixin", "Ctrl, Shift and Alt combos in the Controls screen");
         mixin("KeyBindsListEntryConflictMixin", "keybind conflict warnings for Aurora and profile hotkeys in Controls");
+        mixin("FolderRepositorySourceMixin", "discovering resource packs inside subfolders", "resourcepack_browser")
+                .gates("resourcepackFoldersEnabled");
+        mixin("PackSelectionScreenMixin", "folder-aware resource pack manager in Options", "resourcepack_browser")
+                .gates("resourcepackFoldersEnabled");
         // ---- Performance (ADR 0009) ----
         mixin("LevelLoadTrackerMixin", "skipping the level loading delay", "performance")
                 .gates("perfSkipLevelLoadDelay").yieldsTo("ephemera");
