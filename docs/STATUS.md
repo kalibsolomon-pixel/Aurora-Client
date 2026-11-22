@@ -79,6 +79,13 @@ copying, a hold-to-peek keybind (`key.aurora.chat_peek`), configurable history l
 lines, and atomic per-server chat history persisted off-thread via `AtomicJsonWriter`. Never sends
 messages or packets.
 
+Per-Server Profile Auto-Switching adds server address bindings (comma-separated hostnames, IPs,
+ports, and `*` wildcards such as `*.hypixel.net`) in `ProfileOptionsScreen` and `ProfileManager`.
+Joining a matching multiplayer server automatically switches to the most specific bound profile,
+and disconnecting restores the prior profile unless the player manually switched profiles mid-session.
+Profiles with bound servers show a globe indicator badge and are searchable by server pattern in
+`ProfileManagerScreen`.
+
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's
 profile, input and theme contracts. `CombatBreakdown` adds PvP analysis for 1.9+

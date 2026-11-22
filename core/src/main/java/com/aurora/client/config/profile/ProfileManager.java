@@ -83,6 +83,14 @@ public class ProfileManager {
     /** Cached name → hotkey for profiles that have one; invalidated with {@link #cachedNames}. */
     private Map<String, Integer> cachedHotkeys = null;
 
+    /** Cached name → server patterns for profiles that bind servers; invalidated with {@link #cachedNames}. */
+    private Map<String, List<String>> cachedServers = null;
+
+    /** Profile active before the current per-server auto-switch (restored on disconnect). */
+    private String autoSwitchPreviousProfile = null;
+    /** Profile that per-server auto-switching activated; if user switches away manually, disconnect respects their choice. */
+    private String autoSwitchedToProfile = null;
+
     /** Vanilla key bindings bridge, installed by the adapter; null in tests and before init. */
     private volatile ControlsBridge controlsBridge;
 
@@ -256,6 +264,99 @@ public class ProfileManager {
         return true;
     }
 
+    /** Normalized server address patterns bound to {@code name} for auto-switching. */
+    public List<String> servers(String name) {
+        List<String> list = serverBindings().get(name);
+        return list == null ? List.of() : list;
+    }
+
+    /** Every profile with at least one bound server pattern: name → normalized patterns. */
+    public Map<String, List<String>> serverBindings() {
+        Map<String, List<String>> cache = cachedServers;
+        if (cache != null) return cache;
+        Map<String, List<String>> out = new LinkedHashMap<>();
+        for (String n : listProfileNames()) {
+            Profile p = readProfileFile(n);
+            if (p != null && p.servers != null && !p.servers.isEmpty()) {
+                List<String> norm = ServerPatternMatcher.normalizeList(p.servers);
+                if (!norm.isEmpty()) out.put(n, norm);
+            }
+        }
+        cache = Collections.unmodifiableMap(out);
+        cachedServers = cache;
+        return cache;
+    }
+
+    /** Updates the server patterns bound to {@code name}. @return false if missing. */
+    public boolean setServers(String name, List<String> patterns) {
+        Profile p = readProfileFile(name);
+        if (p == null) return false;
+        p.servers = new ArrayList<>(ServerPatternMatcher.normalizeList(patterns));
+        writeProfileFile(p);
+        cachedServers = null;
+        return true;
+    }
+
+    /**
+     * Finds the best-matching profile for {@code serverAddress} by highest
+     * pattern specificity (tie-breaking alphabetically by profile name), or
+     * {@code null} when no profile matches.
+     */
+    public String matchProfileForServer(String serverAddress) {
+        if (serverAddress == null || serverAddress.isBlank()) return null;
+        String bestProfile = null;
+        int bestScore = -1;
+        for (Map.Entry<String, List<String>> entry : serverBindings().entrySet()) {
+            for (String pattern : entry.getValue()) {
+                if (ServerPatternMatcher.matches(pattern, serverAddress)) {
+                    int score = ServerPatternMatcher.specificity(pattern);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestProfile = entry.getKey();
+                    }
+                }
+            }
+        }
+        return bestProfile;
+    }
+
+    /**
+     * Auto-switches to the best-matching profile for {@code serverAddress},
+     * remembering the pre-server profile to restore on disconnect.
+     *
+     * @return the activated profile name, or {@code null} if no switch occurred.
+     */
+    public String onServerJoin(String serverAddress) {
+        String target = matchProfileForServer(serverAddress);
+        if (target == null || target.equals(currentProfileName)) return null;
+        if (autoSwitchPreviousProfile == null) {
+            autoSwitchPreviousProfile = currentProfileName;
+        }
+        if (switchTo(target)) {
+            autoSwitchedToProfile = target;
+            return target;
+        }
+        return null;
+    }
+
+    /**
+     * Restores the pre-server profile after disconnecting from a server that
+     * triggered an auto-switch, unless the player manually switched to a
+     * different profile during the session.
+     *
+     * @return the restored profile name, or {@code null} if no restore occurred.
+     */
+    public String onServerDisconnect() {
+        String restore = autoSwitchPreviousProfile;
+        String expectedActive = autoSwitchedToProfile;
+        autoSwitchPreviousProfile = null;
+        autoSwitchedToProfile = null;
+        if (restore == null || expectedActive == null) return null;
+        if (!currentProfileName.equals(expectedActive)) return null;
+        if (restore.equals(currentProfileName) || !nameExists(restore)) return null;
+        return switchTo(restore) ? restore : null;
+    }
+
     // ------------------------------------------------------------------
     //  CRUD
     // ------------------------------------------------------------------
@@ -330,6 +431,7 @@ public class ProfileManager {
         src.name = newName;
         src.createdAtMs = System.currentTimeMillis();
         src.hotkey = -1; // one key, one profile
+        src.servers = new ArrayList<>(); // avoid ambiguous duplicate server bindings
         writeProfileFile(src);
         invalidateCache();
         return true;
@@ -376,12 +478,13 @@ public class ProfileManager {
         writeProfileFile(p);
     }
 
-    /** Carries the file's own metadata (created time, icon, hotkey) into a fresh capture. */
+    /** Carries the file's own metadata (created time, icon, hotkey, servers) into a fresh capture. */
     private static void keepMetadata(Profile fresh, Profile existing) {
         fresh.createdAtMs = existing != null ? existing.createdAtMs : System.currentTimeMillis();
         if (existing != null) {
             fresh.icon = existing.icon == null ? "" : existing.icon;
             fresh.hotkey = existing.hotkey;
+            fresh.servers = existing.servers == null ? new ArrayList<>() : new ArrayList<>(existing.servers);
         }
     }
 
@@ -682,7 +785,7 @@ public class ProfileManager {
         return names;
     }
 
-    private void invalidateCache() { cachedNames = null; cachedHotkeys = null; }
+    private void invalidateCache() { cachedNames = null; cachedHotkeys = null; cachedServers = null; }
 
     private boolean nameExists(String name) {
         return listProfileNames().contains(name);

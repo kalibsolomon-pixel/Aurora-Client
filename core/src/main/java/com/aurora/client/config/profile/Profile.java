@@ -51,6 +51,14 @@ public class Profile {
     public int hotkey = -1;
 
     /**
+     * Server address patterns bound to this profile for automatic switching on
+     * multiplayer join (e.g. {@code "*.hypixel.net"}, {@code "minemen.club"}).
+     * Profile metadata, kept outside {@link #fields} so it survives settings
+     * saves and stays visible from every active profile.
+     */
+    public java.util.List<String> servers = new java.util.ArrayList<>();
+
+    /**
      * The game's own (vanilla) key bindings captured with this profile:
      * binding name to saved key string ({@link ControlsBridge}). Null for
      * profiles saved before controls were captured; those leave the live

@@ -48,9 +48,10 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
     private String nameError;
 
     private int panelX, panelY, panelW, panelH;
-    private int colX, colW, iconRowY, nameRowY, hotkeyRowY;
+    private int colX, colW, iconRowY, nameRowY, hotkeyRowY, serversRowY;
 
     private EditBox nameField;
+    private EditBox serversField;
     private ButtonWidget hotkeyBtn;
     private ButtonWidget deleteBtn;
     private boolean listening;
@@ -77,10 +78,11 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
         panelX = frame.x(); panelY = frame.y(); panelW = frame.width(); panelH = frame.height();
         colW = Math.min(panelW - 2 * UiDensity.TITLE_X, 340);
         colX = panelX + (panelW - colW) / 2;
-        iconRowY = panelY + UiDensity.HEADER + 14;
-        nameRowY = iconRowY + ICON_WELL + 16;
-        hotkeyRowY = nameRowY + ROW_H + 12;
-        int actionsY = hotkeyRowY + ROW_H + 16;
+        iconRowY = panelY + UiDensity.HEADER + 10;
+        nameRowY = iconRowY + ICON_WELL + 12;
+        hotkeyRowY = nameRowY + ROW_H + 10;
+        serversRowY = hotkeyRowY + ROW_H + 10;
+        int actionsY = serversRowY + ROW_H + 22;
         int fieldX = colX + LABEL_W, fieldW = colW - LABEL_W;
 
         this.addRenderableWidget(ButtonWidget.semantic(colX + ICON_WELL + 14, iconRowY + 4,
@@ -105,6 +107,32 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
                     capture.reset();
                     hotkeyBtn.setMessage(Component.literal(hotkeyLabel()));
                 }).glassBackground(true));
+
+        var currentServer = this.minecraft != null ? this.minecraft.getCurrentServer() : null;
+        boolean hasLiveServer = currentServer != null && currentServer.ip != null && !currentServer.ip.isBlank();
+        int currentBtnW = hasLiveServer ? 64 : 0;
+        int serversFieldW = hasLiveServer ? fieldW - currentBtnW - 6 : fieldW;
+        String existingServers = com.aurora.client.config.profile.ServerPatternMatcher.formatPatterns(
+                ProfileManager.getInstance().servers(name));
+        serversField = new EditBox(this.font, fieldX, serversRowY, serversFieldW, ROW_H, Component.literal("Servers"));
+        serversField.setMaxLength(256);
+        serversField.setHint(Component.literal("e.g. *.hypixel.net, minemen.club"));
+        serversField.setValue(existingServers);
+        this.addRenderableWidget(serversField);
+        if (hasLiveServer) {
+            final String liveIp = currentServer.ip;
+            this.addRenderableWidget(ButtonWidget.semantic(fieldX + serversFieldW + 6, serversRowY, currentBtnW, ROW_H,
+                    Component.literal("Current"),
+                    "Adds the currently connected server address (" + liveIp + ") to this profile's auto-switch list.",
+                    () -> {
+                        var list = new java.util.ArrayList<>(
+                                com.aurora.client.config.profile.ServerPatternMatcher.parsePatterns(serversField.getValue()));
+                        String norm = com.aurora.client.config.profile.ServerPatternMatcher.normalizeServerAddress(liveIp);
+                        if (!norm.isEmpty() && !list.contains(norm)) list.add(norm);
+                        serversField.setValue(com.aurora.client.config.profile.ServerPatternMatcher.formatPatterns(list));
+                        commitServers();
+                    }).glassBackground(true));
+        }
 
         boolean deletable = !"default".equals(name)
                 && !name.equals(ProfileManager.getInstance().currentProfile());
@@ -218,9 +246,16 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
      * user's text and the message under the field (design language §11.12) —
      * fix it or Escape to discard.
      */
+    private void commitServers() {
+        if (serversField == null) return;
+        var parsed = com.aurora.client.config.profile.ServerPatternMatcher.parsePatterns(serversField.getValue());
+        ProfileManager.getInstance().setServers(name, parsed);
+    }
+
     private void done() {
         String before = name;
         if (!commitRename()) return;
+        commitServers();
         close(before.equals(name) ? null : "Renamed → " + name);
     }
 
@@ -236,6 +271,7 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
             nameField.setValue(name);
             nameError = null;
         }
+        commitServers();
         close(before.equals(name) ? null : "Renamed → " + name);
     }
 
@@ -253,6 +289,12 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
             // A refused name keeps focus, the typed text and the message; a
             // valid one commits and releases the field.
             if (commitRename()) nameField.setFocused(false);
+            return true;
+        }
+        if (serversField != null && serversField.isFocused()
+                && (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER)) {
+            commitServers();
+            serversField.setFocused(false);
             return true;
         }
         // Escape unwinds one layer at a time (design language §8.7): an armed
@@ -302,6 +344,9 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
         if (nameField != null && !nameField.isMouseOver(event.x(), event.y()) && nameField.isFocused()) {
             commitRename();
         }
+        if (serversField != null && !serversField.isMouseOver(event.x(), event.y()) && serversField.isFocused()) {
+            commitServers();
+        }
         return super.mouseClicked(event, doubleClick);
     }
 
@@ -338,6 +383,11 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
 
         ctx.text(this.font, "Name", colX, AuroraFontRenderer.textY(this.font, nameRowY, ROW_H), secondary, false);
         ctx.text(this.font, "Hotkey", colX, AuroraFontRenderer.textY(this.font, hotkeyRowY, ROW_H), secondary, false);
+        ctx.text(this.font, "Servers", colX, AuroraFontRenderer.textY(this.font, serversRowY, ROW_H), secondary, false);
+        String hintText = AuroraFontRenderer.ellipsize(this.font,
+                "Auto-switches on join, restores on disconnect (* wildcards)", colW - LABEL_W, 0);
+        ctx.text(this.font, hintText, colX + LABEL_W, serversRowY + ROW_H + 3,
+                ThemeManager.color(ThemeToken.ON_BACKGROUND_MUTED), false);
 
         super.extractRenderState(ctx, mouseX, mouseY, delta);
 

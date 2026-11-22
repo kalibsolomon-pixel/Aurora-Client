@@ -64,6 +64,7 @@ public class AuroraClient implements ClientModInitializer {
         // Profiles carry the game's own bindings too ("Separate controls"). Installed
         // after the boot-time profile load, so starting the game never rewrites them.
         ProfileManager.getInstance().setControlsBridge(new com.aurora.client.util.VanillaControlsBridge());
+        com.aurora.client.config.profile.ServerProfileSwitcher.register();
 
         // Better Hitreg (Jass's BetterHitreg, integrated; only the custom
         // client-side hitreg remains): sets Hitreg.client first, then
