@@ -47,6 +47,7 @@ public abstract class ClientPlayNetworkHandlerWorldJoinMixin {
     private void aurora$clearOnJoin(ClientboundLoginPacket packet, CallbackInfo ci) {
         aurora$resetRenderCaches();
         AttackedPlayerTracker.clear();
+        com.aurora.client.util.StreamerPrivacy.resetSession();
     }
 
     @Inject(method = "handleRespawn", at = @At("HEAD"))

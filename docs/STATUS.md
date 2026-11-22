@@ -65,6 +65,13 @@ individual Minecraft sounds through a searchable mixer with customized, recently
 common-sound lists across 26.1.2, 26.2, and 26.3, strictly clamped to 0–100% so sounds can never
 be amplified above vanilla.
 
+Streamer Mode (Settings → Display, off by default, local display-only privacy masking under Display
+Settings) masks your username (with a custom alias across title screen, tab list, chat, and
+nametag), replaces your own skin with the default Steve skin, masks server addresses on Direct
+Connection, Edit Server, ConnectScreen, raw-IP server list entries and chat, hides coordinates on
+Info HUD and Minimap, and optionally replaces other players' nametags, tab-list entries, and chat
+mentions with customizable numbered/colored opponent labels. Zero overhead when off.
+
 Pulsar integration adds Phenomena's analytics and recording as Aurora's 40th
 feature, off by default. Its configuration and six-tab dashboard follow Aurora's
 profile, input and theme contracts. `CombatBreakdown` adds PvP analysis for 1.9+

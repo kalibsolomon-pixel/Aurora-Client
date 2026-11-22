@@ -15,7 +15,7 @@ mainHand offHand playerHealth noFog fogDistance underwater lava
 motionBlur colorSaturation localTime localWeather customSky fireOverlay hurtCam
 cps reach sprintHud waypointDisplay waypointBeam waypointLabel waypointBlock
 waypointShow deathWaypoint crosshair hitbox particle containerPreview itemPhysics
-keystrokes minimap worldMapShow resourcepackBrowser pulsar scoreboard vanillaHud inventoryHud soundVolumes
+keystrokes minimap worldMapShow resourcepackBrowser pulsar scoreboard vanillaHud inventoryHud soundVolumes streamer
 """.split())
 EXACT = set("""
 keybindVersion customTitleScreen moduleGridView textRendererMode activeFont textWeight textItalic

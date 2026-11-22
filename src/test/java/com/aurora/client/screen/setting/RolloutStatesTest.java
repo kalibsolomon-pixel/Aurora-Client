@@ -141,8 +141,8 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
                     SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new ColorSetting", -1).length - 1;
-            assertEquals(43, count,
-                    "production ColorSetting construction sites (inventory drift guard; 41→42 with Inventory HUD, 42→43 with Pack Tweaks' Custom Sky Color, 2026-11-21)");
+            assertEquals(44, count,
+                    "production ColorSetting construction sites (inventory drift guard; 41→42 with Inventory HUD, 42→43 with Pack Tweaks' Custom Sky Color, 43→44 with Streamer Mode's Opponent Tag Color, 2026-11-21)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }

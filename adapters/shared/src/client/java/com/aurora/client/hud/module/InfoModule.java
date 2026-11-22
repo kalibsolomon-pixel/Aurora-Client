@@ -45,7 +45,8 @@ public class InfoModule extends HudModule {
         List<String> lines = new ArrayList<>(8);
         if (cfg.showFps) lines.add("FPS: " + client.getFps());
 
-        if (cfg.showCoords && player != null) {
+        boolean hideCoords = com.aurora.client.util.StreamerMode.hideCoords();
+        if (cfg.showCoords && !hideCoords && player != null) {
             BlockPos p = player.blockPosition();
             lines.add("XYZ: " + p.getX() + " / " + p.getY() + " / " + p.getZ());
         }
@@ -56,18 +57,18 @@ public class InfoModule extends HudModule {
         if (cfg.infoShowFacing && player != null) {
             lines.add(formatFacing(player.getYRot(), player.getDirection()));
         }
-        if (cfg.infoShowChunkLocal && player != null) {
+        if (cfg.infoShowChunkLocal && !hideCoords && player != null) {
             BlockPos p = player.blockPosition();
             // Mojang's chunk-local arithmetic: bottom 4 bits of world coord.
             // Works for both positive and negative world coords because it's
             // a bitmask, not a modulo.
             lines.add("In-chunk: " + (p.getX() & 15) + ", " + (p.getZ() & 15));
         }
-        if (cfg.infoShowChunkCoords && player != null) {
+        if (cfg.infoShowChunkCoords && !hideCoords && player != null) {
             ChunkPos cp = player.chunkPosition();
             lines.add("Chunk: " + cp.x() + ", " + cp.z());
         }
-        if (cfg.infoShowYRelSea && player != null && level != null) {
+        if (cfg.infoShowYRelSea && !hideCoords && player != null && level != null) {
             int y = player.blockPosition().getY();
             int sea = level.getSeaLevel();
             int delta = y - sea;
