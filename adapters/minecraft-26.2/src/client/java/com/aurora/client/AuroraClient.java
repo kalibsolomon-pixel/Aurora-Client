@@ -120,6 +120,7 @@ public class AuroraClient implements ClientModInitializer {
         moduleManager.register(new MinimapModule());
         // Scoreboard HUD: replaces vanilla's sidebar via ScoreboardSidebarMixin.
         moduleManager.register(new com.aurora.client.hud.module.ScoreboardModule());
+        com.aurora.client.hud.module.VanillaHudModule.registerAll(moduleManager);
         // 26.2+ flag F1 on Hud.isHidden(); 26.1 uses Options.hideGui instead.
         com.aurora.client.hud.module.ScoreboardModule.vanillaHudHidden =
                 () -> net.minecraft.client.Minecraft.getInstance().gui.hud.isHidden();

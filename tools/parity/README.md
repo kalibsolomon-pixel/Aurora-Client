@@ -98,6 +98,8 @@ lookup must wait, not fail.
 | `profile-hotkey <name> <key>` | Create the profile if missing and bind its hotkey (stored SDL/KeyCombo int) |
 | `profile-options <name>` | Open `ProfileOptionsScreen` for that profile |
 | `controls` | Open vanilla's `KeyBindsScreen` and log Aurora/profile extra conflict detection |
+| `vhud-layout <id> <anchor> <ox> <oy> <scale> [enabled]` | Position/scale/hide a HUD module in memory |
+| `vhud-toast` | Push a sample `SystemToast` onto the client's `ToastManager` |
 | `inventory` / `hover-slot 0` | Open the survival inventory / park the GUI pointer on an inventory slot, showing its tooltip |
 | `reload-resources` | Start the reload F3+T starts (`Minecraft.reloadResourcePacks()`); logs `reload-resources finished` once every listener has applied |
 | `stop` | Shut down normally |

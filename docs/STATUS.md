@@ -58,6 +58,8 @@ Aurora and Pulsar text fields share bounded undo/redo history; see [text-field b
 
 Keybind conflict warnings (`KeybindConflicts`, `KeybindConflictLookup`, `KeyBindsListEntryConflictMixin`) surface duplicate bindings across Aurora's `KeybindSetting` rows, profile hotkeys (`ProfileManagerScreen`, `ProfileOptionsScreen`), and Minecraft's vanilla Controls screen (including profile hotkeys and default-vs-default collisions involving Aurora bindings, while leaving F3 debug sub-keys and plain-vs-combo `KeyCombo` pairs distinct). Checked in a disposable 26.3 dev client at factory (0.42) and high (0.85) opacity plus 854×480 narrow viewport across Zoom, Sprint & Sneak, Pulsar, Profiles, Profile Options, and vanilla Controls.
 
+Vanilla HUD control (`vanilla_hud`, off by default, vanilla-equivalent) exposes Minecraft's boss bar, action bar, titles, subtitles, toasts, and advancement pop-ups in Aurora's HUD editor (`VanillaHudLayout`, `VanillaHudModule`, `VanillaBossBarMixin`, `VanillaHudOverlayMixin`, `VanillaToastMixin`) so each can be moved, scaled, or hidden independently across 26.1.2, 26.2, and 26.3. Checked in a disposable 26.3 singleplayer dev client across settings detail (0.42/0.85 opacity and 854×480), HUD editor off/on, live moved & scaled overlays, and selective hiding.
+
 Roadmap steps 1–3 and the 26.1.2, 26.2 and 26.3 ports are merged through PRs
 #1–#12. The owner authorized autonomous GitHub integration and publication.
 
