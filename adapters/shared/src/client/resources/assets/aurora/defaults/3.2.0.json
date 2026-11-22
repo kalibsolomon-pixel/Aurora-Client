@@ -874,5 +874,16 @@
   "minimapCoordColor": -1,
   "worldMapEnabled": false,
   "worldMapKey": 28,
-  "resourcepackBrowserEnabled": true
+  "resourcepackBrowserEnabled": true,
+  "streamerModeEnabled": false,
+  "streamerHideOwnName": true,
+  "streamerSelfAlias": "You",
+  "streamerHideOwnSkin": true,
+  "streamerHideServerAddress": true,
+  "streamerHideCoords": true,
+  "streamerHideOtherNames": false,
+  "streamerOpponentLabel": "Opponent",
+  "streamerOpponentNumbered": true,
+  "streamerOpponentColorEnabled": false,
+  "streamerOpponentColor": -1
 }

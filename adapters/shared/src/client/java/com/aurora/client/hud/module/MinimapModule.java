@@ -82,7 +82,8 @@ public final class MinimapModule extends HudModule {
     @Override public int getWidth() { return size() + 2; }
     @Override public int getHeight() {
         var cfg = AuroraConfig.get();
-        return size() + 2 + ((cfg.minimapShowCoords ? 1 : 0) + (cfg.minimapShowBiome ? 1 : 0))
+        boolean showCoords = cfg.minimapShowCoords && !com.aurora.client.util.StreamerMode.hideCoords();
+        return size() + 2 + ((showCoords ? 1 : 0) + (cfg.minimapShowBiome ? 1 : 0))
                 * (Minecraft.getInstance().font.lineHeight + 2);
     }
 
@@ -248,7 +249,7 @@ public final class MinimapModule extends HudModule {
             }
         }
         int textY = y + size + 4;
-        if (cfg.minimapShowCoords) {
+        if (cfg.minimapShowCoords && !com.aurora.client.util.StreamerMode.hideCoords()) {
             var pos = mc.player.blockPosition();
             String coordinates = pos.getX() + " / " + pos.getY() + " / " + pos.getZ();
             drawCaption(g, mc, coordinates, x, textY, cfg.minimapCoordColor);

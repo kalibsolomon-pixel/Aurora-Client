@@ -48,17 +48,30 @@ public abstract class PlayerEntityRendererMixin {
         AuroraConfig cfg = AuroraConfig.get();
         boolean wantPing  = cfg.nametagPingEnabled;
         boolean wantTotem = cfg.nametagTotemPopsEnabled;
-        if (!wantPing && !wantTotem) return;
+        boolean hideSelf  = com.aurora.client.util.StreamerMode.hideOwnName();
+        boolean hideOthers = com.aurora.client.util.StreamerMode.hideOtherNames();
+        if (!wantPing && !wantTotem && !hideSelf && !hideOthers) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc == null) return;
 
-        // Skip self — own ping isn't meaningful, and own totem pops are
-        // already in the dedicated HUD module.
-        if (mc.player != null && player.getUUID().equals(mc.player.getUUID())) return;
+        boolean isSelf = mc.player != null && player.getUUID().equals(mc.player.getUUID());
+        if (isSelf) {
+            if (hideSelf) {
+                state.nameTag = Component.literal(com.aurora.client.util.StreamerMode.ownAlias())
+                        .setStyle(state.nameTag.getStyle());
+            }
+            return;
+        }
 
-        MutableComponent decorated = state.nameTag.copy();
+        MutableComponent decorated;
         boolean changed = false;
+        if (hideOthers) {
+            decorated = com.aurora.client.util.StreamerMode.opponentComponent(player.getUUID());
+            changed = true;
+        } else {
+            decorated = state.nameTag.copy();
+        }
 
         if (wantPing && mc.getConnection() != null) {
             PlayerInfo entry = mc.getConnection().getPlayerInfo(player.getUUID());

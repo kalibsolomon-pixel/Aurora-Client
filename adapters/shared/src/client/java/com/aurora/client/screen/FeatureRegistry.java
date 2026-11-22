@@ -1493,14 +1493,72 @@ addWithSettings("hitbox",
                 () -> cfg.serverListDragReorder,
                 v -> cfg.serverListDragReorder = v).resetDefault("serverListDragReorder", () -> defaults.serverListDragReorder)
                 .description("Lets you reorder servers in the Multiplayer server list by click-and-drag instead of vanilla's up/down arrow buttons. Click and hold a server, drag it to a new position, and release — the new order is saved instantly. Normal clicks still select and join servers as usual.");
+        FeatureSetting streamerModeEnabled = new BooleanSetting("Enabled",
+                () -> cfg.streamerModeEnabled,
+                v -> cfg.streamerModeEnabled = v).resetDefault("streamerModeEnabled", () -> defaults.streamerModeEnabled)
+                .description("Master switch for Streamer Mode. Masks identifying details on your screen without affecting what the game sends to servers.");
+        FeatureSetting streamerHideOwnName = new BooleanSetting("Hide Own Name",
+                () -> cfg.streamerHideOwnName,
+                v -> cfg.streamerHideOwnName = v).resetDefault("streamerHideOwnName", () -> defaults.streamerHideOwnName)
+                .description("Replaces your Minecraft username with your chosen alias on the title screen, tab list, chat, and nametag.")
+                .disabled(() -> !cfg.streamerModeEnabled);
+        FeatureSetting streamerSelfAlias = new TextSetting("Own Alias",
+                () -> cfg.streamerSelfAlias,
+                v -> cfg.streamerSelfAlias = v).resetDefault(() -> defaults.streamerSelfAlias)
+                .placeholder("You")
+                .maxLength(com.aurora.client.util.StreamerPrivacy.MAX_ALIAS_LENGTH)
+                .description("Replacement name shown in place of your username while Hide Own Name is enabled.")
+                .disabled(() -> !cfg.streamerModeEnabled || !cfg.streamerHideOwnName);
+        FeatureSetting streamerHideOwnSkin = new BooleanSetting("Hide Own Skin",
+                () -> cfg.streamerHideOwnSkin,
+                v -> cfg.streamerHideOwnSkin = v).resetDefault("streamerHideOwnSkin", () -> defaults.streamerHideOwnSkin)
+                .description("Replaces your own player skin with the default Steve skin in-world, in the tab list, and on the title screen.")
+                .disabled(() -> !cfg.streamerModeEnabled);
+        FeatureSetting streamerHideServerAddress = new BooleanSetting("Hide Server Address",
+                () -> cfg.streamerHideServerAddress,
+                v -> cfg.streamerHideServerAddress = v).resetDefault("streamerHideServerAddress", () -> defaults.streamerHideServerAddress)
+                .description("Masks server IP fields on Direct Connection and Edit Server screens, redacts connecting status addresses, hides raw IP titles in the server list, and redacts server addresses in chat.")
+                .disabled(() -> !cfg.streamerModeEnabled);
+        FeatureSetting streamerHideCoords = new BooleanSetting("Hide Coordinates",
+                () -> cfg.streamerHideCoords,
+                v -> cfg.streamerHideCoords = v).resetDefault("streamerHideCoords", () -> defaults.streamerHideCoords)
+                .description("Hides XYZ, chunk coordinates, relative height, and minimap coordinates from Aurora's Info HUD and Minimap while streaming.")
+                .disabled(() -> !cfg.streamerModeEnabled);
+        FeatureSetting streamerHideOtherNames = new BooleanSetting("Hide Opponent Names",
+                () -> cfg.streamerHideOtherNames,
+                v -> cfg.streamerHideOtherNames = v).resetDefault("streamerHideOtherNames", () -> defaults.streamerHideOtherNames)
+                .description("Replaces other players' nametags, tab-list names, and chat mentions with customizable anonymous labels.")
+                .disabled(() -> !cfg.streamerModeEnabled);
+        FeatureSetting streamerOpponentLabel = new TextSetting("Opponent Nametag",
+                () -> cfg.streamerOpponentLabel,
+                v -> cfg.streamerOpponentLabel = v).resetDefault(() -> defaults.streamerOpponentLabel)
+                .placeholder("Opponent")
+                .maxLength(com.aurora.client.util.StreamerPrivacy.MAX_ALIAS_LENGTH)
+                .description("Custom label prefix shown for other players while Hide Opponent Names is enabled (for example, Opponent, Player, or Rival).")
+                .disabled(() -> !cfg.streamerModeEnabled || !cfg.streamerHideOtherNames);
+        FeatureSetting streamerOpponentNumbered = new BooleanSetting("Number Opponents",
+                () -> cfg.streamerOpponentNumbered,
+                v -> cfg.streamerOpponentNumbered = v).resetDefault("streamerOpponentNumbered", () -> defaults.streamerOpponentNumbered)
+                .description("Appends a consistent per-session number to each masked opponent (Opponent 1, Opponent 2, ...) so you can still tell players apart.")
+                .disabled(() -> !cfg.streamerModeEnabled || !cfg.streamerHideOtherNames);
+        FeatureSetting streamerOpponentColorEnabled = new BooleanSetting("Custom Opponent Color",
+                () -> cfg.streamerOpponentColorEnabled,
+                v -> cfg.streamerOpponentColorEnabled = v).resetDefault("streamerOpponentColorEnabled", () -> defaults.streamerOpponentColorEnabled)
+                .description("Applies a custom text color to masked opponent nametags and tab-list names.")
+                .disabled(() -> !cfg.streamerModeEnabled || !cfg.streamerHideOtherNames);
+        FeatureSetting streamerOpponentColor = new ColorSetting("Opponent Tag Color",
+                () -> cfg.streamerOpponentColor,
+                v -> cfg.streamerOpponentColor = v).resetDefault(() -> defaults.streamerOpponentColor)
+                .description("Text color used for masked opponent nametags when Custom Opponent Color is enabled.")
+                .disabled(() -> !cfg.streamerModeEnabled || !cfg.streamerHideOtherNames || !cfg.streamerOpponentColorEnabled);
         FeatureSetting copyDiagnostics = ButtonSetting.semantic("Copy Diagnostics", "Copy",
                 com.aurora.client.diagnostics.DiagnosticsReport::runAndCopy)
                 .description("Closes this menu, measures frame times for 5 seconds, then copies a text report to your clipboard: your mod list, any Aurora feature that could not start and why, the renderer, recent Aurora errors and the frame-time result. Nothing is sent anywhere; paste it where you are asking for help. It contains no account, world or server names.");
         addWithSettings("miscellaneous",
-                "Display and responsiveness controls: smooth camera, frame pacing, a global frame cap, latency, input handling, and server-list dragging. Each keeps its own enable toggle and settings under its section.",
+                "Display and responsiveness controls: smooth camera, frame pacing, a global frame cap, latency, input handling, server-list dragging, and Streamer Mode privacy masking. Each keeps its own enable toggle and settings under its section.",
                         () -> cfg.smoothCamera || cfg.smoothFramePacer || cfg.lowLatencyRender
                         || cfg.inputSamplingDecoupled
-                        || cfg.serverListDragReorder || cfg.frameCapFps > 0,
+                        || cfg.serverListDragReorder || cfg.frameCapFps > 0 || cfg.streamerModeEnabled,
                 v -> {
                     cfg.smoothCamera = v;
                     cfg.smoothFramePacer = v;
@@ -1510,7 +1568,10 @@ addWithSettings("hitbox",
                     // The cap is a value setting, not a toggle: master-off
                     // removes it (0 = Off), master-on leaves whatever cap the
                     // user chose (a forced "on" value would be arbitrary).
-                    if (!v) cfg.frameCapFps = 0;
+                    if (!v) {
+                        cfg.frameCapFps = 0;
+                        cfg.streamerModeEnabled = false;
+                    }
                 },
                 List.of(
                         new SectionHeaderSetting("Smooth Camera"),
@@ -1526,6 +1587,11 @@ addWithSettings("hitbox",
                         decoupledInputEnabled,
                         new SectionHeaderSetting("Drag-to-Reorder Servers"),
                         serverListDragEnabled,
+                        new SectionHeaderSetting("Streamer Mode"),
+                        streamerModeEnabled, streamerHideOwnName, streamerSelfAlias,
+                        streamerHideOwnSkin, streamerHideServerAddress, streamerHideCoords,
+                        streamerHideOtherNames, streamerOpponentLabel, streamerOpponentNumbered,
+                        streamerOpponentColorEnabled, streamerOpponentColor,
                         new SectionHeaderSetting("Support"),
                         copyDiagnostics
                 ),
@@ -1535,7 +1601,7 @@ addWithSettings("hitbox",
                         "smoothCamera",
                         "smoothFramePacer", "framePacer", "framePacing", "frameCap",
                         "lowLatencyRender", "disableVSync", "adaptiveRenderSleeping",
-                        "inputSamplingDecoupled", "serverListDragReorder"));
+                        "inputSamplingDecoupled", "serverListDragReorder", "streamer"));
 
         // Client optimizations Aurora owns (ADR 0009). Only the switches
         // with a visible trade-off have rows; the rest are config-only
@@ -1591,6 +1657,11 @@ addWithSettings("hitbox",
                 group("frame_pacer", "Frame Pacer", framePacerEnabled, framePacingStrategy,
                         framePacerLowCpu, framePacerSpinThreshold, framePacerParkThreshold).pageSummary("Holds each frame to an even interval for smoother motion."),
                 group("low_latency", "Low Latency", lowLatencyEnabled, disableVSync, adaptiveRenderSleeping).pageSummary("Shortens the delay between your input and the screen."),
+                group("streamer_mode", "Streamer Mode", streamerModeEnabled, streamerHideOwnName, streamerSelfAlias,
+                        streamerHideOwnSkin, streamerHideServerAddress, streamerHideCoords,
+                        streamerHideOtherNames, streamerOpponentLabel, streamerOpponentNumbered,
+                        streamerOpponentColorEnabled, streamerOpponentColor)
+                        .pageSummary("Masks your username, skin, coordinates, server address, and optionally opponent nametags on your screen."),
                 settingsEntry("gradient_dither").pageSummary("Removes color banding from skies, fog and dark scenes."),
                 settingsEntry("smooth_fog").pageSummary("Softens harsh linear distance fog edges across the horizon."))));
         SETTINGS_PAGES.add(new SettingsPage("Controls", List.of(

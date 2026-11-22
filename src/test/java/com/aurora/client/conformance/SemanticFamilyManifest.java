@@ -193,7 +193,8 @@ public final class SemanticFamilyManifest {
                             + "vanilla owns interaction, narration, enabled authority and sound."),
             new Family("text-field", Hover.NOT_ANIMATED, Press.N_A,
                     Sound.NONE_BY_CONTRACT, Keyboard.VANILLA_OWNED, true, true, true, true,
-                    List.of(SRC + "mixin/EditBoxMixin.java"),
+                    List.of(SRC + "mixin/EditBoxMixin.java",
+                            SRC + "screen/setting/TextSetting.java"),
                     "Glass input chrome; focus = caret + accent hairline; the C-8 Escape rule "
                             + "(first Escape unfocuses, second closes) on every production field "
                             + "except ColorPicker's hex field (intentional screen-level Cancel)."),

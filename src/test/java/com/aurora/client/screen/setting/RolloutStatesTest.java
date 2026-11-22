@@ -141,8 +141,8 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
                     SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new ColorSetting", -1).length - 1;
-            assertEquals(41, count,
-                    "production ColorSetting construction sites (inventory drift guard; 37→41 with the Health HUD's text and background colors, the Ping HUD's background color and the Scoreboard HUD's text color, 2026-11-19; 33→37 with the Alerts' two module color pairs, 2026-11-12; 37→38 with the Scoreboard HUD's Background Color, 2026-11-12; 38→37 when Better Hitreg's color helper was removed, 2026-11-15)");
+            assertEquals(42, count,
+                    "production ColorSetting construction sites (inventory drift guard; 41→42 with Streamer Mode's Opponent Tag Color, 2026-11-21; 37→41 with the Health HUD's text and background colors, the Ping HUD's background color and the Scoreboard HUD's text color, 2026-11-19; 33→37 with the Alerts' two module color pairs, 2026-11-12; 37→38 with the Scoreboard HUD's Background Color, 2026-11-12; 38→37 when Better Hitreg's color helper was removed, 2026-11-15)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }

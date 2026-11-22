@@ -292,7 +292,7 @@ public final class FeatureCatalog {
         classify("scoreboard", FairPlay.VANILLA_INFORMATION, "Replaces the vanilla scoreboard sidebar with a movable, resizable module that shows the same rows and scores as vanilla. Off in a fresh install.", "scoreboardEnabled");
         classify("world_map", FairPlay.VANILLA_INFORMATION, "A full-screen map of terrain you have already visited.");
         classify("resourcepack_browser", FairPlay.COSMETIC, "Downloads resource packs from Modrinth.");
-        classify("miscellaneous", FairPlay.LOCAL_TIMING, "Frame pacing, a frame cap, vsync control and the point within a frame where mouse movement is applied. The rate and content of what is sent to the server are unchanged.");
+        classify("miscellaneous", FairPlay.LOCAL_TIMING, "Frame pacing, a frame cap, vsync control, the point within a frame where mouse movement is applied, and Streamer Mode privacy masking (hides your own name, skin, coordinates, server address, and optionally replaces other players' nametags on your own screen). The rate and content of what is sent to the server are unchanged.");
         classify("custom_title", FairPlay.COSMETIC, "Aurora's title screen and menu styling.");
         classify("text_fonts", FairPlay.COSMETIC, "Changes the font.");
         classify("theme", FairPlay.COSMETIC, "Changes the colors of Aurora's own screens.");
@@ -349,8 +349,8 @@ public final class FeatureCatalog {
         mixin("RetroBodyTurnMixin", "retro backwards walking", "animations").gates("animRetroBackwardsWalk");
         mixin("ClassicSneakPoseMixin", "the classic sneak pose", "animations").gates("animClassicSneak");
         mixin("HotbarItemBounceMixin", "the hotbar item bounce", "animations").gates("hotbarBounceEnabled");
-        mixin("PlayerEntityRendererMixin", "ping and totem pops under nametags", "ping", "totem_pop")
-                .gates("nametagPingEnabled", "nametagTotemPopsEnabled");
+        mixin("PlayerEntityRendererMixin", "ping, totem pops and Streamer Mode nametag masking", "ping", "totem_pop", "miscellaneous")
+                .gates("nametagPingEnabled", "nametagTotemPopsEnabled", "streamerModeEnabled");
         mixin("LivingEntityRendererExtractMixin", "entity health labels and hit-color health capture", "player_health", "hit_color")
                 .gates("playerHealthIndicators", "hitColorHealthGradient");
         mixin("LavaClarityMixin", "lava clarity", "pack_tweaks").gates("lavaClarityEnabled");
@@ -403,6 +403,14 @@ public final class FeatureCatalog {
         mixin("AbstractButtonMixin", "Aurora styling on vanilla buttons", "custom_title").gates("customTitleScreen");
         mixin("EditBoxMixin", "Aurora styling on text fields", "custom_title").gates("customTitleScreen");
         mixin("ServerListDragReorderMixin", "drag-to-reorder in the server list", "miscellaneous").gates("serverListDragReorder");
+        mixin("StreamerSkinMixin", "hiding your own skin in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
+        mixin("StreamerPlayerInfoSkinMixin", "hiding your own tab-list skin in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
+        mixin("StreamerTabNameMixin", "masking player names in the tab list in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
+        mixin("StreamerChatMixin", "redacting names and server addresses in chat in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
+        mixin("StreamerDirectJoinMixin", "masking the Direct Connection IP field in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
+        mixin("StreamerManageServerMixin", "masking the Edit Server IP field in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
+        mixin("StreamerConnectScreenMixin", "redacting server addresses while connecting in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
+        mixin("StreamerServerEntryMixin", "masking raw IP titles in the server list in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
         mixin("MultiplayerServerListWidgetMixin", "numeric ping in the server list", "ping");
         mixin("ClientLevelWorldMapMixin", "refreshing the maps when a block changes", "world_map", "minimap");
         mixin("ReflexMinecraftMixin", "automatic latency reduction");

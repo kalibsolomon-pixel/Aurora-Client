@@ -467,6 +467,19 @@ public class AuroraConfig {
     public boolean inputSamplingDecoupled = false;
     public boolean lowLatencyRender = true;
     public boolean disableVSync = false;
+
+    // ---- Streamer Mode (Settings -> Display -> Streamer Mode) ----
+    public boolean streamerModeEnabled = false;
+    public boolean streamerHideOwnName = true;
+    public String  streamerSelfAlias = "You";
+    public boolean streamerHideOwnSkin = true;
+    public boolean streamerHideServerAddress = true;
+    public boolean streamerHideCoords = true;
+    public boolean streamerHideOtherNames = false;
+    public String  streamerOpponentLabel = "Opponent";
+    public boolean streamerOpponentNumbered = true;
+    public boolean streamerOpponentColorEnabled = false;
+    public int     streamerOpponentColor = 0xFFFFFFFF;
     /**
      * Gradient Dithering: the sky, fog, clouds and terrain get an ordered dither of under half
      * an 8-bit step, so smooth gradients stop banding (render/GradientDither). Stands down

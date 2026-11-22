@@ -152,8 +152,11 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
 
         // Without blocking on the session server (ADR 0009): until the profile
         // arrives the model shows the session's default skin, then rebuilds.
-        skin = this.minecraft.getSkinManager().createLookup(com.aurora.client.util.ProfileWait.gameProfile(this.minecraft,
+        Supplier<PlayerSkin> realSkin = this.minecraft.getSkinManager().createLookup(com.aurora.client.util.ProfileWait.gameProfile(this.minecraft,
                 () -> { if (NativeUi.screen(this.minecraft) == this) rebuildWidgets(); }), false);
+        skin = () -> com.aurora.client.util.StreamerMode.hideOwnSkin()
+                ? net.minecraft.client.resources.DefaultPlayerSkin.getDefaultSkin()
+                : realSkin.get();
         var model = composition.model();
         if (model.width() > 0 && !waitingForResources) {
             try {
@@ -300,7 +303,9 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         if (!posed) PlayerFaceExtractor.extractRenderState(ctx, skin.get(), r.x() + DROPDOWN_PAD + 2, rowY + (DROPDOWN_ROW - face) / 2, face);
         int nameX = r.x() + DROPDOWN_PAD + 2 + face + 6;
         int checkX = r.x() + r.width() - DROPDOWN_PAD - 8;
-        String name = dropdownName.fit(this.font, this.minecraft.getUser().getName(), checkX - 8 - nameX);
+        String name = dropdownName.fit(this.font,
+                com.aurora.client.util.StreamerMode.ownDisplayName(this.minecraft.getUser().getName()),
+                checkX - 8 - nameX);
         if (progress >= .015f) ctx.text(this.font, name, nameX, rowY + (DROPDOWN_ROW - this.font.lineHeight) / 2 + 1,
                 AuroraAnim.scaleAlpha(ThemeManager.color(ThemeToken.MATERIAL_TEXT), progress), false);
         MaterialIconRenderer.drawIcon(ctx, this.font, com.aurora.client.screen.IconCatalog.glyph("check"),
@@ -383,7 +388,8 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
         private final boolean chip;
 
         AccountCard(UiDensity.Rect r, boolean chip) {
-            super(r.x(), r.y(), r.width(), r.height(), Component.literal(minecraft.getUser().getName()));
+            super(r.x(), r.y(), r.width(), r.height(),
+                    Component.literal(com.aurora.client.util.StreamerMode.ownDisplayName(minecraft.getUser().getName())));
             this.chip = chip;
         }
 
@@ -411,6 +417,8 @@ public class AuroraTitleScreen extends Screen implements ThemedScreen {
             int chevronX = getX() + getWidth() - pad - 6;
             int nameX = getX() + pad + face + 6;
             int text = ThemeManager.color(ThemeToken.MATERIAL_TEXT);
+            String displayName = com.aurora.client.util.StreamerMode.ownDisplayName(minecraft.getUser().getName());
+            if (!displayName.equals(getMessage().getString())) setMessage(Component.literal(displayName));
             String name = cardName.fit(font, getMessage().getString(), chevronX - 8 - nameX);
             g.text(font, name, nameX, getY() + (getHeight() - font.lineHeight) / 2 + 1, text, false);
             MaterialIconRenderer.drawIcon(g, font, com.aurora.client.screen.IconCatalog.glyph(switcher ? "switch_account" : accountOpen ? "expand_less" : "expand_more"),
