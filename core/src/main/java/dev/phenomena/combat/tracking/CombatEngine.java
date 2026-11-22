@@ -1072,7 +1072,12 @@ public final class CombatEngine {
       if (FightRecord.Evaluation.SHIELD_DISABLE.equals(old.result())) stats.shieldDisables--;
     }
     attacks.classify(match.sequence(), AttackObservations.Classification.HIT);
+    boolean sameTickTrade =
+        e.clientTick() != null && Objects.equals(lastIncomingTick, e.clientTick());
     stats.hit(match.attack(), match.nanoTime(), e.nanoTime(), policy.comboSeconds());
+    if (sameTickTrade) {
+      stats.currentCombo = 0;
+    }
     if (PerfectReach.eligible(
         match.attack(), policy.perfectReachTarget(), policy.perfectReachTolerance()))
       stats.perfectReachHits++;

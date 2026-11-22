@@ -266,22 +266,49 @@ final class DefensePage implements PhenomenaScreen.Page {
             .filter(Objects::nonNull)
             .reduce((x, y) -> y)
             .orElse(null);
+    var latestKb = a.latestTimeline == null ? null : a.latestTimeline.breakdown.knockbackControl;
     c.stats(
         List.of(
             new Stat(
-                "Reset success",
-                "Not measured",
-                "no success rate",
-                "Candidates describe timing only; no validated knockback baseline exists."),
-            new Stat(
-                "Speed after knockback (exp.)",
-                e == null
+                "Reset timing rating",
+                latestKb == null || !Double.isFinite(latestKb.rating())
                     ? "Unavailable"
-                    : number(e.candidateSpeed(), 3) + " vs " + number(e.otherSpeed(), 3),
-                e == null ? "needs 3+ samples per group" : "candidates vs no jump, latest",
-                "Experimental and descriptive: mean horizontal speed (blocks/tick) 0.1-0.4 s after"
-                    + " knockback. Confounded by attacker sprint, enchantments, blocks and"
-                    + " input.")));
+                    : number(latestKb.rating(), 0) + " / 100",
+                latestKb == null || latestKb.eligibleHits() == 0
+                    ? "needs 3+ eligible hits"
+                    : (latestKb.idealResets() + latestKb.attemptResets())
+                        + " / "
+                        + latestKb.eligibleHits()
+                        + " timed ("
+                        + latestKb.earlyAttempts()
+                        + " early, "
+                        + latestKb.lateAttempts()
+                        + " late)",
+                "Composite timing & observed knockback-control score (0–100) from same-tick accuracy, offset tightness, and post-hit speed reduction when available."),
+            new Stat(
+                "Mean |offset|",
+                latestKb == null || !Double.isFinite(latestKb.meanAbsOffsetTicks())
+                    ? NONE
+                    : number(latestKb.meanAbsOffsetTicks(), 2) + " ticks",
+                "within ±" + window + " window",
+                "Average absolute tick distance from the incoming hit among in-window jump-reset candidates (0.00 = all same-tick)."),
+            new Stat(
+                "Speed after knockback",
+                latestKb != null && Double.isFinite(latestKb.speedReductionPct())
+                    ? number(latestKb.meanSpeedCandidate(), 3)
+                        + " vs "
+                        + number(latestKb.meanSpeedNoJump(), 3)
+                        + " ("
+                        + (latestKb.speedReductionPct() >= 0 ? "-" : "+")
+                        + number(Math.abs(latestKb.speedReductionPct()), 0)
+                        + "%)"
+                    : e == null
+                        ? "Unavailable"
+                        : number(e.candidateSpeed(), 3) + " vs " + number(e.otherSpeed(), 3),
+                latestKb != null && Double.isFinite(latestKb.speedReductionPct())
+                    ? "reset candidates vs no jump"
+                    : e == null ? "needs 2+ samples per group" : "candidates vs no jump, latest",
+                "Observed mean horizontal speed (blocks/tick) 0.1–0.4 s after knockback for jump-reset candidates versus non-jump hits.")));
     var latest = a.latestTimeline;
     if (latest != null) {
       c.heading(latestLabel(latest), dateTime(latest.fight.startEpochMillis()));

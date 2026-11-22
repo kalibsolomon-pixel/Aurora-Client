@@ -171,17 +171,30 @@ final class FlowPage implements PhenomenaScreen.Page {
 
   private void combos(Content c, Aggregate a, FightAnalytics f) {
     c.heading("Combos in scope", coverage(a));
+    var cp = f.breakdown.comboProfile;
     c.stats(
         List.of(
             stat("longestCombo", Integer.toString(a.longestCombo), "your best"),
             stat(
                 "averageCombo", number(a.averageLocalCombo(), 2), a.localCombos.size() + " combos"),
-            stat("comboHits", Integer.toString(a.comboHits), "of " + hits(a.hits)),
+            stat(
+                "comboHits",
+                Integer.toString(a.comboHits),
+                Double.isFinite(cp.comboHitSharePct())
+                    ? number(cp.comboHitSharePct(), 0) + "% of hits (focused)"
+                    : "of " + hits(a.hits)),
             stat("longestUnanswered", Integer.toString(a.longestUnanswered), "ignores gaps"),
             stat(
                 "longestOpponentCombo",
                 Integer.toString(a.longestOpponentCombo),
-                a.unattributedIncoming > 0 ? "estimated" : "attributed hits")));
+                a.unattributedIncoming > 0 ? "estimated" : "attributed hits"),
+            new Stat(
+                "Combo rating",
+                Double.isFinite(cp.rating()) ? number(cp.rating(), 0) + " / 100" : NONE,
+                cp.sameTickTrades() == 0
+                    ? "focused recording"
+                    : cp.sameTickTrades() + (cp.sameTickTrades() == 1 ? " trade" : " trades"),
+                "Composite combo efficiency score (0–100) from combo hit share, average combo length, and net combo balance vs opponent.")));
     var all = f.allCombos();
     if (s.state.combo >= all.size()) s.state.combo = -1;
     c.heading("Combo timeline", "focused recording; x = combo length");

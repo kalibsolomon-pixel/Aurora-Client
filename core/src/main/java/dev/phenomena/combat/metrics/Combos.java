@@ -107,19 +107,24 @@ public final class Combos {
       double gapSeconds,
       List<MatchEvidence.Round> rounds,
       List<dev.phenomena.combat.tracking.CombatExchange.Interval> intervals) {
-    long[] boundaries =
+    long[] roundStarts =
+        rounds.stream().mapToLong(MatchEvidence.Round::startNanos).distinct().sorted().toArray();
+    long[] roundEnds =
         rounds.stream()
-            .flatMapToLong(
-                r ->
-                    r.endNanos() == null
-                        ? java.util.stream.LongStream.of(r.startNanos())
-                        : java.util.stream.LongStream.of(r.startNanos(), r.endNanos()))
+            .filter(r -> r.endNanos() != null)
+            .mapToLong(MatchEvidence.Round::endNanos)
             .distinct()
             .sorted()
             .toArray();
-    long[] exchangeBoundaries =
+    long[] exchangeStarts =
         intervals.stream()
-            .flatMapToLong(i -> java.util.stream.LongStream.of(i.startNanos(), i.endNanos()))
+            .mapToLong(dev.phenomena.combat.tracking.CombatExchange.Interval::startNanos)
+            .distinct()
+            .sorted()
+            .toArray();
+    long[] exchangeEnds =
+        intervals.stream()
+            .mapToLong(dev.phenomena.combat.tracking.CombatExchange.Interval::endNanos)
             .distinct()
             .sorted()
             .toArray();
@@ -161,19 +166,29 @@ public final class Combos {
     int exLocal = 0, exOpp = 0, exLongLocal = 0, exLongOpp = 0;
     int run = 0, longestLocal = 0, longestOpp = 0;
     Side runSide = null;
-    int boundary = 0, exchangeBoundaryIndex = 0;
+    int rStartIdx = 0, rEndIdx = 0, exStartIdx = 0, exEndIdx = 0;
     for (var m : marks) {
       boolean roundBoundary = false;
       boolean exchangeBoundary = false;
-      while (exchangeBoundaryIndex < exchangeBoundaries.length
-          && exchangeBoundaries[exchangeBoundaryIndex] <= m.nanos()) {
-        if (last != Long.MIN_VALUE && exchangeBoundaries[exchangeBoundaryIndex] > last)
-          exchangeBoundary = true;
-        exchangeBoundaryIndex++;
+      // An exchange/round interval [startNanos, endNanos] is inclusive at both ends:
+      // a start separates `last` and `m` when last < start <= m.nanos();
+      // an end separates `last` and `m` only when last <= end < m.nanos() (never splitting a
+      // mark that sits directly on its own interval's closing timestamp).
+      while (exStartIdx < exchangeStarts.length && exchangeStarts[exStartIdx] <= m.nanos()) {
+        if (last != Long.MIN_VALUE && exchangeStarts[exStartIdx] > last) exchangeBoundary = true;
+        exStartIdx++;
       }
-      while (boundary < boundaries.length && boundaries[boundary] <= m.nanos()) {
-        if (last != Long.MIN_VALUE && boundaries[boundary] > last) roundBoundary = true;
-        boundary++;
+      while (exEndIdx < exchangeEnds.length && exchangeEnds[exEndIdx] < m.nanos()) {
+        if (last != Long.MIN_VALUE && exchangeEnds[exEndIdx] >= last) exchangeBoundary = true;
+        exEndIdx++;
+      }
+      while (rStartIdx < roundStarts.length && roundStarts[rStartIdx] <= m.nanos()) {
+        if (last != Long.MIN_VALUE && roundStarts[rStartIdx] > last) roundBoundary = true;
+        rStartIdx++;
+      }
+      while (rEndIdx < roundEnds.length && roundEnds[rEndIdx] < m.nanos()) {
+        if (last != Long.MIN_VALUE && roundEnds[rEndIdx] >= last) roundBoundary = true;
+        rEndIdx++;
       }
       if (roundBoundary) {
         run = 0;

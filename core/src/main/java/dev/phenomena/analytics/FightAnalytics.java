@@ -780,7 +780,8 @@ public final class FightAnalytics {
     boolean fastMotion = dMonotonic && mMonotonic;
     boolean fastJumps = dMonotonic && jMonotonic;
 
-    int hBeforePtr = -1, hMinStart = 0, vPtr = 0, mStart = 0, jPtr = 0;
+    boolean[] vUsed = new boolean[vCount];
+    int hBeforePtr = -1, hMinStart = 0, vStart = 0, mStart = 0, jPtr = 0;
     List<Incoming> out = new ArrayList<>(damage.size());
     for (var d : damage) {
       var ctx = d.context();
@@ -819,15 +820,47 @@ public final class FightAnalytics {
         }
         if (before != null && min != null && before - min > 1e-6) dmg = before - min;
 
+        // Pair each incoming hit with at most one unclaimed VELOCITY packet in [tick - 1, tick + 1].
+        // Priority: exact same tick (delta 0), then tick + 1 (post-damage impulse), then tick - 1
+        // (packet arrived across a tick boundary before DamageEvent); strongest horizontal impulse
+        // breaks ties on the same tick.
+        int bestV = -1;
+        int bestRank = Integer.MAX_VALUE;
+        double bestKb = -1.0;
         if (fastVel) {
-          while (vPtr < vCount && vTick[vPtr] < tick) vPtr++;
-          if (vPtr < vCount && vTick[vPtr] <= tick + 1) kb = vKb[vPtr];
-        } else {
-          for (int k = 0; k < vCount; k++)
-            if (vTick[k] >= tick && vTick[k] <= tick + 1) {
-              kb = vKb[k];
-              break;
+          while (vStart < vCount && vTick[vStart] < tick - 1) vStart++;
+          for (int k = vStart; k < vCount && vTick[k] <= tick + 1; k++) {
+            if (vUsed[k]) continue;
+            if (vTick[k] != tick && damageTicks.contains(vTick[k])) continue;
+            long diff = vTick[k] - tick;
+            int rank = diff == 0 ? 0 : (diff == 1 ? 1 : 2);
+            if (rank < bestRank || (rank == bestRank && vKb[k] > bestKb)) {
+              bestRank = rank;
+              bestKb = vKb[k];
+              bestV = k;
             }
+          }
+        } else {
+          for (int k = 0; k < vCount; k++) {
+            if (vUsed[k]) continue;
+            if (vTick[k] != tick && damageTicks.contains(vTick[k])) continue;
+            long diff = vTick[k] - tick;
+            if (diff < -1 || diff > 1) continue;
+            int rank = diff == 0 ? 0 : (diff == 1 ? 1 : 2);
+            if (rank < bestRank || (rank == bestRank && vKb[k] > bestKb)) {
+              bestRank = rank;
+              bestKb = vKb[k];
+              bestV = k;
+            }
+          }
+        }
+        if (bestV >= 0) {
+          long claimedTick = vTick[bestV];
+          for (int k = fastVel ? vStart : 0; k < vCount; k++) {
+            if (vTick[k] == claimedTick) vUsed[k] = true;
+            else if (fastVel && vTick[k] > claimedTick) break;
+          }
+          kb = vKb[bestV];
         }
 
         double sum = 0;
