@@ -874,5 +874,6 @@
   "minimapCoordColor": -1,
   "worldMapEnabled": false,
   "worldMapKey": 28,
-  "resourcepackBrowserEnabled": true
+  "resourcepackBrowserEnabled": true,
+  "resourcepackFoldersEnabled": true
 }

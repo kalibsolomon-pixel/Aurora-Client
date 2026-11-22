@@ -1607,12 +1607,27 @@ addWithSettings("hitbox",
         SETTINGS_PAGES.add(new SettingsPage("Performance", List.of(
                 group("debug_screen", "Debug Screen", debugEntryCache).pageSummary("Makes the F3 screen cheaper to draw."),
                 group("maps", "Maps", minimapRefreshCap).pageSummary("Limits how often the minimap redraws its terrain."))));
+        FeatureSetting resourcepackFolders = new BooleanSetting("Resource Pack Folders",
+                () -> cfg.resourcepackFoldersEnabled, v -> { cfg.resourcepackFoldersEnabled = v; AuroraConfig.save(); })
+                .resetDefault("resourcepackFoldersEnabled", () -> defaults.resourcepackFoldersEnabled)
+                .description("Discovers resource packs inside subfolders of resourcepacks/ and opens Aurora's folder-aware manager in Options → Resource Packs.");
+        FeatureSetting openPackManager = ButtonSetting.semantic("Open Pack Manager…",
+                () -> {
+                    net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+                    if (mc != null) {
+                        com.aurora.client.adapter.NativeUi.setScreen(mc,
+                                ResourcePackManagerScreen.open(com.aurora.client.adapter.NativeUi.screen(mc)));
+                    }
+                })
+                .description("Opens Aurora's folder-aware resource pack manager with subfolder navigation, search, and load-order controls.");
         SETTINGS_PAGES.add(new SettingsPage("General", List.of(
                 group("interface_motion", "Interface", new BooleanSetting("Reduced Motion",
                         () -> cfg.reducedMotion, value -> { cfg.reducedMotion = value; AuroraConfig.save(); })
                         .resetDefault("reducedMotion", () -> defaults.reducedMotion)
                         .description("Skip overlay fades and make keyboard focus scrolling instant."))
                         .pageSummary("Animation and motion preferences for Aurora's menus."),
+                group("resource_packs", "Resource Packs", resourcepackFolders, openPackManager)
+                        .pageSummary("Organize resource packs into nested folders with search and load-order controls."),
                 group("search", "Search", searchInstant, searchTolerance).pageSummary("How the search bar finds features and settings."),
                 settingsEntry("custom_title").pageSummary("Aurora's own title screen in place of the vanilla one."),
                 group("server_list", "Drag-to-Reorder Servers", serverListDragEnabled).pageSummary("Reorder servers in the Multiplayer list by dragging."),

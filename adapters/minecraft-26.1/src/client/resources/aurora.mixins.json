@@ -87,6 +87,8 @@
     "ScreenPanoramaAccessor",
     "KeyMappingComboMixin",
     "KeyBindsScreenComboMixin",
+    "FolderRepositorySourceMixin",
+    "PackSelectionScreenMixin",
     "LevelLoadTrackerMixin",
     "OcclusionFrameMixin",
     "OcclusionBodyMixin",

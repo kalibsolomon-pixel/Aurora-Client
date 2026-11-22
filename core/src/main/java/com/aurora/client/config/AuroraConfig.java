@@ -1394,6 +1394,12 @@ public class AuroraConfig {
      */
     public boolean resourcepackBrowserEnabled = true;
 
+    /**
+     * Enables folder-aware resource pack discovery and Aurora's folder-aware
+     * Resource Pack Manager in Options → Resource Packs.
+     */
+    public boolean resourcepackFoldersEnabled = true;
+
 
     public static AuroraConfig get() { return INSTANCE; }
 

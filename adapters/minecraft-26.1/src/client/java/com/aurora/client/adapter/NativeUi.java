@@ -16,4 +16,12 @@ public final class NativeUi {
     public static RenderTarget mainTarget(Minecraft client) { return client.getMainRenderTarget(); }
     /** Opens a folder or file in the system's file manager. */
     public static void openPath(java.nio.file.Path path) { net.minecraft.util.Util.getPlatform().openPath(path); }
+    /** Reads {@code pack.png} bytes from a resource pack, or null when absent. */
+    public static byte[] readPackIconPng(net.minecraft.server.packs.repository.Pack pack) {
+        try (var res = pack.open()) {
+            var supplier = res.getRootResource("pack.png");
+            if (supplier == null) return null;
+            try (var in = supplier.get()) { return in.readAllBytes(); }
+        } catch (Exception ignored) { return null; }
+    }
 }

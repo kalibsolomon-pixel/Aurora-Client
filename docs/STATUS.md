@@ -5,6 +5,8 @@ Updated 2026-11-21. See [ROADMAP](ROADMAP.md) for the order of work,
 
 ## Structure and integration
 
+Folder-Aware Resource Pack Manager (`resourcepackFoldersEnabled`, on by default, cosmetic) discovers resource packs nested inside organizing subfolders under `resourcepacks/` (path-qualified `file/<folder>/<name>` IDs while keeping top-level vanilla IDs untouched) and adds Aurora's themed `ResourcePackManagerScreen` with folder navigation, clickable breadcrumbs, global recursive search, async pack icon loading, and load-order reordering from both **Options → Resource Packs** and **Settings → General → Resource Packs**.
+
 UI cache refinement crops static captures to their panel/body bounds, keeps
 unified chrome through screenshot suppression, retires screen textures after
 deferred draws, and reuses one prepared setting-tooltip layout. The optional
