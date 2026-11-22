@@ -27,6 +27,8 @@ class RetiredProfileFieldsTest {
     void removedSmoothingAndHitregFieldsAreRetired() {
         assertTrue(ProfileFieldSet.isRetired("entityMovementSmoothingEnabled"));
         assertTrue(ProfileFieldSet.isRetired("hitregSettingsKey"));
+        assertTrue(ProfileFieldSet.isRetired("smoothCamera"));
+        assertTrue(ProfileFieldSet.isRetired("smoothCameraStrength"));
         assertFalse(ProfileFieldSet.isRetired("hitregDelayMs"));
     }
 }

@@ -207,6 +207,20 @@ Sodium's `VulkanPipelineMixin` attaches push constants). All fourteen rows passe
 reports each; judged runs 0.034–0.089 ms mean and at most 0.167 ms p95, zero fills and glass
 ([evidence](releases/evidence/3.7.0-parity.json)).
 
+3.8.0 follows: Vanilla HUD Control, Inventory HUD, Chat Suite, Media Controls & Now Playing HUD,
+Pack Tweaks post-processing/skies/local time & weather, Tab List & Nametag polish, Per-Sound Volume,
+Streamer Mode, Keybind Conflict Warnings, Per-Server Profile Auto-Switching, Screenshot Manager,
+Folder-Aware Resource Pack Manager, Pulsar accuracy pass, and Ephemera `ObjectShare` integration
+([notes](releases/RELEASE_NOTES_3.8.0.md), [evidence](releases/evidence/3.8.0-parity.json)).
+
+3.8.1 follows: Ephemera-first engine & frame-pacing ownership (PR #111), Smooth Camera removal plus
+the stress-test pass fixing 11 feature Reset prefix lists, dead/hidden settings, Escape popup
+handling, Aurora-only text-scope hitboxes, and small-scale Waypoint Editor / Resource Pack Manager
+layouts (PR #109), and retiring `smoothCamera` / `smoothCameraStrength` in `ProfileFieldSet` so
+existing profiles upgrade without warnings ([notes](releases/RELEASE_NOTES_3.8.1.md)). All fourteen
+rows passed with six reports each; judged runs 0.031–0.128 ms mean and at most 0.229 ms p95, zero
+fills and glass ([evidence](releases/evidence/3.8.1-parity.json)).
+
 Window frames now use a cached, content-clipped bevel with one fixed strength, a little lighter than the former Subtle level (the Window Bevel setting and its levels were retired on 2026-11-18). Below full opacity the rim stays as clear as the window and the glass pass bends the backdrop across the frame band; glass, gem and metal were captured in the 26.3 client on OpenGL and Vulkan and await owner review. Since 2026-11-18 every window keeps a 10 px frame room, so the band is never squeezed by content (it may take up to 6 px) and content keeps a 4 px gap from it (DESIGN_LANGUAGE "Frame room").
 
 ## Acceptance and contributor readiness
