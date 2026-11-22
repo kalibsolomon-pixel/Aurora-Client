@@ -22,7 +22,12 @@ public final class KeybindMigrator {
             "waypointManagerKey",
             "minimapToggleKey",
             "blurTestKey",
-            "worldMapKey");
+            "worldMapKey",
+            "mediaPlayPauseKey",
+            "mediaNextKey",
+            "mediaPrevKey",
+            "mediaVolUpKey",
+            "mediaVolDownKey");
 
     private KeybindMigrator() {}
 

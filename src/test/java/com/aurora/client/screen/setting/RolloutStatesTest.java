@@ -104,8 +104,8 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
                     SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new EnumSetting<>", -1).length - 1;
-            assertEquals(31, count,
-                    "production EnumSetting construction sites (inventory drift guard; 29→31 with the Health and Ping HUDs' Background, 2026-11-19; 25→24 with Swing Style's removal, 2026-10-30; 24→25 with Text's Weight, 2026-11-12; 25→27 with the Alerts' two module-background dropdowns, 2026-11-12; 27→29 with Hit Color's Flash Style and the Scoreboard HUD's Background, 2026-11-12; 29→30 with Keystrokes' Key Style, 2026-11-17; 31→30 with Window Bevel's retirement, 2026-11-18; 30→29 with View Bob Curve's removal, 2026-11-18)");
+            assertEquals(32, count,
+                    "production EnumSetting construction sites (inventory drift guard; 31→32 with Media Controls' Now Playing HUD Background)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }
@@ -141,8 +141,8 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
                     SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new ColorSetting", -1).length - 1;
-            assertEquals(41, count,
-                    "production ColorSetting construction sites (inventory drift guard; 37→41 with the Health HUD's text and background colors, the Ping HUD's background color and the Scoreboard HUD's text color, 2026-11-19; 33→37 with the Alerts' two module color pairs, 2026-11-12; 37→38 with the Scoreboard HUD's Background Color, 2026-11-12; 38→37 when Better Hitreg's color helper was removed, 2026-11-15)");
+            assertEquals(43, count,
+                    "production ColorSetting construction sites (inventory drift guard; 41→43 with Media Controls' Now Playing HUD colors)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }
@@ -209,8 +209,8 @@ class RolloutStatesTest {
             // Settings tab's Controls page (it was vanilla-Controls-only).
             // 18 → 12 on 2026-11-15: Better Hitreg's six keybind rows were
             // removed with everything but its custom hitreg.
-            assertEquals(12, count,
-                    "production KeybindSetting construction sites (inventory drift guard)");
+            assertEquals(17, count,
+                    "production KeybindSetting construction sites (inventory drift guard; 12→17 with Media Controls' five keybind rows)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }

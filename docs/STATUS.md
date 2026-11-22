@@ -5,6 +5,8 @@ Updated 2026-11-21. See [ROADMAP](ROADMAP.md) for the order of work,
 
 ## Structure and integration
 
+Media Controls (`mediaControlsEnabled`, off by default, cosmetic) adds cross-platform desktop playback keybinds (Play/Pause, Next, Previous, Volume Up, Volume Down — dispatched asynchronously off the tick thread on Windows, macOS, and Linux) plus a Windows-first **Now Playing** HUD overlay (`NowPlayingModule`, polled off-thread via WinRT GSMTC only while enabled, zero background work when off).
+
 UI cache refinement crops static captures to their panel/body bounds, keeps
 unified chrome through screenshot suppression, retires screen textures after
 deferred draws, and reuses one prepared setting-tooltip layout. The optional

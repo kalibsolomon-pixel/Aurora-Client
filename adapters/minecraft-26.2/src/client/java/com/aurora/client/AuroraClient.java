@@ -120,6 +120,7 @@ public class AuroraClient implements ClientModInitializer {
         moduleManager.register(new MinimapModule());
         // Scoreboard HUD: replaces vanilla's sidebar via ScoreboardSidebarMixin.
         moduleManager.register(new com.aurora.client.hud.module.ScoreboardModule());
+        moduleManager.register(new com.aurora.client.hud.module.NowPlayingModule());
         // 26.2+ flag F1 on Hud.isHidden(); 26.1 uses Options.hideGui instead.
         com.aurora.client.hud.module.ScoreboardModule.vanillaHudHidden =
                 () -> net.minecraft.client.Minecraft.getInstance().gui.hud.isHidden();
@@ -336,5 +337,25 @@ public class AuroraClient implements ClientModInitializer {
                 "key.aurora.blur_test",
                 com.aurora.client.util.AuroraKey.UNBOUND,
                 () -> cfg.blurTestKey,         v -> cfg.blurTestKey = v);
+        com.aurora.client.util.AuroraKeybinds.register(
+                "key.aurora.media_play_pause",
+                com.aurora.client.util.AuroraKey.UNBOUND,
+                () -> cfg.mediaPlayPauseKey,   v -> cfg.mediaPlayPauseKey = v);
+        com.aurora.client.util.AuroraKeybinds.register(
+                "key.aurora.media_next",
+                com.aurora.client.util.AuroraKey.UNBOUND,
+                () -> cfg.mediaNextKey,        v -> cfg.mediaNextKey = v);
+        com.aurora.client.util.AuroraKeybinds.register(
+                "key.aurora.media_prev",
+                com.aurora.client.util.AuroraKey.UNBOUND,
+                () -> cfg.mediaPrevKey,        v -> cfg.mediaPrevKey = v);
+        com.aurora.client.util.AuroraKeybinds.register(
+                "key.aurora.media_vol_up",
+                com.aurora.client.util.AuroraKey.UNBOUND,
+                () -> cfg.mediaVolUpKey,       v -> cfg.mediaVolUpKey = v);
+        com.aurora.client.util.AuroraKeybinds.register(
+                "key.aurora.media_vol_down",
+                com.aurora.client.util.AuroraKey.UNBOUND,
+                () -> cfg.mediaVolDownKey,     v -> cfg.mediaVolDownKey = v);
     }
 }

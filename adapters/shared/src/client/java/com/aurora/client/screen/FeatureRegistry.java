@@ -1158,6 +1158,68 @@ addWithSettings("hitbox",
                                 .description("Opens the Modrinth resource-pack browser. Search, preview, and install packs straight into your game.")
                 ));
 
+        addWithSettings("media_controls",
+                "Control desktop music and media players directly from Minecraft using cross-platform keybinds, and optionally show a live Now Playing HUD overlay on Windows.",
+                () -> cfg.mediaControlsEnabled, v -> cfg.mediaControlsEnabled = v,
+                List.of(
+                        new SectionHeaderSetting("Quick Controls"),
+                        ButtonSetting.semantic("Play / Pause",
+                                () -> com.aurora.client.media.SystemMediaBridge.dispatch(com.aurora.client.media.MediaAction.PLAY_PAUSE))
+                                .description("Toggles playback in your active desktop media player."),
+                        ButtonSetting.semantic("Next Track",
+                                () -> com.aurora.client.media.SystemMediaBridge.dispatch(com.aurora.client.media.MediaAction.NEXT))
+                                .description("Skips to the next track."),
+                        ButtonSetting.semantic("Previous Track",
+                                () -> com.aurora.client.media.SystemMediaBridge.dispatch(com.aurora.client.media.MediaAction.PREVIOUS))
+                                .description("Returns to the previous track."),
+                        new SectionHeaderSetting("Keybinds"),
+                        new KeybindSetting("Play / Pause Key",
+                                () -> cfg.mediaPlayPauseKey, v -> cfg.mediaPlayPauseKey = v).resetDefault(() -> defaults.mediaPlayPauseKey)
+                                .description("Toggles desktop media playback in-game."),
+                        new KeybindSetting("Next Track Key",
+                                () -> cfg.mediaNextKey, v -> cfg.mediaNextKey = v).resetDefault(() -> defaults.mediaNextKey)
+                                .description("Skips to the next track."),
+                        new KeybindSetting("Previous Track Key",
+                                () -> cfg.mediaPrevKey, v -> cfg.mediaPrevKey = v).resetDefault(() -> defaults.mediaPrevKey)
+                                .description("Goes back to the previous track."),
+                        new KeybindSetting("Volume Up Key",
+                                () -> cfg.mediaVolUpKey, v -> cfg.mediaVolUpKey = v).resetDefault(() -> defaults.mediaVolUpKey)
+                                .description("Raises desktop media volume."),
+                        new KeybindSetting("Volume Down Key",
+                                () -> cfg.mediaVolDownKey, v -> cfg.mediaVolDownKey = v).resetDefault(() -> defaults.mediaVolDownKey)
+                                .description("Lowers desktop media volume."),
+                        new SectionHeaderSetting("Now Playing HUD (Windows)"),
+                        new BooleanSetting("Show Now Playing HUD",
+                                () -> cfg.mediaNowPlayingHudEnabled, v -> cfg.mediaNowPlayingHudEnabled = v).resetDefault(() -> defaults.mediaNowPlayingHudEnabled)
+                                .description("Displays the current track title, artist, and progress bar in a movable HUD overlay (Windows GSMTC)."),
+                        new BooleanSetting("Show Artist",
+                                () -> cfg.mediaHudShowArtist, v -> cfg.mediaHudShowArtist = v).resetDefault(() -> defaults.mediaHudShowArtist)
+                                .visibleWhen(() -> cfg.mediaNowPlayingHudEnabled)
+                                .description("Shows the artist line below the track title."),
+                        new BooleanSetting("Show Progress Bar",
+                                () -> cfg.mediaHudShowProgress, v -> cfg.mediaHudShowProgress = v).resetDefault(() -> defaults.mediaHudShowProgress)
+                                .visibleWhen(() -> cfg.mediaNowPlayingHudEnabled)
+                                .description("Shows a subtle accent playback progress bar at the bottom of the HUD."),
+                        new BooleanSetting("Hide When Idle",
+                                () -> cfg.mediaHudHideWhenIdle, v -> cfg.mediaHudHideWhenIdle = v).resetDefault(() -> defaults.mediaHudHideWhenIdle)
+                                .visibleWhen(() -> cfg.mediaNowPlayingHudEnabled)
+                                .description("Hides the HUD completely when no desktop media is playing."),
+                        SliderSetting.ofInt("Max Width",
+                                () -> cfg.mediaHudMaxWidth, v -> cfg.mediaHudMaxWidth = v, 120, 280).resetDefault(() -> defaults.mediaHudMaxWidth)
+                                .visibleWhen(() -> cfg.mediaNowPlayingHudEnabled)
+                                .description("Maximum width of the Now Playing HUD in pixels."),
+                        new EnumSetting<>("Background", AuroraConfig.HudBackground.class,
+                                () -> cfg.mediaHudBgMode, v -> cfg.mediaHudBgMode = v).resetDefault(() -> defaults.mediaHudBgMode)
+                                .visibleWhen(() -> cfg.mediaNowPlayingHudEnabled),
+                        new ColorSetting("Background Color",
+                                () -> cfg.mediaHudBgColor, v -> cfg.mediaHudBgColor = v).resetDefault(() -> defaults.mediaHudBgColor)
+                                .visibleWhen(() -> cfg.mediaNowPlayingHudEnabled && cfg.mediaHudBgMode == AuroraConfig.HudBackground.SOLID),
+                        new ColorSetting("Text Color",
+                                () -> cfg.mediaHudTextColor, v -> cfg.mediaHudTextColor = v).resetDefault(() -> defaults.mediaHudTextColor)
+                                .visibleWhen(() -> cfg.mediaNowPlayingHudEnabled)
+                ),
+                List.of("media"));
+
 
 
         // ============ SETTINGS TAB ============

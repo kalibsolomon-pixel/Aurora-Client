@@ -77,6 +77,7 @@ Changing a default does not change an existing install: a player who already had
 | Scoreboard HUD | Vanilla equivalent | Replaces the vanilla scoreboard sidebar with a movable, resizable module that shows the same rows and scores as vanilla. Off in a fresh install. |
 | World Map | Vanilla equivalent | A full-screen map of terrain you have already visited. |
 | Resourcepack Browser | Cosmetic | Downloads resource packs from Modrinth. |
+| Media Controls | Cosmetic | Controls local desktop media playback and displays the currently playing track locally. |
 | Display Settings | Local timing | Frame pacing, a frame cap, vsync control and the point within a frame where mouse movement is applied. The rate and content of what is sent to the server are unchanged. |
 | Custom Title | Cosmetic | Aurora's title screen and menu styling. |
 | Text & Fonts | Cosmetic | Changes the font. |

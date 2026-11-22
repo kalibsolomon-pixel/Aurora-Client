@@ -38,6 +38,11 @@
   "key.aurora.waypoint_manager": "Waypoint Manager",
   "key.aurora.world_map": "Open World Map",
   "key.aurora.minimap_toggle": "Toggle Minimap",
-  "key.aurora.blur_test": "Blur Panel Test"
+  "key.aurora.blur_test": "Blur Panel Test",
+  "key.aurora.media_play_pause": "Media Play / Pause",
+  "key.aurora.media_next": "Media Next Track",
+  "key.aurora.media_prev": "Media Previous Track",
+  "key.aurora.media_vol_up": "Media Volume Up",
+  "key.aurora.media_vol_down": "Media Volume Down"
 }
 
