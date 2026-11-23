@@ -7,7 +7,6 @@ import com.aurora.client.resourcepack.PackIconLoader;
 import com.aurora.client.theme.ThemeManager;
 import com.aurora.client.theme.ThemeToken;
 import com.aurora.client.ui.component.ButtonWidget;
-import com.aurora.client.ui.component.GlassSurface;
 import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.component.ScrollbarChrome;
 import com.aurora.client.ui.component.ThemedScreen;
@@ -37,6 +36,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackCompatibility;
 import net.minecraft.server.packs.repository.PackRepository;
@@ -56,20 +56,34 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * clickable folder breadcrumbs, global recursive search across all subfolders,
  * pack icons loaded asynchronously, and full selection + load-order management
  * backed by Minecraft's {@link PackSelectionModel}.
+ *
+ * <p>Not a window (owner, 2026-11-23): it keeps vanilla's pack screen layout (header, two
+ * 200 px lists 30 px apart, 33 px footer, vanilla background, separators and list texture) and
+ * replaces the elements inside it with Aurora's: search, breadcrumbs, pack rows and buttons.
  */
 public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
-    @Override public boolean parentGlassOnly() { return true; }
 
     private static final AtomicBoolean VANILLA_BYPASS = new AtomicBoolean(false);
 
     public static void allowVanillaNext() { VANILLA_BYPASS.set(true); }
     public static boolean consumeVanillaBypass() { return VANILLA_BYPASS.getAndSet(false); }
 
-    private static final int ROW_H = 40;
-    private static final int FOLDER_ROW_H = 30;
+    /** Vanilla's pack row height; folders are a step shorter. */
+    private static final int ROW_H = 36;
+    private static final int FOLDER_ROW_H = 28;
     private static final int ROW_GAP = 4;
     private static final int ICON_SIZE = 28;
-    private static final int PANE_GAP = 10;
+    /** Vanilla's pack screen geometry: list width, the gap between the lists, the footer band. */
+    private static final int LIST_W = 200;
+    private static final int LIST_GAP = 30;
+    private static final int FOOTER_H = 33;
+    private static final int SEARCH_W = 200;
+    private static final int SEARCH_H = 15;
+    private static final int BUTTON_GAP = 8;
+    private static final Identifier MENU_LIST_BACKGROUND =
+            Identifier.withDefaultNamespace("textures/gui/menu_list_background.png");
+    private static final Identifier INWORLD_MENU_LIST_BACKGROUND =
+            Identifier.withDefaultNamespace("textures/gui/inworld_menu_list_background.png");
     private static final int ACTION_BTN = 18;
     private static final int SCROLLBAR_W = 4;
 
@@ -82,6 +96,9 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
     private static final String ICON_CHEVRON = "\uE5CC";
     private static final String ICON_PACK = "\uE1A1";
     private static final String ICON_SEARCH = "\uE8B6";
+
+    private static final String[] SEARCH_HINTS = {
+            "Search resource packs across all folders", "Search all folders", "Search"};
 
     private final PackSelectionModel model;
     private final Path packDir;
@@ -102,11 +119,9 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
     private PackFolderTree.FolderView currentView;
 
     // Layout geometry
-    private int panelX, panelY, panelW, panelH;
-    private int headerButtonsLeftX;
+    private int titleY, headerH, footerTop;
     private int searchX, searchY, searchW, searchH;
     private int crumbY, crumbH;
-    private int paneTop, paneH;
     private int leftX, leftW, rightX, rightW;
     private int listTop, listH;
 
@@ -549,74 +564,24 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
     @Override
     protected void init() {
         semanticHost.beginRebuild();
-        var frame = UiDensity.window(this.width, this.height);
-        panelX = frame.x();
-        panelY = frame.y();
-        panelW = frame.width();
-        panelH = frame.height();
+        int centerX = this.width / 2;
+        int listW = Math.max(1, Math.min(LIST_W, (this.width - LIST_GAP - 2 * 8) / 2));
+        leftW = listW;
+        rightW = listW;
+        leftX = centerX - LIST_GAP / 2 - listW;
+        rightX = centerX + LIST_GAP / 2;
 
-        int pad = UiDensity.TITLE_X;
-        int btnH = UiDensity.HEADER_BUTTON_H;
-        int btnY = panelY + UiDensity.HEADER_TOP;
-
-        boolean compact = panelW < 390;
-        String openLabel = compact ? "Folder" : "Open folder";
-        String refreshLabel = compact ? "Sync" : "Refresh";
-        // Button reserves 8 px inner pad per side plus border inset; +22 guarantees full un-ellipsized labels.
-        int btnPad = 22;
-        int gap = 4;
-
-        int doneW = Math.max(46, this.font.width("Done") + btnPad);
-        int vanillaW = Math.max(52, this.font.width("Vanilla") + btnPad);
-        int refreshW = Math.max(46, this.font.width(refreshLabel) + btnPad);
-        int openW = Math.max(54, this.font.width(openLabel) + btnPad);
-        int modrinthW = Math.max(60, this.font.width("Modrinth") + btnPad);
-
-        int rightEdge = panelX + panelW - pad;
-        int doneX = rightEdge - doneW;
-        int vanillaX = doneX - gap - vanillaW;
-        int refreshX = vanillaX - gap - refreshW;
-        int openX = refreshX - gap - openW;
-        int modrinthX = openX - gap - modrinthW;
-
-        int titleMinRight = panelX + pad + Math.min(96, this.font.width(AuroraFontRenderer.role("Resource Packs", AuroraFontRenderer.Role.TITLE)) + 8);
-        boolean showModrinth = AuroraConfig.get().resourcepackBrowserEnabled && modrinthX >= titleMinRight;
-        headerButtonsLeftX = showModrinth ? modrinthX : openX;
-        if (showModrinth) {
-            this.addRenderableWidget(ButtonWidget.semantic(modrinthX, btnY, modrinthW, btnH,
-                    Component.literal("Modrinth"),
-                    "Browse and install resource packs from Modrinth.",
-                    () -> NativeUi.setScreen(this.minecraft, new ResourcePackBrowserScreen(this)))
-                    .glassBackground(true));
-        }
-        this.addRenderableWidget(ButtonWidget.semantic(openX, btnY, openW, btnH,
-                Component.literal(openLabel),
-                "Opens the current resource packs folder in your file manager.",
-                this::openCurrentFolder).glassBackground(true));
-        this.addRenderableWidget(ButtonWidget.semantic(refreshX, btnY, refreshW, btnH,
-                Component.literal(refreshLabel),
-                "Re-scans resourcepacks and all subfolders.",
-                () -> {
-                    rescanDiskAndModel(true);
-                    toast.flash("Rescanned resource packs", 1800L);
-                }).glassBackground(true));
-        this.addRenderableWidget(ButtonWidget.semantic(vanillaX, btnY, vanillaW, btnH,
-                Component.literal("Vanilla"),
-                "Switches to Minecraft's default resource pack screen.",
-                this::openVanillaScreen).glassBackground(true));
-        this.addRenderableWidget(ButtonWidget.semantic(doneX, btnY, doneW, btnH,
-                Component.literal("Done"),
-                "Applies selected resource packs and closes.",
-                this::commitAndClose).primary(true).glassBackground(true));
-
-        searchX = panelX + pad;
-        searchY = panelY + UiDensity.HEADER + 4;
-        searchW = panelW - 2 * pad;
-        searchH = 20;
+        // Header: the title, then the search field under it, both centred.
+        titleY = 6;
+        searchW = Math.min(SEARCH_W, this.width - 16);
+        searchH = SEARCH_H;
+        searchX = centerX - searchW / 2;
+        searchY = titleY + this.font.lineHeight + 5;
+        headerH = searchY + searchH + 5;
 
         searchField = new EditBox(this.font, searchX, searchY, searchW, searchH, Component.literal("Search"));
         searchField.setMaxLength(120);
-        searchField.setHint(Component.literal("Search resource packs across all folders"));
+        searchField.setHint(Component.literal(searchHint(searchW - 20)));
         searchField.setValue(searchQuery);
         searchField.setResponder(q -> {
             searchQuery = q;
@@ -625,21 +590,77 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         });
         this.addRenderableWidget(searchField);
 
-        crumbY = searchY + searchH + 8;
+        // Footer: one centred row of buttons. Labels shorten, then the extras drop out
+        // (Modrinth, Refresh, Vanilla) before anything can run off the screen.
+        footerTop = this.height - FOOTER_H;
+        layoutFooter(this.height - FOOTER_H + (FOOTER_H - UiDensity.HEADER_BUTTON_H) / 2 + 1);
+
+        // Each list: its heading (breadcrumbs on the left, "Selected" on the right), then its rows.
+        crumbY = headerH + 4;
         crumbH = 18;
-        paneTop = crumbY + crumbH + 4;
-        paneH = Math.max(80, panelY + panelH - 12 - paneTop);
-
-        int usableW = panelW - 2 * pad - PANE_GAP;
-        leftW = usableW / 2;
-        rightW = usableW - leftW;
-        leftX = panelX + pad;
-        rightX = leftX + leftW + PANE_GAP;
-
-        listTop = paneTop + 20;
-        listH = Math.max(40, paneH - 22);
+        listTop = crumbY + crumbH + 2;
+        listH = Math.max(0, footerTop - 4 - listTop);
         semanticHost.finishRebuild();
         syncScrollFocusTargets();
+    }
+
+    private record FooterButton(String label, String shortLabel, String tooltip, Runnable action, boolean optional) {}
+
+    private void layoutFooter(int y) {
+        List<FooterButton> buttons = new ArrayList<>(5);
+        if (AuroraConfig.get().resourcepackBrowserEnabled) {
+            buttons.add(new FooterButton("Modrinth", "Modrinth", "Browse and install resource packs from Modrinth.",
+                    () -> NativeUi.setScreen(this.minecraft, new ResourcePackBrowserScreen(this)), true));
+        }
+        buttons.add(new FooterButton("Open folder", "Folder", "Opens the current resource packs folder in your file manager.",
+                this::openCurrentFolder, false));
+        buttons.add(new FooterButton("Refresh", "Sync", "Re-scans resourcepacks and all subfolders.", () -> {
+            rescanDiskAndModel(true);
+            toast.flash("Rescanned resource packs", 1800L);
+        }, true));
+        buttons.add(new FooterButton("Vanilla", "Vanilla", "Switches to Minecraft's default resource pack screen.",
+                this::openVanillaScreen, true));
+        buttons.add(new FooterButton("Done", "Done", "Applies selected resource packs and closes.", this::commitAndClose, false));
+
+        int room = this.width - 16;
+        boolean compact = footerWidth(buttons, false) > room;
+        while (footerWidth(buttons, compact) > room && buttons.stream().anyMatch(FooterButton::optional)) {
+            for (int i = 0; i < buttons.size(); i++) {
+                if (buttons.get(i).optional()) {
+                    buttons.remove(i);
+                    break;
+                }
+            }
+        }
+        int x = (this.width - footerWidth(buttons, compact)) / 2;
+        for (FooterButton b : buttons) {
+            String label = compact ? b.shortLabel() : b.label();
+            int w = buttonWidth(label);
+            ButtonWidget widget = ButtonWidget.semantic(x, y, w, UiDensity.HEADER_BUTTON_H,
+                    Component.literal(label), b.tooltip(), b.action());
+            if (b.label().equals("Done")) widget.primary(true);
+            this.addRenderableWidget(widget);
+            x += w + BUTTON_GAP;
+        }
+    }
+
+    /** Label plus the button's inner pad and border inset: the label never ellipsizes. */
+    private int buttonWidth(String label) {
+        return Math.max(46, this.font.width(label) + 22);
+    }
+
+    private int footerWidth(List<FooterButton> buttons, boolean compact) {
+        int total = 0;
+        for (FooterButton b : buttons) total += buttonWidth(compact ? b.shortLabel() : b.label());
+        return total + BUTTON_GAP * Math.max(0, buttons.size() - 1);
+    }
+
+    /** The longest search hint that fits {@code maxW}; the field's text inset and icon take the rest. */
+    private String searchHint(int maxW) {
+        for (String hint : SEARCH_HINTS) {
+            if (this.font.width(hint) <= maxW) return hint;
+        }
+        return SEARCH_HINTS[SEARCH_HINTS.length - 1];
     }
 
     private void openCurrentFolder() {
@@ -898,8 +919,18 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
 
     @Override
     public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
-        if (GlassSurface.liveWorldBackdrop()) return;
-        GlassSurface.renderMenuPanorama(this, g, delta);
+        super.extractBackground(g, mouseX, mouseY, delta);
+        // Vanilla's list texture behind both lists, and its separators under the header and above the footer.
+        boolean inWorld = this.minecraft != null && this.minecraft.level != null;
+        Identifier list = inWorld ? INWORLD_MENU_LIST_BACKGROUND : MENU_LIST_BACKGROUND;
+        int bandH = footerTop - headerH;
+        if (bandH > 0) {
+            Screen.extractMenuBackgroundTexture(g, list, 0, headerH, 0f, 0f, this.width, bandH);
+        }
+        g.blit(RenderPipelines.GUI_TEXTURED, inWorld ? Screen.INWORLD_HEADER_SEPARATOR : Screen.HEADER_SEPARATOR,
+                0, headerH - 2, 0f, 0f, this.width, 2, 32, 2);
+        g.blit(RenderPipelines.GUI_TEXTURED, inWorld ? Screen.INWORLD_FOOTER_SEPARATOR : Screen.FOOTER_SEPARATOR,
+                0, footerTop, 0f, 0f, this.width, 2, 32, 2);
     }
 
     @Override
@@ -910,46 +941,20 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         semanticHost.beginAvailabilitySweep();
         syncScrollFocusTargets();
 
-        float radius = AuroraTheme.RADIUS_LARGE;
-        GlassSurface.beginGlassPass();
-        GlassSurface.container(ctx, panelX, panelY, panelW, panelH, radius);
-        GlassSurface.overlayDim(ctx, this.width, this.height);
-        MaterialSurface.parent(ctx, panelX, panelY, panelW, panelH, radius, MaterialSurface.frameInset(radius));
-
         int onBg = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int secondary = ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY);
         int accent = MaterialSurface.color(ThemeToken.ACCENT);
 
-        // Header title (fitted cleanly before the leftmost header button at every GUI scale)
-        int titleX = panelX + UiDensity.TITLE_X;
-        int titleMaxW = Math.max(24, headerButtonsLeftX - titleX - 8);
-        String headerTitle = AuroraFontRenderer.ellipsizeRole(this.font, "Resource Packs", titleMaxW, AuroraFontRenderer.Role.TITLE);
-        ctx.text(this.font, AuroraFontRenderer.role(headerTitle, AuroraFontRenderer.Role.TITLE),
-                titleX,
-                AuroraFontRenderer.roleTextY(this.font, panelY + UiDensity.HEADER_TOP, UiDensity.TOOL, AuroraFontRenderer.Role.TITLE),
-                onBg, false);
+        // Title, centred like vanilla's.
+        String headerTitle = AuroraFontRenderer.ellipsize(this.font, "Resource Packs", this.width - 16, 0);
+        ctx.text(this.font, headerTitle, (this.width - this.font.width(headerTitle)) / 2, titleY, 0xFFFFFFFF, true);
 
-        // Breadcrumb bar
-        renderBreadcrumbs(ctx, mouseX, mouseY, onBg, secondary, accent);
-
-        // Pane headers
-        int availCount = currentView == null ? 0 : currentView.packs().size();
-        int folderCount = currentView == null ? 0 : currentView.folders().size();
-        String leftHeading = currentView != null && currentView.searching()
-                ? "Matches (" + availCount + ")"
-                : folderCount > 0
-                        ? "Available (" + folderCount + (folderCount == 1 ? " folder, " : " folders, ") + availCount + ")"
-                        : "Available (" + availCount + ")";
-        ctx.text(this.font, AuroraFontRenderer.ellipsize(this.font, leftHeading, leftW, 0),
-                leftX, paneTop + 4, secondary, false);
-
+        // Left heading: clickable breadcrumbs with the folder's counts; right heading: the selection.
+        renderLeftHeading(ctx, mouseX, mouseY, onBg, secondary, accent);
+        int headingY = AuroraFontRenderer.textY(this.font, crumbY, crumbH);
         String rightHeading = "Selected (" + selectedEntries.size() + ")";
         ctx.text(this.font, AuroraFontRenderer.ellipsize(this.font, rightHeading, rightW, 0),
-                rightX, paneTop + 4, secondary, false);
-
-        // Subtle divider between panes
-        int divX = leftX + leftW + PANE_GAP / 2;
-        ctx.fill(divX, paneTop + 2, divX + 1, paneTop + paneH, ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.BORDER), 90));
+                rightX, headingY, secondary, false);
 
         // Left & Right lists
         renderLeftPane(ctx, mouseX, mouseY, onBg, secondary, accent);
@@ -969,19 +974,38 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         semanticHost.finishAvailabilitySweep();
     }
 
-    private void renderBreadcrumbs(GuiGraphicsExtractor ctx, int mouseX, int mouseY,
+    private void renderLeftHeading(GuiGraphicsExtractor ctx, int mouseX, int mouseY,
                                    int onBg, int secondary, int accent) {
         crumbHits.clear();
         if (currentView == null) return;
-        int x = leftX;
-        int maxRight = panelX + panelW - UiDensity.TITLE_X;
-        List<PackFolderTree.Breadcrumb> crumbs = currentView.breadcrumbs();
         int textY = AuroraFontRenderer.textY(this.font, crumbY, crumbH);
+        int headingRight = leftX + leftW - SCROLLBAR_W - 4;
+        int packs = currentView.packs().size();
+        if (currentView.searching()) {
+            // Search spans every folder; Escape clears it. The crumb controls sit out this frame.
+            String heading = "Matches in all folders (" + packs + ")";
+            ctx.text(this.font, AuroraFontRenderer.ellipsize(this.font, heading, headingRight - leftX, 0),
+                    leftX, textY, secondary, false);
+            return;
+        }
 
+        // The counts sit right-aligned and give way to the breadcrumbs when the column is narrow.
+        int folders = currentView.folders().size();
+        String counts = (folders > 0 ? folders + (folders == 1 ? " folder \u00b7 " : " folders \u00b7 ") : "")
+                + packs + (packs == 1 ? " pack" : " packs");
+        int countsW = this.font.width(counts);
+        int maxRight = headingRight;
+        if (headingRight - countsW - 8 - leftX >= 90) {
+            ctx.text(this.font, counts, headingRight - countsW, textY, secondary, false);
+            maxRight = headingRight - countsW - 8;
+        }
+
+        int x = leftX;
+        List<PackFolderTree.Breadcrumb> crumbs = currentView.breadcrumbs();
         for (int i = 0; i < crumbs.size(); i++) {
             PackFolderTree.Breadcrumb crumb = crumbs.get(i);
-            boolean isLast = (i == crumbs.size() - 1) && !currentView.searching();
-            int remaining = maxRight - x - 14;
+            boolean isLast = i == crumbs.size() - 1;
+            int remaining = maxRight - x - 10;
             if (remaining <= 20) break;
             String label = AuroraFontRenderer.ellipsize(this.font, crumb.label(), Math.min(remaining, 140), 0);
             int w = this.font.width(label) + 10;
@@ -1003,22 +1027,18 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
             ctx.text(this.font, label, x + 5, textY, isLast ? onBg : (hovered || focused ? accent : secondary), false);
             crumbHits.add(new CrumbHit(x, crumbY, w, crumbH, crumb.path()));
             x += w;
-            if (i < crumbs.size() - 1) {
+            if (!isLast) {
                 MaterialIconRenderer.drawIcon(ctx, this.font, ICON_CHEVRON,
                         x + 5f, crumbY + crumbH / 2f, 10f, secondary);
                 x += 10;
             }
-        }
-        if (currentView.searching() && x + 60 < maxRight) {
-            String note = "• Searching all folders";
-            ctx.text(this.font, AuroraFontRenderer.ellipsize(this.font, note, maxRight - x - 6, 0),
-                    x + 6, textY, accent, false);
         }
     }
 
     private void renderLeftPane(GuiGraphicsExtractor ctx, int mouseX, int mouseY,
                                 int onBg, int secondary, int accent) {
         int cardW = leftW - SCROLLBAR_W - 4;
+        if (cardW <= 0 || listH <= 0) return; // no room: an empty scissor would crash the frame
         int maxScroll = Math.max(0, leftContentHeight() - listH);
         int scrollOff = (int) Math.round(leftScroll.current());
 
@@ -1094,7 +1114,8 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
                         ? "No matching resource packs."
                         : "This folder has no unselected packs.";
                 String fitted = AuroraFontRenderer.ellipsize(this.font, emptyMsg, cardW - 12, 0);
-                ctx.text(this.font, fitted, leftX + 6, listTop + 14, secondary, false);
+                // Under the ".." row when there is one, not on it.
+                ctx.text(this.font, fitted, leftX + 6, listTop + sectionOffset - scrollOff + 10, secondary, false);
             }
         }
         ctx.disableScissor();
@@ -1113,6 +1134,7 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
     private void renderRightPane(GuiGraphicsExtractor ctx, int mouseX, int mouseY,
                                  int onBg, int secondary, int accent) {
         int cardW = rightW - SCROLLBAR_W - 4;
+        if (cardW <= 0 || listH <= 0) return;
         int maxScroll = Math.max(0, rightContentHeight() - listH);
         int scrollOff = (int) Math.round(rightScroll.current());
 
@@ -1195,7 +1217,7 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         int subColor = entry != null && !entry.getCompatibility().isCompatible()
                 ? ThemeManager.color(ThemeToken.SEMANTIC_WARNING) : secondary;
         ctx.text(this.font, AuroraFontRenderer.ellipsize(this.font, sub, textMax, 0),
-                textX, y + 21, subColor, false);
+                textX, y + 20, subColor, false);
 
         if (entry != null && entry.canSelect()) {
             boolean active = hover || focused;
@@ -1237,7 +1259,7 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         int subColor = !entry.getCompatibility().isCompatible()
                 ? ThemeManager.color(ThemeToken.SEMANTIC_WARNING) : secondary;
         ctx.text(this.font, AuroraFontRenderer.ellipsize(this.font, sub, textMax, 0),
-                textX, y + 21, subColor, false);
+                textX, y + 20, subColor, false);
 
         if (hasControls) {
             if (entry.canMoveUp()) {

@@ -1528,6 +1528,11 @@ cards keep their original 80×80 size; the window must not be oversized for the 
   cards, the third row all but its last 4 px — the owner's "approximately 3×3" target. The
   first draft of the pass was 420×272 with 4 columns. The title screen,
   HUD editor and the full-screen world map are not windows and keep their layouts.
+  The folder-aware resource pack manager is not a window either (owner, 2026-11-23): it
+  keeps vanilla's pack screen layout — centred title and search in the header, two 200 px
+  lists 30 px apart over vanilla's list texture, header and footer separators, a 33 px
+  footer of centred buttons — and only the elements inside are Aurora's (breadcrumbs, pack
+  rows with icons and actions, buttons). It draws no glass.
 - **Compact text.** Inside Aurora windows (`ThemedScreen.compactText`, default = windowed
   hosts) text uses `<font>_ui`, the same bundled face rasterized at 8 instead of 9 px —
   crisp, no pose scaling; measurement uses the same style. Vanilla-font users

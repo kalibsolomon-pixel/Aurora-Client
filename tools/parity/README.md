@@ -51,6 +51,7 @@ lookup must wait, not fail.
 | `font-specimen` | Render fallback, bold/italic, decorations and obfuscation samples |
 | `sdf-compare [scale]` | Explicit-ID columns, Inter Medium bitmap vs SDF, with width deltas at 8/9/11 px and `HudTextPainter` FULL. Scales 0.5, 0.75, 1, 1.25, 1.5, 2, 3 (default 1). Enables SDF temporarily without saving; wait for glyphs to warm, and widen the viewport or lower GUI scale to fit all rows. |
 | `hud-editor` | Open the universal HUD editor |
+| `packs` | Open Aurora's folder-aware resource pack manager |
 | `factory` | Replace the disposable client's in-memory settings with field initializers (does not overlay the shipped defaults JSON) |
 | `benchmark label` | Export an exploratory eight-second frame sample; not release overhead evidence |
 | `grab label` | Read the main render target (the last finished frame) back into `label.png` in the control directory |
