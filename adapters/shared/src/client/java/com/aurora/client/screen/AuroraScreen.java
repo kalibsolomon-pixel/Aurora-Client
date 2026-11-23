@@ -248,20 +248,19 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     private static final long REVEAL_MS = 1600L;
 
     /**
-     * One scroll per tab — τ from the fps-keyed table below, snap 0.1,
-     * wheel step 30, grab-where-clicked thumb that keeps easing toward the
-     * moving target during drags (the screen's exact pre-R2 tuning; only
-     * the active tab's position advances, the inactive one stays frozen).
+     * One scroll per tab — 60 ms τ, snap 0.1, wheel step 30, grab-where-clicked
+     * thumb that keeps easing toward the moving target during drags (only the
+     * active tab's position advances, the inactive one stays frozen).
      */
     private final SmoothScroll[] scrolls = {
-            new SmoothScroll(AuroraScreen::scrollTauMs).boundedMotion().setSnapEpsilon(0.1),
+            new SmoothScroll(60.0).boundedMotion().setSnapEpsilon(0.1),
             null, // the selected Settings page's scroll (pageScrolls), set below
     };
     /** One scroll per Settings page; {@code scrolls[1]} is the selected page's, so each page keeps its position. */
     private final SmoothScroll[] pageScrolls = new SmoothScroll[pages.size()];
     {
         for (int i = 0; i < pageScrolls.length; i++) {
-            pageScrolls[i] = new SmoothScroll(AuroraScreen::scrollTauMs).boundedMotion().setSnapEpsilon(0.1);
+            pageScrolls[i] = new SmoothScroll(60.0).boundedMotion().setSnapEpsilon(0.1);
         }
         scrolls[1] = pageScrolls[selectedPage];
     }
@@ -2024,19 +2023,6 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         // old single shared clock gave.
         scrolls[1 - selectedCategory].touchClock();
         scrolls[selectedCategory].advance(computeMaxScroll());
-    }
-
-    /**
-     * τ (ms) for the scroll glide, keyed off the GUI fps cap — the screen's
-     * historical table (snappier easing at low caps, lazier when uncapped).
-     */
-    private static double scrollTauMs() {
-        int fps = com.aurora.client.config.AuroraConfig.get().guiFpsLimit;
-        if (fps <= 15) return 24.0;
-        if (fps <= 25) return 32.0;
-        if (fps <= 30) return 38.0;
-        if (fps <= 60) return 54.0;
-        return 65.0;
     }
 
     private ScrollbarChrome.Thumb thumb(double maxScroll) {

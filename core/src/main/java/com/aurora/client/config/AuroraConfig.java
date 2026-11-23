@@ -294,19 +294,6 @@ public class AuroraConfig {
     public boolean reducedMotion = false;
     /** Typos a search word may carry and still match (0 = exact only, at most 3). */
     public int searchTypoTolerance = 2;
-    public int guiFpsLimit = 60;
-
-    /** Discrete GUI FPS-limit options (value 1000 = unlimited). */
-    public enum GuiFps {
-        F15(15), F25(25), F30(30), F60(60), F120(120), UNLIMITED(1000);
-        public final int value;
-        GuiFps(int v) { this.value = v; }
-        public String label() { return this == UNLIMITED ? "Unlimited" : value + " FPS"; }
-        public static GuiFps fromValue(int v) {
-            for (GuiFps f : values()) if (f.value == v) return f;
-            return F60;
-        }
-    }
 
     // ---- Theme ----
     /** Master switch: false = fixed factory palette instead of the user's colors. */
@@ -336,44 +323,6 @@ public class AuroraConfig {
     public double zoomSmoothness = 0.2; // 0.01 = very smooth, 1.0 = snap
     public boolean fullBright = false;
     public int fullBrightGamma = 500; // percentage, 100..1500
-    public boolean smoothFramePacer = true;
-    // PARK since 2026-09-13 (was HYBRID): the efficiency audit measured PARK
-    // as at least as accurate at 60 and 120 fps for meaningfully less CPU
-    // (HYBRID's longer spin window buys nothing). Only fresh configs see this
-    // — every existing config has the field explicitly persisted, which wins
-    // verbatim on load.
-    public PacingStrategy framePacingStrategy = PacingStrategy.PARK;
-    public int framePacerSpinThresholdMicros = 500;   // PARK spin tail; also HYBRID with Low CPU
-    public int framePacerParkThresholdMicros = 2000;  // HYBRID spin window with Low CPU off
-    public boolean framePacerLowCpuMode = false;      // HYBRID only: use the shorter configured spin tail
-
-    /**
-     * Global frame cap in FPS: 0 = Off (default), 10..2000 when active.
-     * Enforced at the very top of each frame (the Reflex-style position,
-     * before input application — see MinecraftClientRenderMixin) rather
-     * than through vanilla's {@code RenderSystem.limitDisplayFPS}, because
-     * the 1.21.11 game loop only calls that method while the vanilla
-     * framerate option is below its Unlimited sentinel (260) — a cap hooked
-     * there is silently dead whenever the user runs vanilla "Unlimited",
-     * which is exactly when a custom cap is most wanted. FramePacing resolves
-     * the tightest applicable effective native/global/GUI target and assigns
-     * one wait owner. Post-swap never raises a tighter native restriction.
-     */
-    public int frameCapFps = 0;
-
-    /**
-     * Frame-pacer wait strategies (see {@link com.aurora.client.util.FramePacer}).
-     * YIELD was removed 2026-09-13: its genuine {@code Thread.yield()} form
-     * measured identical to SPIN (a yield returns immediately when nothing
-     * else is runnable, so the wait still burns a full core) — configs that
-     * persisted it load as null and fall back to the default strategy.
-     */
-    public enum PacingStrategy {
-        VANILLA,    // disabled
-        PARK,       // LockSupport.parkNanos + spin tail (low CPU)
-        HYBRID,     // park -> spin (longer spin window than PARK)
-        SPIN        // pure busy loop (max precision, wastes a core)
-    }
     public boolean smoothAnimationsEnabled = false;
     public AnimationCurve swingAnimationCurve = AnimationCurve.QUARTIC_OUT;
     // viewBobCurve was removed 2026-11-18: vanilla's bobView no longer takes a
@@ -463,8 +412,6 @@ public class AuroraConfig {
         CUBIC_HERMITE
     }
     public boolean inputSamplingDecoupled = false;
-    public boolean lowLatencyRender = true;
-    public boolean disableVSync = false;
 
     // ---- Streamer Mode (Settings → Privacy → Streamer Mode) ----
     public boolean streamerModeEnabled = false;
@@ -554,12 +501,7 @@ public class AuroraConfig {
     public boolean perfGuiLayering = true;
     /** Text with no right-to-left characters skips the bidirectional reordering pass; its visual order is the same. */
     public boolean perfLeftToRightText = true;
-    /** While another window has focus, the game draws at most {@link #perfUnfocusedFps} frames a second. */
-    public boolean perfUnfocusedLimit = false;
-    public int perfUnfocusedFps = 30;
 
-    // ---- Late-Stage Responsive Features ----
-    public boolean adaptiveRenderSleeping = false;
     public boolean fixHeldItemSeams = true;
     public double heldItemInflation = 1.001; // 1.0 = no fix, 1.005 = strong fix
     /** How the hurt overlay is drawn on rows 0-7 of the overlay texture. */
@@ -1616,10 +1558,6 @@ public class AuroraConfig {
                     if (loaded.effectExpiryIncludedEffects == null) loaded.effectExpiryIncludedEffects = new ArrayList<>();
                     if (loaded.effectExpiryExcludedEffects == null) loaded.effectExpiryExcludedEffects = new HashSet<>();
                     if (loaded.theme == null) loaded.theme = ThemeDefinition.defaults();
-                    // Covers a removed-enum value (e.g. the YIELD strategy
-                    // deleted 2026-09-13) and a corrupt entry: Gson parses an
-                    // unknown enum name to null.
-                    if (loaded.framePacingStrategy == null) loaded.framePacingStrategy = PacingStrategy.PARK;
                     // VANILLA backgrounds are offered only where a vanilla
                     // texture backs the module; fold everything else to SOLID.
                     HudBackgroundPolicy.normalize(loaded);

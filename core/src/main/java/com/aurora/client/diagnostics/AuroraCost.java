@@ -5,8 +5,7 @@ package com.aurora.client.diagnostics;
  * entry points: its HUD, world-render and client-tick callbacks (ADR 0005).
  *
  * <p>Each entry point brackets its body with {@link #begin} and {@link #end};
- * {@link FrameBenchmark} reads the total once per frame. Waiting is not cost:
- * frame pacing and Reflex waits are outside every bracket. Mixin hooks inside
+ * {@link FrameBenchmark} reads the total once per frame. Mixin hooks inside
  * vanilla methods are not bracketed either (a timer per hook would cost more
  * than most hooks do); a profiler run measures how much that leaves out.
  *

@@ -66,12 +66,6 @@ class MixinStandDownTest {
         }
     }
 
-    @Test void dynamicFpsOwnsTheUnfocusedFrameLimit() {
-        var limit = FeatureCatalog.mixin("FramerateLimitUnfocusedMixin");
-        assertNull(limit.standDownReason(Set.of("sodium", "immediatelyfast")::contains));
-        assertEquals("handled by dynamic_fps", limit.standDownReason(Set.of("dynamic_fps")::contains));
-    }
-
     @Test void entityCullingOwnsEveryOcclusionHook() {
         for (String name : List.of("OcclusionFrameMixin", "OcclusionBodyMixin", "OcclusionChestMixin",
                 "OcclusionDirtyMixin", "OcclusionLeashMixin")) {
@@ -128,7 +122,7 @@ class MixinStandDownTest {
                 "FrameBufferCacheMixin", "VertexArrayCacheSeparateMixin",
                 "SpriteContentsMipsAccessor", "TextureAtlasFreeMipsMixin",
                 "GuiRenderStateNodeMixin", "GuiRenderStateLayeringMixin", "GuiRendererElementOrderMixin",
-                "FormattedBidiReorderMixin", "FramerateLimitUnfocusedMixin")) {
+                "FormattedBidiReorderMixin")) {
             assertEquals("handled by ephemera", FeatureCatalog.mixin(name).standDownReason(loaded::contains),
                     name + " must yield to ephemera");
         }
@@ -144,12 +138,12 @@ class MixinStandDownTest {
         }
     }
 
-    @Test void pairedEphemeraOwnsGuiItemCadenceAndAutomaticPacingWork() {
+    @Test void pairedEphemeraOwnsGuiItemCadence() {
         Set<String> loaded = Set.of("ephemera");
         for (String name : List.of("TextureManagerAnimationMixin", "ItemStackRenderStateAnimationMixin",
                 "CuboidItemModelAnimationMixin", "GuiItemAtlasBakingMixin", "ItemStackRenderStateGlintMixin",
                 "CuboidItemModelGlintMixin", "GuiItemAtlasGlintMixin", "OversizedItemGlintMixin",
-                "TextureTransformAccessor", "ReflexMinecraftMixin", "GpuDeviceTimestampAccessor")) {
+                "TextureTransformAccessor")) {
             var binding = FeatureCatalog.mixin(name);
             assertNull(binding.standDownReason(loaded::contains), name);
             assertEquals("handled by ephemera",

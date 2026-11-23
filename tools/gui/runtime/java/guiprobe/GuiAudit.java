@@ -422,11 +422,6 @@ public final class GuiAudit implements ClientModInitializer {
         actions.add(() -> shot("spx-field-hover"));
         actions.add(() -> { park(); for (int i = 0; i < 3; i++) key(org.lwjgl.glfw.GLFW.GLFW_KEY_TAB); });
         actions.add(() -> shot("spx-detail-focus"));
-        var pacing = FeatureRegistry.all().stream().filter(m -> m.id.equals("frame_pacing")).findFirst().orElseThrow();
-        actions.add(() -> { park(); mc.setScreen(new FeatureDetailScreen(null, pacing)); });
-        actions.add(() -> shot("spx-frame-pacing"));
-        actions.add(() -> scroll(-120));
-        actions.add(() -> shot("spx-frame-pacing-pacer"));
         // Collapsible sections: a long screen opens with only its first section expanded.
         var sectioned = FeatureRegistry.all().stream().filter(m -> m.id.equals("alerts")).findFirst().orElseThrow();
         actions.add(() -> { park(); mc.setScreen(new FeatureDetailScreen(null, sectioned)); });

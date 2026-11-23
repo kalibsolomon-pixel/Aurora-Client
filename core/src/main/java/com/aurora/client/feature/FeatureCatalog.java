@@ -258,11 +258,9 @@ public final class FeatureCatalog {
         setting("custom_title", "Custom Title");
         setting("text_fonts", "Text & Fonts");
         setting("theme", "Theme");
-        setting("interface", "Interface");
-        // Display Settings ("miscellaneous") was one feature holding all of
-        // these until 2026-11-23; each now has its own fair-play class, mixin
+        // Display Settings ("miscellaneous") was one feature holding these
+        // until 2026-11-23; each now has its own fair-play class, mixin
         // health note and reset, and its own entry on a Settings-tab page.
-        setting("frame_pacing", "Frame Pacing");
         setting("decoupled_input", "Decoupled Input");
         setting("tab_list", "Tab List");
         setting("nametags", "Nametags");
@@ -320,7 +318,6 @@ public final class FeatureCatalog {
         classify("resourcepack_browser", FairPlay.COSMETIC, "Downloads resource packs from Modrinth.");
         classify("chat", FairPlay.VANILLA_INFORMATION, "Reformats incoming chat locally (compacting duplicates, adding local timestamps and online player heads, searching, copying, peeking, and keeping longer per-server history). Off in a fresh install; never sends messages or packets.", "chatEnabled");
         classify("media_controls", FairPlay.COSMETIC, "Controls local desktop media playback and displays the currently playing track locally.");
-        classify("frame_pacing", FairPlay.LOCAL_TIMING, "Frame pacing, a frame cap, vsync control and render sleeping: when frames are drawn on your own screen. The rate and content of what is sent to the server are unchanged.");
         classify("decoupled_input", FairPlay.LOCAL_TIMING, "Applies mouse movement at the start of each frame instead of later in it. What is sent to the server, and when, is unchanged.");
         classify("tab_list", FairPlay.COSMETIC, "Hides the tab list's server header, footer or player heads, highlights your own row and sets its background opacity.");
         classify("nametags", FairPlay.COSMETIC, "Nametag scale, text shadow and background opacity, and your own nametag in third person.");
@@ -330,7 +327,6 @@ public final class FeatureCatalog {
         classify("custom_title", FairPlay.COSMETIC, "Aurora's title screen and menu styling.");
         classify("text_fonts", FairPlay.COSMETIC, "Changes the font.");
         classify("theme", FairPlay.COSMETIC, "Changes the colors of Aurora's own screens.");
-        classify("interface", FairPlay.COSMETIC, "Limits the frame rate of Aurora's own screens.");
         classify("performance", FairPlay.LOCAL_TIMING, "Caches, skips or reschedules work your own client does to load, draw and play sound. A new singleplayer world's loading screen closes half a second sooner; what is sent to a multiplayer server, and when, is unchanged.");
         classify("gradient_dither", FairPlay.COSMETIC, "Adds a fixed pattern of less than half a color step to the sky, fog, clouds and terrain, so smooth gradients do not show bands. Average colors stay the same and nothing becomes easier to see.");
         classify("smooth_fog", FairPlay.COSMETIC, "Replaces Minecraft's linear fog ramp with a smooth S-curve across the exact same fog start and end distances, removing harsh fog rings on distant terrain, sky, clouds and entities.");
@@ -359,13 +355,11 @@ public final class FeatureCatalog {
                 .gates("hitboxEnabled", "hitboxTargetEnabled");
         mixin("HitboxVisibleEntitiesMixin", "matching hitboxes to visible entities", "hitbox")
                 .gates("hitboxEnabled", "hitboxTargetEnabled");
-        mixin("RenderSystemMixin", "Aurora's frame limiter after each frame", "frame_pacing")
-                .gates("smoothFramePacer", "adaptiveRenderSleeping");
         mixin("GameRendererBobMixin", "the view-bob strength", "animations");
         mixin("HeldItemRendererMixin", "the swing animation curve", "animations");
         mixin("MouseAccessor", "decoupled mouse input", "decoupled_input").gates("inputSamplingDecoupled");
-        mixin("MinecraftClientRenderMixin", "frame pacing, decoupled mouse input and blurred glass", "frame_pacing", "decoupled_input")
-                .gates("smoothFramePacer", "adaptiveRenderSleeping", "inputSamplingDecoupled", "lowLatencyRender", "disableVSync");
+        mixin("MinecraftClientRenderMixin", "decoupled mouse input and blurred glass", "decoupled_input")
+                .gates("inputSamplingDecoupled");
         mixin("MixinOverlayTexture", "recoloring the hurt flash", "hit_color").gates("hitColorEnabled");
         mixin("EquipmentLayerRendererMixin", "tinting armor and trims with the hit color", "hit_color")
                 .gates("hitColorTintArmor", "hitColorTintArmorTrims");
@@ -467,8 +461,6 @@ public final class FeatureCatalog {
         mixin("ChatScreenSuiteMixin", "Chat Suite in-chat search and click-to-copy", "chat").gates("chatEnabled");
         mixin("MultiplayerServerListWidgetMixin", "numeric ping in the server list", "ping");
         mixin("ClientLevelWorldMapMixin", "refreshing the maps when a block changes", "world_map", "minimap");
-        mixin("ReflexMinecraftMixin", "automatic latency reduction").yieldsToEphemera("engine_ownership");
-        mixin("GpuDeviceTimestampAccessor", "automatic latency reduction").yieldsToEphemera("engine_ownership");
         mixin("ItemStackRenderStateAccessor", "flat item icons in Aurora screens");
         mixin("ItemLayerQuadsAccessor", "flat item icons in Aurora screens");
         mixin("ScreenPanoramaAccessor", "blurred glass over the menu panorama");
@@ -568,8 +560,6 @@ public final class FeatureCatalog {
                 .gates("perfGuiLayering").yieldsTo("polytone", "gnetum", "ephemera");
         mixin("FormattedBidiReorderMixin", "skipping bidirectional reordering for left-to-right text", "performance")
                 .gates("perfLeftToRightText").yieldsTo("modernui", "caxton", "ephemera");
-        mixin("FramerateLimitUnfocusedMixin", "the unfocused frame limit", "performance")
-                .gates("perfUnfocusedLimit").yieldsTo("dynamic_fps", "ephemera");
         // VulkanMod (26.1) compiles shaders its own way; an Iris shader pack is checked at draw time.
         mixin("GradientDitherSourceMixin", "dithered sky, fog and terrain shaders", "gradient_dither")
                 .gates("gradientDither").yieldsTo("vulkanmod").yieldsToEphemera("world_visual_ownership");

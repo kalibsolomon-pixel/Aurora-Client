@@ -17,7 +17,7 @@ The budget is about 1.5 times the baseline. At 120 fps, 0.25 ms is 3% of a frame
 
 ## What is measured
 
-**Aurora CPU per frame** is the time the render thread spends inside Aurora's own entry points: its HUD, world-render and client-tick callbacks, each wrapped by `diagnostics/Timed` and added up by `diagnostics/AuroraCost`. Time spent waiting does not count, so frame pacing and Reflex waits are excluded. The benchmark records the total once per frame.
+**Aurora CPU per frame** is the time the render thread spends inside Aurora's own entry points: its HUD, world-render and client-tick callbacks, each wrapped by `diagnostics/Timed` and added up by `diagnostics/AuroraCost`. The benchmark records the total once per frame.
 
 Not counted:
 

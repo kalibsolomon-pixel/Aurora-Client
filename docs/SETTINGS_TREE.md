@@ -30,7 +30,6 @@ These run without a setting of their own, or are part of how Aurora works rather
 - **Aurora styling on vanilla buttons and text fields**: themed buttons on world select, multiplayer and other vanilla screens (tied to Custom Title's hook). `{always:vanillaButtonStyle}`
 - **Flat item icons in Aurora screens**: item icons in Aurora's own lists are drawn flat. `{always:flatItemIcons}`
 - **Numeric ping in the server list**: part of the Ping feature's hook; shows ping as a number in Multiplayer. `{always:serverListPing}`
-- **Automatic latency reduction**: GPU timing used to keep the render queue short. Aurora skips its timing queries when paired with an Ephemera build advertising engine ownership. `{always:reflex}`
 - **Per-world cache clearing**: forgets per-entity data (health seen, pops counted) when you change worlds. `{always:worldJoinReset}`
 - **Map refresh on block change**: keeps the minimap and world map current when blocks change. `{always:mapBlockRefresh}`
 - **Aurora Launcher activity report**: only when started by Aurora Launcher; tells the launcher which world or server you are in so it can show Discord status. The mod itself has no Discord code. `{always:launcherBridge}`
@@ -463,7 +462,7 @@ Install resource packs from Modrinth.
 - **Open Browser…**: button · search, preview, one-click install. `{action:openPackBrowser}`
 
 #### Display Settings: split `{card:miscellaneous}`
-No longer a card or a feature. Until 2026-11-23 it was one catalog feature holding Frame Pacing, Decoupled Input, Tab List, Nametags, Per-Sound Volume, Streamer Mode and Server List; each is now its own feature (`{card:frame_pacing}` … `{card:server_list}`) with its own fair-play class, health note and reset, shown as an entry on a Settings sub-tab (4.3). Each keeps its own Enabled toggle in its rows.
+No longer a card or a feature. Until 2026-11-23 it was one catalog feature holding Frame Pacing (since removed — handled by Ephemera), Decoupled Input, Tab List, Nametags, Per-Sound Volume, Streamer Mode and Server List; each remaining feature (`{card:decoupled_input}` … `{card:server_list}`) now has its own fair-play class, health note and reset, shown as an entry on a Settings sub-tab (4.3). Each keeps its own Enabled toggle in its rows.
 
 ### 4.3 Settings tab: six sub-tabs across the top
 
@@ -514,16 +513,10 @@ Builds advertising Ephemera world shader ownership show one *World Visuals* entr
 
 #### Sub-tab: Performance `{subtab:performance}`
 
-When the paired Ephemera pacer is active, it enforces the Global Frame Cap, the applicable UI FPS Limit, and Minecraft's native cap. Aurora's pacer controls become available again if you switch off the Ephemera pacer.
+Frame pacing, frame rate limiting and low-latency rendering were removed from Aurora on 2026-11-23 (handled by Ephemera).
 
-- *Frame Pacing* `{card:frame_pacing}`, in three sections:
-  - *Frame Cap* — **Global Frame Cap**: slider 0–2000, typeable · Off · caps the whole game, menus included. `{frameCapFps}`
-  - *Frame Pacer* — **Enabled**: toggle · on `{smoothFramePacer}`; **Strategy**: dropdown Vanilla / Park / Hybrid / Spin · Park `{framePacingStrategy}`; **Low CPU (Hybrid only)**: toggle · off `{framePacerLowCpuMode}`; **Spin Threshold (µs)**: slider 100–2000 · 500 `{framePacerSpinThresholdMicros}`; **Park Threshold (µs)**: slider 1000–8000 · 2000 `{framePacerParkThresholdMicros}`
-  - *Low Latency* — **Enabled**: toggle · on `{lowLatencyRender}`; **Disable VSync (causes tearing without VRR)**: toggle · off `{disableVSync}`; **Adaptive Render Sleeping (Reflex-style)**: toggle · off · needs Frame Pacer on with a non-Vanilla strategy `{adaptiveRenderSleeping}`
 - *Decoupled Input* `{card:decoupled_input}`
   - **Enabled**: toggle · off · applies mouse movement at the top of each frame. `{inputSamplingDecoupled}`
-- *Menu Frame Rate*
-  - **UI FPS Limit**: dropdown 15 / 25 / 30 / 60 / 120 FPS / Unlimited · 60 FPS · only while an Aurora screen is open. `{guiFpsLimit}`
 
 Machine settings below (ADR 0009): kept out of profiles and out of the defaults resource.
 
@@ -531,9 +524,6 @@ Machine settings below (ADR 0009): kept out of profiles and out of the defaults 
   - **Update F3 at Tick Rate**: toggle · on. `{perfDebugEntryCache}`
 - *Maps*
   - **Cap Minimap Redraws**: toggle · on. `{perfMinimapRefreshCap}`
-- *Background*
-  - **Background Frame Limit**: toggle · off · draws fewer frames while another window has focus. `{perfUnfocusedLimit}`
-  - **Background FPS**: slider 5–120 · 30 · shown only while the limit is on. `{perfUnfocusedFps}`
 
 #### Sub-tab: Audio & Keys `{subtab:audio_keys}`
 

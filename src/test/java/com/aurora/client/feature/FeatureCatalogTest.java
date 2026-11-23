@@ -150,7 +150,7 @@ class FeatureCatalogTest {
                     throw new AssertionError(f.id() + " names '" + name + "', which is not an AuroraConfig field");
                 }
                 assertEquals(boolean.class, field.getType(), name);
-                // The effective default is checked on a real config in FramePacingPersistenceTest;
+                // The effective default is checked on a real config in ConfigAndProfilePersistenceTest;
                 // this catches the release-defaults file turning one back on.
                 if (releaseDefaults.has(name)) {
                     assertFalse(releaseDefaults.get(name).getAsBoolean(),
@@ -223,7 +223,7 @@ class FeatureCatalogTest {
         // Vanilla HUD, Inventory HUD, Chat Suite, and Media Controls joined the Modules grid (2026-11-21/22).
         assertEquals(39, FeatureCatalog.featuresOn(FeatureCatalog.Tab.MODULES).size());
         // Gradient Dithering and Smooth Fog joined the Display page (2026-11-20/21); Display Settings
-        // split into its seven features (2026-11-23).
-        assertEquals(14, FeatureCatalog.featuresOn(FeatureCatalog.Tab.SETTINGS).size());
+        // split into its features (2026-11-23), and frame_pacing + interface were removed.
+        assertEquals(12, FeatureCatalog.featuresOn(FeatureCatalog.Tab.SETTINGS).size());
     }
 }

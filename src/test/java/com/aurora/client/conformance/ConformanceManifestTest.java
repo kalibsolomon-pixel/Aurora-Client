@@ -284,8 +284,7 @@ class ConformanceManifestTest {
     void auroraScreenSemanticInventoryMatchesLiveSource() throws IOException {
         // The grid's cards are derived from FeatureCatalog (ADR 0004).
         int modules = com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.MODULES).size();
-        // enums (Text Renderer, Client Font, UI FPS Limit, Frame Pacer
-        // Strategy) + accent + the Surfaces caption + Display Settings
+        // enums (Text Renderer, Client Font, …) + accent + the Surfaces caption + Display Settings
         // toggles + HUD Editor key + Open Screenshot Manager + Resource Pack Folders toggle/button + Copy Diagnostics
         int hosted = 4 + 10 + 1 + 8 + 1 + 1 + 2 + 1;
         int pages = 4;                                      // Appearance, Display, Controls, General

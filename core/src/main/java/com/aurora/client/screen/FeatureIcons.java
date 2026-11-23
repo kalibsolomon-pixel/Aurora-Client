@@ -60,7 +60,6 @@ public final class FeatureIcons {
         // ============ SETTINGS TAB ============
         ICONS.put("custom_title",          "\uE264"); // title
         // Display Settings ("miscellaneous") split into these on 2026-11-23.
-        ICONS.put("frame_pacing",          "\uE9E4"); // speed
         ICONS.put("decoupled_input",       "\uE323"); // mouse
         ICONS.put("tab_list",              "\uE241"); // format_list_bulleted
         ICONS.put("nametags",              "\uE893"); // label

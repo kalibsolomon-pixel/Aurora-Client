@@ -1,10 +1,6 @@
 package com.aurora.client.mixin;
 
-import com.aurora.client.compat.EphemeraPacingBridge;
 import com.aurora.client.config.AuroraConfig;
-import com.aurora.client.util.EphemeraPacingHook;
-import com.aurora.client.util.FramePacing;
-import com.aurora.client.util.FramePacer;
 import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -39,41 +35,6 @@ public abstract class MinecraftClientRenderMixin {
         AuroraConfig cfg = AuroraConfig.get();
         // Diagnostics benchmark: one volatile read unless a run is in progress.
         com.aurora.client.diagnostics.FrameBenchmark.onFrame();
-
-        EphemeraPacingBridge.ensureBound();
-        if (EphemeraPacingHook.ownsFramePacing()) {
-            FramePacing.INSTANCE.relinquish();
-        } else {
-            // Use the effective native target, including menu/AFK/iconified
-            // restrictions. A positive global cap must also work when Minecraft
-            // skips limitDisplayFPS at Unlimited. One shared deadline owns both
-            // hooks; post-swap rechecks restrictions after event pumping.
-            boolean auroraGui = com.aurora.client.adapter.NativeUi.screen(self) != null
-                    && com.aurora.client.adapter.NativeUi.screen(self).getClass().getName().startsWith("com.aurora.client.screen");
-            boolean customPacer = cfg.smoothFramePacer
-                    && cfg.framePacingStrategy != AuroraConfig.PacingStrategy.VANILLA;
-            var limit = FramePacing.resolve(self.getFramerateLimitTracker().getFramerateLimit(),
-                    cfg.frameCapFps, cfg.guiFpsLimit, auroraGui, customPacer,
-                    cfg.lowLatencyRender && cfg.adaptiveRenderSleeping);
-            double pacingNow = org.lwjgl.glfw.GLFW.glfwGetTime();
-            if (com.aurora.client.util.ParkDiagnostics.INSTANCE.isEnabled()) {
-                com.aurora.client.util.ParkDiagnosticsControl.observe(limit, cfg, customPacer,
-                        self.isWindowActive(), pacingNow);
-            }
-            double target = FramePacing.INSTANCE.beginFrame(limit, pacingNow);
-            boolean auroraOwnsWait = limit.owner() == FramePacing.Owner.FRAME_HEAD
-                    || limit.owner() == FramePacing.Owner.POST_SWAP;
-            long headWaitNanos = 0L;
-            if (target != 0.0) {
-                long waitStart = System.nanoTime();
-                EphemeraPacingHook.onBeforeWait(
-                        Math.max(0L, (long) ((target - pacingNow) * 1_000_000_000.0)));
-                if (customPacer) FramePacer.waitUntil(target, cfg);
-                else FramePacer.waitUntilHybrid(target, 2000);
-                headWaitNanos = Math.max(0L, System.nanoTime() - waitStart);
-            }
-            EphemeraPacingHook.reportAurora(auroraOwnsWait, limit.fps(), headWaitNanos);
-        }
 
         if (!cfg.inputSamplingDecoupled) return;
 
