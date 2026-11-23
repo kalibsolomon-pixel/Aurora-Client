@@ -84,7 +84,10 @@ public class ShieldStatusFeature implements Feature {
             // 100-tick / 5-second cooldown via ShieldItem#disableFor). At all
             // other times — including while actively blocking — the shield is
             // ready, so we show the AVAILABLE color.
-            if (local.getCooldowns().isOnCooldown(Items.SHIELD.getDefaultInstance())) {
+            var shieldHolder = Items.SHIELD.builtInRegistryHolder();
+            if (shieldHolder != null
+                    && shieldHolder.areComponentsBound()
+                    && local.getCooldowns().isOnCooldown(Items.SHIELD.getDefaultInstance())) {
                 picked = cfg.shieldStatusDisabledColor;
             } else {
                 picked = cfg.shieldStatusAvailableColor;
