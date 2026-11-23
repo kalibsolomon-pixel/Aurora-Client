@@ -192,7 +192,9 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     /** The summary fitted to the content column (the shared ellipsize memo caches it). */
     private String pageSummaryLine(FeatureMetadata m, Font tr) {
         if (m.pageSummary == null || m.pageSummary.isEmpty()) return null;
-        return com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, m.pageSummary, contentWidth() - 8, 1);
+        // A feature whose mixin is not working says so in place of its summary (2026-11-23).
+        String broken = com.aurora.client.health.FeatureHealth.headlineFor(m.id);
+        return com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, broken != null ? broken : m.pageSummary, contentWidth() - 8, 1);
     }
 
     /** Gap between inline rows inside an entry. */
@@ -1617,7 +1619,10 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
             if (settingsReveal == m) paintReveal(g, mx + 4, y, contentWidth() - 4, headerH, ctrlRadius);
             String summary = pageSummaryLine(m, tr);
             if (summary != null && vp.intersects(mx + 4, y + headerH, contentWidth() - 4, SUMMARY_H))
-                g.text(tr, summary, (int) (mx + 4), AuroraFontRenderer.textY(tr, y + headerH, SUMMARY_H), MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+                g.text(tr, summary, (int) (mx + 4), AuroraFontRenderer.textY(tr, y + headerH, SUMMARY_H),
+                        com.aurora.client.health.FeatureHealth.headlineFor(m.id) != null
+                                ? ThemeManager.color(ThemeToken.SEMANTIC_WARNING)
+                                : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
             if (m.settingsDetailOnly) {
                 y = settingsLayout.bounds(m).y(layoutScroll()) + headerBlockH(m);
                 // Detail-only entry: one muted hint line in place of the

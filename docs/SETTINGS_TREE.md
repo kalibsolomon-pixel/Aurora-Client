@@ -1,6 +1,6 @@
 # Aurora Client: settings and features tree
 
-A map of everything a player can see, turn on or change in Aurora, as of 2026-11-12, including the Settings sub-tabs. Written to be edited and handed back.
+A map of everything a player can see, turn on or change in Aurora, as of 2026-11-12, including the Settings sub-tabs (reorganized 2026-11-23). Written to be edited and handed back.
 
 ## How to edit this file
 
@@ -462,20 +462,20 @@ Full-screen map of explored terrain.
 Install resource packs from Modrinth.
 - **Open Browser…**: button · search, preview, one-click install. `{action:openPackBrowser}`
 
-#### Display Settings: moved `{card:miscellaneous}`
-No longer a card. Its sections are on the Settings tab (4.3): Frame Pacer, Frame Cap and Low Latency on Display; Decoupled Input on Controls; Drag-to-Reorder Servers and Support on General. Each section keeps its own Enabled toggle; the card's combined on/off switch is gone. It stays one feature for fair play and its reset.
+#### Display Settings: split `{card:miscellaneous}`
+No longer a card or a feature. Until 2026-11-23 it was one catalog feature holding Frame Pacing, Decoupled Input, Tab List, Nametags, Per-Sound Volume, Streamer Mode and Server List; each is now its own feature (`{card:frame_pacing}` … `{card:server_list}`) with its own fair-play class, health note and reset, shown as an entry on a Settings sub-tab (4.3). Each keeps its own Enabled toggle in its rows.
 
-### 4.3 Settings tab: four sub-tabs across the top
+### 4.3 Settings tab: six sub-tabs across the top
 
-The tab shows one page at a time, chosen from the sub-tabs in the row above the content (where the Modules tab has its layout buttons and search). Each page keeps its own scroll position. On a page, each entry is a header followed by its rows; only Theme and Custom Title have a switch in the header.
+The tab shows one page at a time, chosen from the sub-tabs in the row above the content (where the Modules tab has its layout buttons and search). Each page keeps its own scroll position. On a page, each entry is a header followed by its rows; only Theme and Custom Title have a switch in the header. When a feature's mixin is not working this session, its warning replaces the entry's one-line summary.
 
 Simple config-backed setting rows here and on module detail pages show a small reset icon after their label only when the value differs from its factory default. Hover or keyboard narration names the setting and its displayed default. Click, Enter or Space restores that one value immediately and saves; it needs no confirmation. Value/control columns stay fixed and long modified labels ellipsize. Whole-feature Reset still requires a second press. Actions, previews, lists, per-item editors and the Keystrokes HUD layout Scale row have no individual reset. Keybind labels also show their descriptions on hover.
 
 ```
  Settings
- ┌────────────┬─────────┬──────────┬─────────┐
- │ Appearance │ Display │ Controls │ General │
- └────────────┴─────────┴──────────┴─────────┘
+ ┌────────────┬─────────────┬─────────────┬──────────────┬─────────┬───────┐
+ │ Appearance │ World & HUD │ Performance │ Audio & Keys │ Privacy │ Tools │
+ └────────────┴─────────────┴─────────────┴──────────────┴─────────┴───────┘
 ```
 
 #### Sub-tab: Appearance `{subtab:appearance}`
@@ -495,35 +495,37 @@ Simple config-backed setting rows here and on module detail pages show a small r
   - **HUD Text Shadow**: segmented Off / Normal / Full · Normal (Off before 2026-11-14) · in-world HUD only (Normal = Minecraft's drop shadow, Full = outline); menus never shadow text. `{textHudShadow}`
   - **Preview**: one sample line in the current options, with the HUD shadow.
 
-#### Sub-tab: Display `{subtab:display}`
+- *Motion*
+  - **Reduced Motion**: toggle · off · skips overlay fades and makes keyboard focus scrolling instant. `{reducedMotion}`
+- *Custom Title* · header toggle on · Aurora's title screen and themed vanilla menus; applies the next time you return to the main menu. `{card:custom_title}`
 
-When the paired Ephemera pacer is active, it enforces the Global Frame Cap, the applicable UI FPS Limit, and Minecraft's native cap. Aurora's pacer controls become available again if you switch off the Ephemera pacer. Builds advertising world shader ownership expose Fog and Dithering in Ephemera's Visuals tab.
+#### Sub-tab: World & HUD `{subtab:world}`
 
-- *Frame Rate*
-  - **Global Frame Cap**: slider 0–2000, typeable · Off · caps the whole game, menus included. `{frameCapFps}`
-  - **UI FPS Limit**: dropdown 15 / 25 / 30 / 60 / 120 FPS / Unlimited · 60 FPS · only while an Aurora screen is open. Replaces the old Interface entry, whose on/off toggle is gone (Unlimited means off). `{guiFpsLimit}`
-- *Frame Pacer*
-  - **Enabled**: toggle · on. `{smoothFramePacer}`
-  - **Strategy**: dropdown Vanilla / Park / Hybrid / Spin · Park. `{framePacingStrategy}`
-  - **Low CPU (Hybrid only)**: toggle · off. `{framePacerLowCpuMode}`
-  - **Spin Threshold (µs)**: slider 100–2000 · 500. `{framePacerSpinThresholdMicros}`
-  - **Park Threshold (µs)**: slider 1000–8000 · 2000. `{framePacerParkThresholdMicros}`
-- *Low Latency*
-  - **Enabled**: toggle · on · master for this section. `{lowLatencyRender}`
-  - **Disable VSync (causes tearing without VRR)**: toggle · off. `{disableVSync}`
-  - **Adaptive Render Sleeping (Reflex-style)**: toggle · off · needs Frame Pacer on with a non-Vanilla strategy. `{adaptiveRenderSleeping}`
+Builds advertising Ephemera world shader ownership show one *World Visuals* entry that opens Ephemera's Visuals tab instead of the two entries below.
 
-#### Sub-tab: Controls `{subtab:controls}`
-
-- *Decoupled Input*
-  - **Enabled**: toggle · off · applies mouse movement at the top of each frame. `{inputSamplingDecoupled}`
-- *Aurora Keys*
-  - **HUD Editor Key**: key · Right Shift. New row; also in vanilla Controls. `{hudEditorKey}`
-  - >> Optional later: a read-only list of every Aurora keybind with links to its feature (section 5). `{new}`
+- *Gradient Dithering* · header toggle on `{card:gradient_dither}`
+- *Smooth Fog* · header toggle off `{card:smooth_fog}`
+- *Tab List* `{card:tab_list}`
+  - **Hide Server Header** / **Hide Server Footer** / **Hide Player Heads** / **Highlight Own Row**: toggles · off. `{tabListHideHeader}` `{tabListHideFooter}` `{tabListHideHeads}` `{tabListHighlightSelf}`
+  - **Custom Background**: toggle · off; **Background Opacity**: slider · 50%. `{tabListCustomBackground}` `{tabListBgOpacity}`
+- *Nametags* `{card:nametags}`
+  - **Show Own Nametag (3rd Person)** / **Text Shadow** / **Custom Background**: toggles · off. `{nametagStyleShowSelf}` `{nametagStyleTextShadow}` `{nametagStyleCustomBackground}`
+  - **Background Opacity**: slider · 25%; **Nametag Scale**: slider · 1.00x. `{nametagStyleBgOpacity}` `{nametagStyleScale}`
 
 #### Sub-tab: Performance `{subtab:performance}`
 
-Machine settings (ADR 0009): kept out of profiles and out of the defaults resource.
+When the paired Ephemera pacer is active, it enforces the Global Frame Cap, the applicable UI FPS Limit, and Minecraft's native cap. Aurora's pacer controls become available again if you switch off the Ephemera pacer.
+
+- *Frame Pacing* `{card:frame_pacing}`, in three sections:
+  - *Frame Cap* — **Global Frame Cap**: slider 0–2000, typeable · Off · caps the whole game, menus included. `{frameCapFps}`
+  - *Frame Pacer* — **Enabled**: toggle · on `{smoothFramePacer}`; **Strategy**: dropdown Vanilla / Park / Hybrid / Spin · Park `{framePacingStrategy}`; **Low CPU (Hybrid only)**: toggle · off `{framePacerLowCpuMode}`; **Spin Threshold (µs)**: slider 100–2000 · 500 `{framePacerSpinThresholdMicros}`; **Park Threshold (µs)**: slider 1000–8000 · 2000 `{framePacerParkThresholdMicros}`
+  - *Low Latency* — **Enabled**: toggle · on `{lowLatencyRender}`; **Disable VSync (causes tearing without VRR)**: toggle · off `{disableVSync}`; **Adaptive Render Sleeping (Reflex-style)**: toggle · off · needs Frame Pacer on with a non-Vanilla strategy `{adaptiveRenderSleeping}`
+- *Decoupled Input* `{card:decoupled_input}`
+  - **Enabled**: toggle · off · applies mouse movement at the top of each frame. `{inputSamplingDecoupled}`
+- *Menu Frame Rate*
+  - **UI FPS Limit**: dropdown 15 / 25 / 30 / 60 / 120 FPS / Unlimited · 60 FPS · only while an Aurora screen is open. `{guiFpsLimit}`
+
+Machine settings below (ADR 0009): kept out of profiles and out of the defaults resource.
 
 - *Debug Screen*
   - **Update F3 at Tick Rate**: toggle · on. `{perfDebugEntryCache}`
@@ -533,14 +535,30 @@ Machine settings (ADR 0009): kept out of profiles and out of the defaults resour
   - **Background Frame Limit**: toggle · off · draws fewer frames while another window has focus. `{perfUnfocusedLimit}`
   - **Background FPS**: slider 5–120 · 30 · shown only while the limit is on. `{perfUnfocusedFps}`
 
-#### Sub-tab: General `{subtab:general}`
+#### Sub-tab: Audio & Keys `{subtab:audio_keys}`
 
+- *Per-Sound Volume* `{card:sound_volumes}`
+  - **Per-Sound Volume**: toggle · on; **Open Sound Volume Mixer…**: button; **Reset All Sound Overrides**: button. `{soundVolumesEnabled}`
+- *Aurora Keys*
+  - **HUD Editor Key**: key · Right Shift. Also in vanilla Controls. `{hudEditorKey}`
+  - >> Optional later: a read-only list of every Aurora keybind with links to its feature (section 5). `{new}`
+
+#### Sub-tab: Privacy `{subtab:privacy}`
+
+- *Streamer Mode* `{card:streamer_mode}`
+  - **Enabled**: toggle · off; **Hide Own Name**, **Own Alias**, **Hide Own Skin**, **Hide Server Address**, **Hide Coordinates**, **Hide Opponent Names**, **Opponent Nametag**, **Number Opponents**, **Custom Opponent Color**, **Opponent Tag Color**. `{streamerModeEnabled}`
+
+#### Sub-tab: Tools `{subtab:tools}`
+
+- *Screenshots*
+  - **Open Screenshot Manager**: link · browse, search, rename, copy, crop and delete screenshots. `{action:openScreenshots}`
+- *Resource Packs*
+  - **Resource Pack Folders**: toggle · on; **Open Pack Manager…**: button. `{resourcepackFoldersEnabled}`
+- *Server List* `{card:server_list}`
+  - **Enabled**: toggle · on · reorder the Multiplayer list by dragging. `{serverListDragReorder}`
 - *Search*
   - **Instant Search**: toggle · on · focuses the search bar when the menu opens or you return to the Features tab. Global, not per profile. `{searchInstant}`
   - **Search Typo Tolerance**: segmented Exact / 1 / 2 / 3 · 2 · typos a search word may have; words of 3 letters or fewer always match exactly, 4–6 letters allow at most 1. Applies to every search field. Global. `{searchTypoTolerance}`
-- *Custom Title* · header toggle on · Aurora's title screen and themed vanilla menus; applies the next time you return to the main menu. `{card:custom_title}`
-- *Drag-to-Reorder Servers*
-  - **Enabled**: toggle · on · reorder the Multiplayer list by dragging. `{serverListDragReorder}`
 - *Support*
   - **Copy Diagnostics**: button · 5-second measurement, report copied to clipboard. `{action:copyDiagnostics}`
   - >> Optional later: an "About" line (version, Minecraft line). `{new}`

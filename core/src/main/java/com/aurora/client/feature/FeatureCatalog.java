@@ -259,11 +259,16 @@ public final class FeatureCatalog {
         setting("text_fonts", "Text & Fonts");
         setting("theme", "Theme");
         setting("interface", "Interface");
-        // Display Settings has no entry of its own: its sections are spread
-        // over the Settings tab's Display, Controls and General pages
-        // (FeatureRegistry.settingsPages, 2026-11-12). It stays one feature
-        // for fair play, mixin health and its reset prefixes.
-        setting("miscellaneous", "Display Settings");
+        // Display Settings ("miscellaneous") was one feature holding all of
+        // these until 2026-11-23; each now has its own fair-play class, mixin
+        // health note and reset, and its own entry on a Settings-tab page.
+        setting("frame_pacing", "Frame Pacing");
+        setting("decoupled_input", "Decoupled Input");
+        setting("tab_list", "Tab List");
+        setting("nametags", "Nametags");
+        setting("sound_volumes", "Per-Sound Volume");
+        setting("streamer_mode", "Streamer Mode");
+        setting("server_list", "Server List");
         // Client optimizations Aurora owns (ADR 0009). Most have no row of
         // their own; the Settings tab's Performance page shows the few with
         // a visible trade-off.
@@ -315,7 +320,13 @@ public final class FeatureCatalog {
         classify("resourcepack_browser", FairPlay.COSMETIC, "Downloads resource packs from Modrinth.");
         classify("chat", FairPlay.VANILLA_INFORMATION, "Reformats incoming chat locally (compacting duplicates, adding local timestamps and online player heads, searching, copying, peeking, and keeping longer per-server history). Off in a fresh install; never sends messages or packets.", "chatEnabled");
         classify("media_controls", FairPlay.COSMETIC, "Controls local desktop media playback and displays the currently playing track locally.");
-        classify("miscellaneous", FairPlay.LOCAL_TIMING, "Frame pacing, a frame cap, vsync control, the point within a frame where mouse movement is applied, cosmetic tab-list and nametag styling (including your own nametag in third person), cosmetic per-sound volume attenuation (0–100% only), and Streamer Mode privacy masking (hides your own name, skin, coordinates, server address, and optionally replaces other players' nametags on your own screen). The rate and content of what is sent to the server are unchanged.");
+        classify("frame_pacing", FairPlay.LOCAL_TIMING, "Frame pacing, a frame cap, vsync control and render sleeping: when frames are drawn on your own screen. The rate and content of what is sent to the server are unchanged.");
+        classify("decoupled_input", FairPlay.LOCAL_TIMING, "Applies mouse movement at the start of each frame instead of later in it. What is sent to the server, and when, is unchanged.");
+        classify("tab_list", FairPlay.COSMETIC, "Hides the tab list's server header, footer or player heads, highlights your own row and sets its background opacity.");
+        classify("nametags", FairPlay.COSMETIC, "Nametag scale, text shadow and background opacity, and your own nametag in third person.");
+        classify("sound_volumes", FairPlay.COSMETIC, "Lowers or mutes individual sounds (0–100% attenuation only); nothing is made louder than vanilla.");
+        classify("streamer_mode", FairPlay.COSMETIC, "Masks your own name, skin, coordinates and server address on your screen, and can replace other players' names with labels. It hides information; it never adds any.", "streamerModeEnabled");
+        classify("server_list", FairPlay.VANILLA_INFORMATION, "Reorders the Multiplayer server list by dragging, as vanilla's move buttons do.");
         classify("custom_title", FairPlay.COSMETIC, "Aurora's title screen and menu styling.");
         classify("text_fonts", FairPlay.COSMETIC, "Changes the font.");
         classify("theme", FairPlay.COSMETIC, "Changes the colors of Aurora's own screens.");
@@ -334,9 +345,9 @@ public final class FeatureCatalog {
         mixin("VanillaToastMixin", "moving, scaling or hiding toasts and advancement pop-ups", "vanilla_hud").gates("vanillaHudEnabled");
         mixin("GameRendererMixin", "zooming the view", "zoom").gates("zoomEnabled");
         mixin("RenderTargetMixin", "nothing (kept empty for compatibility)");
-        mixin("PlayerListHudMixin", "numeric ping and styling in the tab list", "ping", "miscellaneous")
+        mixin("PlayerListHudMixin", "numeric ping and styling in the tab list", "ping", "tab_list")
                 .gates("tabPingEnabled", "tabListHideHeader", "tabListHideFooter", "tabListHighlightSelf", "tabListCustomBackground");
-        mixin("PlayerTabHeadsMixin", "hiding player heads in the tab list", "miscellaneous").gates("tabListHideHeads");
+        mixin("PlayerTabHeadsMixin", "hiding player heads in the tab list", "tab_list").gates("tabListHideHeads");
         mixin("InGameHudFoodMixin", "the saturation overlay on the food bar", "saturation_bar").gates("saturationBarEnabled");
         mixin("MouseMixin", "adjusting zoom with the scroll wheel", "zoom");
         mixin("EntityMixin", "the Free Look camera", "free_look").gates("freeLookEnabled");
@@ -348,12 +359,12 @@ public final class FeatureCatalog {
                 .gates("hitboxEnabled", "hitboxTargetEnabled");
         mixin("HitboxVisibleEntitiesMixin", "matching hitboxes to visible entities", "hitbox")
                 .gates("hitboxEnabled", "hitboxTargetEnabled");
-        mixin("RenderSystemMixin", "Aurora's frame limiter after each frame", "miscellaneous")
+        mixin("RenderSystemMixin", "Aurora's frame limiter after each frame", "frame_pacing")
                 .gates("smoothFramePacer", "adaptiveRenderSleeping");
         mixin("GameRendererBobMixin", "the view-bob strength", "animations");
         mixin("HeldItemRendererMixin", "the swing animation curve", "animations");
-        mixin("MouseAccessor", "decoupled mouse input", "miscellaneous").gates("inputSamplingDecoupled");
-        mixin("MinecraftClientRenderMixin", "frame pacing, decoupled mouse input and blurred glass", "miscellaneous")
+        mixin("MouseAccessor", "decoupled mouse input", "decoupled_input").gates("inputSamplingDecoupled");
+        mixin("MinecraftClientRenderMixin", "frame pacing, decoupled mouse input and blurred glass", "frame_pacing", "decoupled_input")
                 .gates("smoothFramePacer", "adaptiveRenderSleeping", "inputSamplingDecoupled", "lowLatencyRender", "disableVSync");
         mixin("MixinOverlayTexture", "recoloring the hurt flash", "hit_color").gates("hitColorEnabled");
         mixin("EquipmentLayerRendererMixin", "tinting armor and trims with the hit color", "hit_color")
@@ -377,13 +388,13 @@ public final class FeatureCatalog {
         mixin("RetroBodyTurnMixin", "retro backwards walking", "animations").gates("animRetroBackwardsWalk");
         mixin("ClassicSneakPoseMixin", "the classic sneak pose", "animations").gates("animClassicSneak");
         mixin("HotbarItemBounceMixin", "the hotbar item bounce", "animations").gates("hotbarBounceEnabled");
-        mixin("PlayerEntityRendererMixin", "ping, totem pops and Streamer Mode nametag masking", "ping", "totem_pop", "miscellaneous")
+        mixin("PlayerEntityRendererMixin", "ping, totem pops and Streamer Mode nametag masking", "ping", "totem_pop", "streamer_mode")
                 .gates("nametagPingEnabled", "nametagTotemPopsEnabled", "streamerModeEnabled");
-        mixin("LivingEntityRendererNameTagMixin", "showing your own nametag in third person", "miscellaneous")
+        mixin("LivingEntityRendererNameTagMixin", "showing your own nametag in third person", "nametags")
                 .gates("nametagStyleShowSelf");
-        mixin("NameTagStyleMixin", "nametag scale and background opacity", "miscellaneous")
+        mixin("NameTagStyleMixin", "nametag scale and background opacity", "nametags")
                 .gates("nametagStyleCustomBackground");
-        mixin("NameTagShadowMixin", "drop shadow on nametag text", "miscellaneous")
+        mixin("NameTagShadowMixin", "drop shadow on nametag text", "nametags")
                 .gates("nametagStyleTextShadow");
         mixin("LivingEntityRendererExtractMixin", "entity health labels and hit-color health capture", "player_health", "hit_color")
                 .gates("playerHealthIndicators", "hitColorHealthGradient");
@@ -442,16 +453,16 @@ public final class FeatureCatalog {
         mixin("GuiRendererGlassMixin", "blurred glass (26.1 captures must run after the world is drawn)");
         mixin("AbstractButtonMixin", "Aurora styling on vanilla buttons", "custom_title").gates("customTitleScreen");
         mixin("EditBoxMixin", "Aurora styling on text fields", "custom_title").gates("customTitleScreen");
-        mixin("ServerListDragReorderMixin", "drag-to-reorder in the server list", "miscellaneous").gates("serverListDragReorder");
-        mixin("SoundVolumeMixin", "per-sound volume attenuation (0–100%)", "miscellaneous").gates("soundVolumesEnabled");
-        mixin("StreamerSkinMixin", "hiding your own skin in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
-        mixin("StreamerPlayerInfoSkinMixin", "hiding your own tab-list skin in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
-        mixin("StreamerTabNameMixin", "masking player names in the tab list in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
-        mixin("StreamerChatMixin", "redacting names and server addresses in chat in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
-        mixin("StreamerDirectJoinMixin", "masking the Direct Connection IP field in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
-        mixin("StreamerManageServerMixin", "masking the Edit Server IP field in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
-        mixin("StreamerConnectScreenMixin", "redacting server addresses while connecting in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
-        mixin("StreamerServerEntryMixin", "masking raw IP titles in the server list in Streamer Mode", "miscellaneous").gates("streamerModeEnabled");
+        mixin("ServerListDragReorderMixin", "drag-to-reorder in the server list", "server_list").gates("serverListDragReorder");
+        mixin("SoundVolumeMixin", "per-sound volume attenuation (0–100%)", "sound_volumes").gates("soundVolumesEnabled");
+        mixin("StreamerSkinMixin", "hiding your own skin in Streamer Mode", "streamer_mode").gates("streamerModeEnabled");
+        mixin("StreamerPlayerInfoSkinMixin", "hiding your own tab-list skin in Streamer Mode", "streamer_mode").gates("streamerModeEnabled");
+        mixin("StreamerTabNameMixin", "masking player names in the tab list in Streamer Mode", "streamer_mode").gates("streamerModeEnabled");
+        mixin("StreamerChatMixin", "redacting names and server addresses in chat in Streamer Mode", "streamer_mode").gates("streamerModeEnabled");
+        mixin("StreamerDirectJoinMixin", "masking the Direct Connection IP field in Streamer Mode", "streamer_mode").gates("streamerModeEnabled");
+        mixin("StreamerManageServerMixin", "masking the Edit Server IP field in Streamer Mode", "streamer_mode").gates("streamerModeEnabled");
+        mixin("StreamerConnectScreenMixin", "redacting server addresses while connecting in Streamer Mode", "streamer_mode").gates("streamerModeEnabled");
+        mixin("StreamerServerEntryMixin", "masking raw IP titles in the server list in Streamer Mode", "streamer_mode").gates("streamerModeEnabled");
         mixin("ChatComponentSuiteMixin", "Chat Suite formatting, compact duplicates, chat heads, longer history and Chat Peek", "chat").gates("chatEnabled");
         mixin("ChatScreenSuiteMixin", "Chat Suite in-chat search and click-to-copy", "chat").gates("chatEnabled");
         mixin("MultiplayerServerListWidgetMixin", "numeric ping in the server list", "ping");

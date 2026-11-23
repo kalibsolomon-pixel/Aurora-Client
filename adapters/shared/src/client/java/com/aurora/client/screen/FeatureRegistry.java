@@ -1792,15 +1792,13 @@ addWithSettings("hitbox",
                 ),
                 List.of("chat"));
 
-        // ---- Display Settings ----
-        // One catalog feature (fair play, mixin health, one reset) whose
-        // rows have no screen of their own: the Settings tab's pages show
-        // them in groups (settingsPages below, 2026-11-12). The rows are
-        // built once and shared, so the detail screen (still reachable by
-        // id, e.g. from the GUI audit) and the pages edit the same values.
-        // History: the former standalone Settings-tab tiles were merged
-        // into this entry on 2026-09-10 and shown as a Modules-grid card
-        // until the pages replaced it.
+        // ---- Former Display Settings ----
+        // Frame pacing, decoupled input, tab list, nametags, per-sound volume,
+        // Streamer Mode and server-list dragging were one catalog feature
+        // ("miscellaneous") until 2026-11-23; each is now its own feature with
+        // its own fair-play class, health note and reset, shown as an entry on
+        // a Settings-tab page. The rows are built once and shared, so a detail
+        // screen (opened from search) and the page edit the same values.
         FeatureSetting framePacerEnabled = new BooleanSetting("Enabled",
                 () -> cfg.smoothFramePacer,
                 v -> cfg.smoothFramePacer = v).resetDefault("smoothFramePacer", () -> defaults.smoothFramePacer)
@@ -1994,75 +1992,89 @@ addWithSettings("hitbox",
         FeatureSetting copyDiagnostics = ButtonSetting.semantic("Copy Diagnostics", "Copy",
                 com.aurora.client.diagnostics.DiagnosticsReport::runAndCopy)
                 .description("Closes this menu, measures frame times for 5 seconds, then copies a text report to your clipboard: your mod list, any Aurora feature that could not start and why, the renderer, recent Aurora errors and the frame-time result. Nothing is sent anywhere; paste it where you are asking for help. It contains no account, world or server names.");
-        addWithSettings("miscellaneous",
-                "Display and responsiveness controls: frame pacing, a global frame cap, latency, input handling, tab list and nametag styling, server-list dragging, per-sound volume, and Streamer Mode privacy masking. Each keeps its own enable toggle and settings under its section.",
-                        () -> cfg.smoothFramePacer || cfg.lowLatencyRender
-                        || cfg.inputSamplingDecoupled
-                        || cfg.serverListDragReorder || cfg.frameCapFps > 0
-                        || cfg.tabListHideHeader || cfg.tabListHideFooter || cfg.tabListHideHeads
-                        || cfg.tabListHighlightSelf || cfg.tabListCustomBackground
-                        || cfg.nametagStyleShowSelf || cfg.nametagStyleTextShadow
-                        || cfg.nametagStyleCustomBackground || Math.abs(cfg.nametagStyleScale - 1.0) > 1e-4
-                        || cfg.soundVolumesEnabled || cfg.streamerModeEnabled,
+        // A page entry's rows carry each switch, so these entries draw no header
+        // toggle and no detail link (pageGroup), exactly as their groups did; the
+        // getter, setter and detail screen remain for search and the GUI audit.
+        addWithSettings("frame_pacing",
+                "When frames are drawn: a global frame cap, a pacer that spaces frames evenly, and low-latency rendering with VSync and render-sleep controls.",
+                () -> cfg.smoothFramePacer || cfg.lowLatencyRender || cfg.frameCapFps > 0,
                 v -> {
                     cfg.smoothFramePacer = v;
                     cfg.lowLatencyRender = v;
-                    cfg.inputSamplingDecoupled = v;
-                    cfg.serverListDragReorder = v;
-                    // The cap is a value setting, not a toggle: master-off
-                    // removes it (0 = Off), master-on leaves whatever cap the
-                    // user chose (a forced "on" value would be arbitrary).
+                    // The cap is a value, not a switch: off removes it, on keeps
+                    // whatever cap the player chose.
+                    if (!v) cfg.frameCapFps = 0;
+                },
+                List.of(
+                        new SectionHeaderSetting("Frame Cap"),
+                        globalFrameCap,
+                        new SectionHeaderSetting("Frame Pacer"),
+                        framePacerEnabled, framePacingStrategy, framePacerLowCpu,
+                        framePacerSpinThreshold, framePacerParkThreshold,
+                        new SectionHeaderSetting("Low Latency"),
+                        lowLatencyEnabled, disableVSync, adaptiveRenderSleeping),
+                List.of("smoothFramePacer", "framePacer", "framePacing", "frameCap",
+                        "lowLatencyRender", "disableVSync", "adaptiveRenderSleeping"))
+                .noSettingsToggle(true).pageGroup(true);
+        addWithSettings("decoupled_input",
+                "Applies mouse movement at the very start of each frame, so the view follows the mouse one step sooner.",
+                () -> cfg.inputSamplingDecoupled, v -> cfg.inputSamplingDecoupled = v,
+                List.of(decoupledInputEnabled),
+                List.of("inputSamplingDecoupled"))
+                .noSettingsToggle(true).pageGroup(true);
+        addWithSettings("tab_list",
+                "Cleans up and restyles the multiplayer player list.",
+                () -> cfg.tabListHideHeader || cfg.tabListHideFooter || cfg.tabListHideHeads
+                        || cfg.tabListHighlightSelf || cfg.tabListCustomBackground,
+                v -> {
                     if (!v) {
-                        cfg.frameCapFps = 0;
                         cfg.tabListHideHeader = false;
                         cfg.tabListHideFooter = false;
                         cfg.tabListHideHeads = false;
                         cfg.tabListHighlightSelf = false;
                         cfg.tabListCustomBackground = false;
+                    }
+                },
+                List.of(tabListHideHeader, tabListHideFooter, tabListHideHeads,
+                        tabListHighlightSelf, tabListCustomBg, tabListBgOpacity),
+                List.of("tabList"))
+                .noSettingsToggle(true).pageGroup(true);
+        addWithSettings("nametags",
+                "Your own nametag in third person, and the scale, shadow and background of floating nametags.",
+                () -> cfg.nametagStyleShowSelf || cfg.nametagStyleTextShadow || cfg.nametagStyleCustomBackground
+                        || Math.abs(cfg.nametagStyleScale - 1.0) > 1e-4,
+                v -> {
+                    if (!v) {
                         cfg.nametagStyleShowSelf = false;
                         cfg.nametagStyleTextShadow = false;
                         cfg.nametagStyleCustomBackground = false;
                         cfg.nametagStyleScale = 1.0;
-                        cfg.soundVolumesEnabled = false;
-                        cfg.streamerModeEnabled = false;
                     }
                 },
-                List.of(
-                        new SectionHeaderSetting("Frame Pacer"),
-                        framePacerEnabled, framePacingStrategy, framePacerLowCpu,
-                        framePacerSpinThreshold, framePacerParkThreshold,
-                        new SectionHeaderSetting("Frame Cap"),
-                        globalFrameCap,
-                        new SectionHeaderSetting("Low Latency"),
-                        lowLatencyEnabled, disableVSync, adaptiveRenderSleeping,
-                        new SectionHeaderSetting("Decoupled Input"),
-                        decoupledInputEnabled,
-                        new SectionHeaderSetting("Tab List"),
-                        tabListHideHeader, tabListHideFooter, tabListHideHeads,
-                        tabListHighlightSelf, tabListCustomBg, tabListBgOpacity,
-                        new SectionHeaderSetting("Nametags"),
-                        nametagShowSelf, nametagTextShadow, nametagCustomBg,
-                        nametagBgOpacity, nametagScale,
-                        new SectionHeaderSetting("Drag-to-Reorder Servers"),
-                        serverListDragEnabled,
-                        new SectionHeaderSetting("Sound Volumes"),
-                        soundVolumesEnabled, openSoundMixer, clearSoundOverrides,
-                        new SectionHeaderSetting("Streamer Mode"),
-                        streamerModeEnabled, streamerHideOwnName, streamerSelfAlias,
+                List.of(nametagShowSelf, nametagTextShadow, nametagCustomBg, nametagBgOpacity, nametagScale),
+                List.of("nametagStyle"))
+                .noSettingsToggle(true).pageGroup(true);
+        addWithSettings("sound_volumes",
+                "Lower or mute individual Minecraft sounds (0–100% attenuation only).",
+                () -> cfg.soundVolumesEnabled, v -> cfg.soundVolumesEnabled = v,
+                List.of(soundVolumesEnabled, openSoundMixer, clearSoundOverrides),
+                List.of("soundVolumes"))
+                .noSettingsToggle(true).pageGroup(true);
+        addWithSettings("streamer_mode",
+                "Masks your username, skin, coordinates and server address on your screen, and can replace other players' names with labels.",
+                () -> cfg.streamerModeEnabled, v -> cfg.streamerModeEnabled = v,
+                List.of(streamerModeEnabled, streamerHideOwnName, streamerSelfAlias,
                         streamerHideOwnSkin, streamerHideServerAddress, streamerHideCoords,
                         streamerHideOtherNames, streamerOpponentLabel, streamerOpponentNumbered,
-                        streamerOpponentColorEnabled, streamerOpponentColor,
-                        new SectionHeaderSetting("Screenshots"),
-                        openScreenshots,
-                        new SectionHeaderSetting("Support"),
-                        copyDiagnostics
-                ),
-                // Union of the original tiles' config fields (see the
-                // resetByPrefix comment on pack_tweaks for prefix rules).
-                List.of(
-                        "smoothFramePacer", "framePacer", "framePacing", "frameCap",
-                        "lowLatencyRender", "disableVSync", "adaptiveRenderSleeping",
-                        "inputSamplingDecoupled", "tabList", "nametagStyle", "serverListDragReorder", "soundVolumes", "streamer"));
+                        streamerOpponentColorEnabled, streamerOpponentColor),
+                List.of("streamer"))
+                .noSettingsToggle(true).pageGroup(true);
+        addWithSettings("server_list",
+                "Reorder servers in the Multiplayer list by dragging them.",
+                () -> cfg.serverListDragReorder, v -> cfg.serverListDragReorder = v,
+                List.of(serverListDragEnabled),
+                List.of("serverListDragReorder"))
+                .noSettingsToggle(true).pageGroup(true);
 
         // Client optimizations Aurora owns (ADR 0009). Only the switches
         // with a visible trade-off have rows; the rest are config-only
@@ -2103,46 +2115,35 @@ addWithSettings("hitbox",
         // The Settings tab shows one page at a time, chosen from the row of
         // sub-tabs at its top. A page is a list of entries; each entry is a
         // header (with the feature's own switch for Theme and Custom Title)
-        // over its rows. Theme, Text & Fonts and Custom Title are their
-        // catalog features; every other entry is a group of rows owned by
-        // Interface or Display Settings, so their config fields, defaults,
-        // fair-play notes and resets do not change.
+        // over its rows. Most entries are catalog features (their health note
+        // replaces the summary line while a mixin is down); the rest are
+        // groups of rows owned by Interface or Performance. Six pages since
+        // 2026-11-23: Appearance, World & HUD, Performance, Audio & Keys,
+        // Privacy, Tools.
         FeatureSetting hudEditorKey = new KeybindSetting("HUD Editor Key",
                 () -> cfg.hudEditorKey, v -> cfg.hudEditorKey = v).resetDefault(() -> defaults.hudEditorKey).keyId("key.aurora.hud_editor")
                 .description("Opens the HUD editor in game, where you move and resize HUD modules; its Aurora Settings button leads here. Also listed in Minecraft's Controls. Press ESC or Backspace while rebinding to clear it.");
+        FeatureSetting reducedMotion = new BooleanSetting("Reduced Motion",
+                () -> cfg.reducedMotion, value -> { cfg.reducedMotion = value; AuroraConfig.save(); })
+                .resetDefault("reducedMotion", () -> defaults.reducedMotion)
+                .description("Skip overlay fades and make keyboard focus scrolling instant.");
         SETTINGS_PAGES.add(new SettingsPage("Appearance", List.of(
                 settingsEntry("theme").pageSummary("The accent, window tint and glass of every Aurora screen."),
-                settingsEntry("text_fonts").pageSummary("The typeface and style of Aurora's text, and where it applies."))));
-        List<FeatureMetadata> displayEntries = new ArrayList<>(List.of(
-                group("frame_rate", "Frame Rate", globalFrameCap, uiFpsLimit).pageSummary("Framerate caps for the game and for Aurora's menus."),
-                group("frame_pacer", "Frame Pacer", framePacerEnabled, framePacingStrategy,
-                        framePacerLowCpu, framePacerSpinThreshold, framePacerParkThreshold).pageSummary("Holds each frame to an even interval for smoother motion."),
-                group("low_latency", "Low Latency", lowLatencyEnabled, disableVSync, adaptiveRenderSleeping).pageSummary("Shortens the delay between your input and the screen."),
-                group("streamer_mode", "Streamer Mode", streamerModeEnabled, streamerHideOwnName, streamerSelfAlias,
-                        streamerHideOwnSkin, streamerHideServerAddress, streamerHideCoords,
-                        streamerHideOtherNames, streamerOpponentLabel, streamerOpponentNumbered,
-                        streamerOpponentColorEnabled, streamerOpponentColor)
-                        .pageSummary("Masks your username, skin, coordinates, server address, and optionally opponent nametags on your screen.")));
+                settingsEntry("text_fonts").pageSummary("The typeface and style of Aurora's text, and where it applies."),
+                group("interface_motion", "Motion", reducedMotion).pageSummary("Animation and motion preferences for Aurora's menus."),
+                settingsEntry("custom_title").pageSummary("Aurora's own title screen in place of the vanilla one."))));
+        List<FeatureMetadata> worldEntries = new ArrayList<>();
         if (EphemeraOwnership.ownsWorldVisuals()) {
-            displayEntries.add(group("world_visuals", "World Visuals", mappingAction("Open Ephemera Settings",
+            worldEntries.add(group("world_visuals", "World Visuals", mappingAction("Open Ephemera Settings",
                     "Adjust Gradient Dithering and Smooth Fog in Ephemera's Visuals tab.",
                     com.aurora.client.compat.EphemeraBridge::openConfigScreen)));
         } else {
-            displayEntries.add(settingsEntry("gradient_dither").pageSummary("Removes color banding from skies, fog and dark scenes."));
-            displayEntries.add(settingsEntry("smooth_fog").pageSummary("Softens harsh linear distance fog edges across the horizon."));
+            worldEntries.add(settingsEntry("gradient_dither").pageSummary("Removes color banding from skies, fog and dark scenes."));
+            worldEntries.add(settingsEntry("smooth_fog").pageSummary("Softens harsh linear distance fog edges across the horizon."));
         }
-        displayEntries.addAll(List.of(
-                group("tab_list", "Tab List", tabListHideHeader, tabListHideFooter, tabListHideHeads,
-                        tabListHighlightSelf, tabListCustomBg, tabListBgOpacity).pageSummary("Clean up and restyle the multiplayer player list."),
-                group("nametags", "Nametags", nametagShowSelf, nametagTextShadow, nametagCustomBg,
-                        nametagBgOpacity, nametagScale).pageSummary("Third-person self nametag and floating nametag styling.")));
-        SETTINGS_PAGES.add(new SettingsPage("Display", List.copyOf(displayEntries)));
-        SETTINGS_PAGES.add(new SettingsPage("Controls", List.of(
-                group("decoupled_input", "Decoupled Input", decoupledInputEnabled).pageSummary("Applies mouse movement at the very start of each frame."),
-                group("aurora_keys", "Aurora Keys", hudEditorKey).pageSummary("Keys that open Aurora's own screens."))));
-        SETTINGS_PAGES.add(new SettingsPage("Sound", List.of(
-                group("sound_volumes", "Per-Sound Volume", soundVolumesEnabled, openSoundMixer, clearSoundOverrides)
-                        .pageSummary("Lower or mute individual Minecraft sounds (0–100% attenuation only)."))));
+        worldEntries.add(settingsEntry("tab_list").pageSummary("Clean up and restyle the multiplayer player list."));
+        worldEntries.add(settingsEntry("nametags").pageSummary("Third-person self nametag and floating nametag styling."));
+        SETTINGS_PAGES.add(new SettingsPage("World & HUD", List.copyOf(worldEntries)));
         FeatureSetting searchInstant = new BooleanSetting("Instant Search",
                 () -> cfg.searchInstant, v -> { cfg.searchInstant = v; AuroraConfig.save(); }).resetDefault("searchInstant", () -> defaults.searchInstant)
                 .description("Focuses the search bar when the Aurora menu opens or you return to the Features tab, so you can type straight away.");
@@ -2151,9 +2152,17 @@ addWithSettings("hitbox",
                 SearchTolerance::label).resetDefault(() -> SearchTolerance.of(defaults.searchTypoTolerance))
                 .description("How many typos a search word can have and still find a match. Exact only finds exact matches; short words always need to be exact.");
         SETTINGS_PAGES.add(new SettingsPage("Performance", List.of(
+                settingsEntry("frame_pacing").pageSummary("Frame cap, even frame pacing and low-latency rendering."),
+                settingsEntry("decoupled_input").pageSummary("Applies mouse movement at the very start of each frame."),
+                group("menu_frame_rate", "Menu Frame Rate", uiFpsLimit).pageSummary("The framerate of Aurora's own screens."),
                 group("debug_screen", "Debug Screen", debugEntryCache).pageSummary("Makes the F3 screen cheaper to draw."),
                 group("maps", "Maps", minimapRefreshCap).pageSummary("Limits how often the minimap redraws its terrain."),
                 group("background", "Background", unfocusedLimit, unfocusedFps).pageSummary("Slows drawing while another window has focus."))));
+        SETTINGS_PAGES.add(new SettingsPage("Audio & Keys", List.of(
+                settingsEntry("sound_volumes").pageSummary("Lower or mute individual Minecraft sounds (0–100% attenuation only)."),
+                group("aurora_keys", "Aurora Keys", hudEditorKey).pageSummary("Keys that open Aurora's own screens."))));
+        SETTINGS_PAGES.add(new SettingsPage("Privacy", List.of(
+                settingsEntry("streamer_mode").pageSummary("Masks your username, skin, coordinates, server address, and optionally opponent nametags on your screen."))));
         FeatureSetting resourcepackFolders = new BooleanSetting("Resource Pack Folders",
                 () -> cfg.resourcepackFoldersEnabled, v -> { cfg.resourcepackFoldersEnabled = v; AuroraConfig.save(); })
                 .resetDefault("resourcepackFoldersEnabled", () -> defaults.resourcepackFoldersEnabled)
@@ -2167,18 +2176,12 @@ addWithSettings("hitbox",
                     }
                 })
                 .description("Opens Aurora's folder-aware resource pack manager with subfolder navigation, search, and load-order controls.");
-        SETTINGS_PAGES.add(new SettingsPage("General", List.of(
-                group("interface_motion", "Interface", new BooleanSetting("Reduced Motion",
-                        () -> cfg.reducedMotion, value -> { cfg.reducedMotion = value; AuroraConfig.save(); })
-                        .resetDefault("reducedMotion", () -> defaults.reducedMotion)
-                        .description("Skip overlay fades and make keyboard focus scrolling instant."))
-                        .pageSummary("Animation and motion preferences for Aurora's menus."),
+        SETTINGS_PAGES.add(new SettingsPage("Tools", List.of(
                 group("screenshots", "Screenshots", openScreenshots).pageSummary("Browse, search, rename, copy, crop and delete screenshots in-game."),
                 group("resource_packs", "Resource Packs", resourcepackFolders, openPackManager)
                         .pageSummary("Organize resource packs into nested folders with search and load-order controls."),
+                settingsEntry("server_list").pageSummary("Reorder servers in the Multiplayer list by dragging."),
                 group("search", "Search", searchInstant, searchTolerance).pageSummary("How the search bar finds features and settings."),
-                settingsEntry("custom_title").pageSummary("Aurora's own title screen in place of the vanilla one."),
-                group("server_list", "Drag-to-Reorder Servers", serverListDragEnabled).pageSummary("Reorder servers in the Multiplayer list by dragging."),
                 group("support", "Support", copyDiagnostics).pageSummary("Collects a diagnostics report to attach to bug reports."))));
 
     }

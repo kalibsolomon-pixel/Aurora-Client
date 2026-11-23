@@ -288,7 +288,7 @@ public class AuroraConfig {
     public TextCase textCase = TextCase.NORMAL;
     public TextShadow textHudShadow = TextShadow.NORMAL; // factory Normal since 2026-11-14 (owner decision)
 
-    // ---- Search (Settings → General → Search, 2026-11-12) ----
+    // ---- Search (Settings → Tools → Search; General until 2026-11-23) ----
     /** Focus the search field when the Aurora menu opens or its page changes. */
     public boolean searchInstant = true;
     public boolean reducedMotion = false;
@@ -466,7 +466,7 @@ public class AuroraConfig {
     public boolean lowLatencyRender = true;
     public boolean disableVSync = false;
 
-    // ---- Streamer Mode (Settings -> Display -> Streamer Mode) ----
+    // ---- Streamer Mode (Settings → Privacy → Streamer Mode) ----
     public boolean streamerModeEnabled = false;
     public boolean streamerHideOwnName = true;
     public String  streamerSelfAlias = "You";
