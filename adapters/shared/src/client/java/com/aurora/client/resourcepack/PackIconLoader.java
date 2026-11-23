@@ -9,13 +9,7 @@ import net.minecraft.server.packs.repository.Pack;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -25,7 +19,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>Decodes PNGs off-thread and registers {@link DynamicTexture} instances on
  * the render thread. Evicted textures are retired and freed in {@link #drainRetired()}
- * at the start of the next frame (rendering rule 10).
+ * at the start of the next frame (rendering rule 10). Cache entries, in-flight
+ * jobs, ready uploads, and missing markers are stamped with a refresh generation
+ * via {@link PackIconCache} so pre-Refresh decodes can never poison the new cache.
  */
 public final class PackIconLoader {
 
@@ -41,13 +37,9 @@ public final class PackIconLoader {
 
     public record LoadedIcon(Identifier textureId, DynamicTexture texture, int width, int height) {}
 
-    private record ReadyImage(String packId, NativeImage image) {}
     private record RetiredTexture(Identifier id, DynamicTexture texture) {}
 
-    private static final Map<String, LoadedIcon> CACHE = new LinkedHashMap<>(64, 0.75f, true);
-    private static final Set<String> IN_FLIGHT = ConcurrentHashMap.newKeySet();
-    private static final Set<String> MISSING = ConcurrentHashMap.newKeySet();
-    private static final ConcurrentLinkedQueue<ReadyImage> READY = new ConcurrentLinkedQueue<>();
+    private static final PackIconCache<NativeImage, LoadedIcon> CACHE = new PackIconCache<>(MAX_CACHED_ICONS);
     private static final List<RetiredTexture> RETIRED = new ArrayList<>();
 
     private PackIconLoader() {}
@@ -60,25 +52,40 @@ public final class PackIconLoader {
         if (pack == null) return null;
         drainReady();
         String id = pack.getId();
-        LoadedIcon cached = CACHE.get(id);
+        LoadedIcon cached = CACHE.getCached(id);
         if (cached != null) return cached;
-        if (MISSING.contains(id) || !IN_FLIGHT.add(id)) return null;
+        long gen = CACHE.tryBeginLoad(id);
+        if (gen < 0L) return null;
 
         IO_POOL.execute(() -> {
+            NativeImage raw = null;
+            NativeImage scaled = null;
+            boolean published = false;
             try {
                 byte[] bytes = NativeUi.readPackIconPng(pack);
                 if (bytes == null || bytes.length == 0) {
-                    MISSING.add(id);
+                    CACHE.completeMissing(gen, id);
+                    published = true;
                     return;
                 }
-                NativeImage raw = NativeImage.read(new ByteArrayInputStream(bytes));
-                NativeImage scaled = downscaleIfLarge(raw);
-                if (scaled != raw) raw.close();
-                READY.add(new ReadyImage(id, scaled));
+                raw = NativeImage.read(new ByteArrayInputStream(bytes));
+                scaled = downscaleIfLarge(raw);
+                if (scaled != raw) {
+                    raw.close();
+                    raw = null;
+                }
+                CACHE.completeSuccess(gen, id, scaled, NativeImage::close);
+                published = true;
             } catch (Throwable ignored) {
-                MISSING.add(id);
-            } finally {
-                IN_FLIGHT.remove(id);
+                if (scaled != null && scaled != raw) {
+                    try { scaled.close(); } catch (Throwable closeIgnored) {}
+                }
+                if (raw != null) {
+                    try { raw.close(); } catch (Throwable closeIgnored) {}
+                }
+                if (!published) {
+                    CACHE.completeMissing(gen, id);
+                }
             }
         });
         return null;
@@ -88,34 +95,18 @@ public final class PackIconLoader {
     public static void drainReady() {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null) return;
-        ReadyImage item;
-        int uploaded = 0;
-        while (uploaded < 8 && (item = READY.poll()) != null) {
-            uploaded++;
-            NativeImage img = item.image();
-            try {
-                Identifier texId = Identifier.fromNamespaceAndPath(
-                        "aurora", "pack_icon/" + SEQ.incrementAndGet());
-                DynamicTexture dyn = new DynamicTexture(() -> "aurora_pack_icon", img);
-                mc.getTextureManager().register(texId, dyn);
-                LoadedIcon prev = CACHE.put(item.packId(), new LoadedIcon(texId, dyn, img.getWidth(), img.getHeight()));
-                if (prev != null) retire(prev);
-                trimCache();
-            } catch (Throwable ignored) {
-                img.close();
-            }
-        }
+        CACHE.drainReady(8, img -> {
+            Identifier texId = Identifier.fromNamespaceAndPath(
+                    "aurora", "pack_icon/" + SEQ.incrementAndGet());
+            DynamicTexture dyn = new DynamicTexture(() -> "aurora_pack_icon", img);
+            mc.getTextureManager().register(texId, dyn);
+            return new LoadedIcon(texId, dyn, img.getWidth(), img.getHeight());
+        }, NativeImage::close, PackIconLoader::retire);
     }
 
     /** Retires all cached icons (e.g. on Refresh) so they re-read from disk safely on next frame. */
     public static void invalidateAll() {
-        for (LoadedIcon icon : CACHE.values()) retire(icon);
-        CACHE.clear();
-        MISSING.clear();
-        ReadyImage pending;
-        while ((pending = READY.poll()) != null) {
-            try { pending.image().close(); } catch (Throwable ignored) {}
-        }
+        CACHE.invalidateAll(NativeImage::close, PackIconLoader::retire);
     }
 
     /** Frees retired textures at frame start before any GUI blits are recorded (rendering rule 10). */
@@ -135,14 +126,6 @@ public final class PackIconLoader {
 
     private static void retire(LoadedIcon icon) {
         if (icon != null) RETIRED.add(new RetiredTexture(icon.textureId(), icon.texture()));
-    }
-
-    private static void trimCache() {
-        Iterator<Map.Entry<String, LoadedIcon>> it = CACHE.entrySet().iterator();
-        while (CACHE.size() > MAX_CACHED_ICONS && it.hasNext()) {
-            retire(it.next().getValue());
-            it.remove();
-        }
     }
 
     private static NativeImage downscaleIfLarge(NativeImage src) {

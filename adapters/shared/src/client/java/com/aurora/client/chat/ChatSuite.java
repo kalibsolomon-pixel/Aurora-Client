@@ -9,11 +9,18 @@ import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.chat.GuiMessage;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.contents.objects.PlayerSprite;
 import net.minecraft.world.item.component.ResolvableProfile;
+import net.minecraft.world.level.storage.LevelResource;
 
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,6 +28,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Shared runtime coordinator for Aurora's Chat Suite: duplicate metadata,
@@ -40,11 +48,9 @@ public final class ChatSuite {
     private static final Map<GuiMessage, MessageMeta> MESSAGE_META =
             Collections.synchronizedMap(new IdentityHashMap<>());
 
-    private static final List<ChatHistoryStore.Entry> SESSION_HISTORY = new ArrayList<>();
-    private static String activeScope;
+    private static final ChatHistorySession SESSION = new ChatHistorySession();
+    private static volatile CompletableFuture<Void> lastDisconnectFlush = CompletableFuture.completedFuture(null);
     private static boolean replayingHistory;
-    private static long lastHistorySaveMs;
-    private static int unsavedMessages;
 
     private ChatSuite() {}
 
@@ -60,6 +66,9 @@ public final class ChatSuite {
                 mc.execute(ChatSuite::onDisconnect));
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> {
             onDisconnect();
+            try {
+                lastDisconnectFlush.get(500L, TimeUnit.MILLISECONDS);
+            } catch (Exception ignored) {}
             ChatHistoryStore.flush(1500L);
         });
     }
@@ -169,7 +178,7 @@ public final class ChatSuite {
         return out;
     }
 
-    /** Computes the current server or singleplayer world scope key. */
+    /** Computes the current server or singleplayer save-directory scope key. */
     public static String currentScope(Minecraft mc) {
         if (mc == null) return null;
         ServerData server = mc.getCurrentServer();
@@ -177,9 +186,14 @@ public final class ChatSuite {
             return "mp:" + server.ip.trim();
         }
         var sp = mc.getSingleplayerServer();
-        if (sp != null && sp.getWorldData() != null) {
-            String name = sp.getWorldData().getLevelName();
-            if (name != null && !name.isBlank()) return "sp:" + name;
+        if (sp != null) {
+            Path worldRoot = sp.getWorldPath(LevelResource.ROOT);
+            String saveScope = ChatFormatting.singleplayerScope(worldRoot);
+            if (saveScope != null) return saveScope;
+            if (sp.getWorldData() != null) {
+                String name = sp.getWorldData().getLevelName();
+                if (name != null && !name.isBlank()) return "sp:" + name;
+            }
         }
         return null;
     }
@@ -191,24 +205,7 @@ public final class ChatSuite {
         if (plainText == null || plainText.isBlank()) return;
         String scope = currentScope(mc);
         if (scope == null) return;
-        synchronized (SESSION_HISTORY) {
-            if (!scope.equals(activeScope)) {
-                activeScope = scope;
-                SESSION_HISTORY.clear();
-            }
-            int limit = Math.max(50, Math.min(500, cfg.chatPerServerMaxSaved));
-            SESSION_HISTORY.add(new ChatHistoryStore.Entry(System.currentTimeMillis(), plainText));
-            while (SESSION_HISTORY.size() > limit) {
-                SESSION_HISTORY.removeFirst();
-            }
-            unsavedMessages++;
-            long now = System.currentTimeMillis();
-            if (unsavedMessages >= 5 || now - lastHistorySaveMs >= 5000L) {
-                ChatHistoryStore.saveAsync(activeScope, SESSION_HISTORY, limit);
-                lastHistorySaveMs = now;
-                unsavedMessages = 0;
-            }
-        }
+        SESSION.recordIncoming(scope, plainText, System.currentTimeMillis(), true, cfg.chatPerServerMaxSaved);
     }
 
     /** Loads and replays saved per-server chat history off the main thread on world/server join. */
@@ -217,57 +214,92 @@ public final class ChatSuite {
         if (!cfg.chatEnabled || !cfg.chatPerServerHistory || mc == null) return;
         String scope = currentScope(mc);
         if (scope == null) return;
-        int limit = Math.max(50, Math.min(500, cfg.chatPerServerMaxSaved));
+        int limit = ChatHistorySession.clampLimit(cfg.chatPerServerMaxSaved);
 
-        synchronized (SESSION_HISTORY) {
-            if (scope.equals(activeScope) && !SESSION_HISTORY.isEmpty()) {
-                return; // Same session/dimension respawn — don't duplicate divider.
+        var sp = mc.getSingleplayerServer();
+        Path spWorldRoot = sp != null ? sp.getWorldPath(LevelResource.ROOT) : null;
+        String spLevelName = (sp != null && sp.getWorldData() != null) ? sp.getWorldData().getLevelName() : null;
+        String legacyScope = (spLevelName != null && !spLevelName.isBlank()) ? "sp:" + spLevelName : null;
+
+        CompletableFuture<List<ChatHistoryStore.Entry>> loadFuture = CompletableFuture.supplyAsync(() -> {
+            if (legacyScope != null && spWorldRoot != null) {
+                boolean unambiguous = isLegacySingleplayerOwnerUnambiguous(spWorldRoot, spLevelName);
+                return ChatHistoryStore.loadOrMigrateLegacy(scope, legacyScope, unambiguous, limit);
             }
-            activeScope = scope;
-            SESSION_HISTORY.clear();
-            unsavedMessages = 0;
-        }
+            return ChatHistoryStore.load(scope, limit);
+        });
 
-        CompletableFuture.supplyAsync(() -> ChatHistoryStore.load(scope, limit))
-                .thenAccept(entries -> {
-                    if (entries.isEmpty()) return;
-                    mc.execute(() -> {
-                        if (!AuroraConfig.get().chatEnabled || !AuroraConfig.get().chatPerServerHistory) return;
-                        if (!scope.equals(currentScope(mc))) return;
-                        ChatComponent chat = NativeUi.chat(mc);
-                        if (chat == null) return;
-                        synchronized (SESSION_HISTORY) {
-                            SESSION_HISTORY.addAll(0, entries);
-                            while (SESSION_HISTORY.size() > limit) {
-                                SESSION_HISTORY.removeFirst();
-                            }
-                        }
-                        replayingHistory = true;
-                        try {
-                            for (ChatHistoryStore.Entry e : entries) {
-                                chat.addClientSystemMessage(Component.literal(e.text()).withColor(HISTORY_TEXT_COLOR));
-                            }
-                            chat.addClientSystemMessage(Component.literal("\u2500\u2500 Previous session \u2500\u2500")
-                                    .withColor(HISTORY_DIVIDER_COLOR));
-                        } finally {
-                            replayingHistory = false;
-                        }
-                    });
-                });
+        long generation = SESSION.beginSession(scope, true, limit, loadFuture);
+        if (generation < 0L) return; // Same session/dimension respawn — don't duplicate divider.
+
+        loadFuture.thenAccept(entries -> mc.execute(() -> {
+            if (!SESSION.completeLoad(generation, entries, System.currentTimeMillis())) return;
+            if (entries.isEmpty()) return;
+            if (!AuroraConfig.get().chatEnabled || !AuroraConfig.get().chatPerServerHistory) return;
+            if (!scope.equals(currentScope(mc))) return;
+            ChatComponent chat = NativeUi.chat(mc);
+            if (chat == null) return;
+            replayingHistory = true;
+            try {
+                for (ChatHistoryStore.Entry e : entries) {
+                    chat.addClientSystemMessage(Component.literal(e.text()).withColor(HISTORY_TEXT_COLOR));
+                }
+                chat.addClientSystemMessage(Component.literal("\u2500\u2500 Previous session \u2500\u2500")
+                        .withColor(HISTORY_DIVIDER_COLOR));
+            } finally {
+                replayingHistory = false;
+            }
+        }));
+    }
+
+    /**
+     * Checks whether {@code worldRoot} is the sole save in its parent saves
+     * directory carrying {@code displayName} (case-insensitively, matching the
+     * legacy scope hash). Runs off the main thread during world join.
+     */
+    private static boolean isLegacySingleplayerOwnerUnambiguous(Path worldRoot, String displayName) {
+        if (worldRoot == null || displayName == null || displayName.isBlank()) return false;
+        Path normRoot = worldRoot.toAbsolutePath().normalize();
+        Path savesDir = normRoot.getParent();
+        if (savesDir == null || !Files.isDirectory(savesDir)) return false;
+        int matches = 0;
+        try (DirectoryStream<Path> dirs = Files.newDirectoryStream(savesDir)) {
+            for (Path candidate : dirs) {
+                if (!Files.isDirectory(candidate)) continue;
+                Path normCandidate = candidate.toAbsolutePath().normalize();
+                if (normCandidate.equals(normRoot)) {
+                    matches++;
+                    continue;
+                }
+                Path levelDat = normCandidate.resolve("level.dat");
+                if (!Files.isRegularFile(levelDat)) continue;
+                String otherName = readLevelName(levelDat);
+                if (otherName == null) return false; // Unreadable sibling => cannot prove unique ownership.
+                if (displayName.equalsIgnoreCase(otherName)) {
+                    matches++;
+                    if (matches > 1) return false;
+                }
+            }
+        } catch (Exception ignored) {
+            return false;
+        }
+        return matches == 1;
+    }
+
+    private static String readLevelName(Path levelDat) {
+        try {
+            CompoundTag root = NbtIo.readCompressed(levelDat, NbtAccounter.unlimitedHeap());
+            CompoundTag data = root.getCompoundOrEmpty("Data");
+            String name = data.getStringOr("LevelName", "");
+            return name.isBlank() ? null : name;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     /** Flushes any unsaved per-server history on disconnect or shutdown. */
     public static void onDisconnect() {
-        AuroraConfig cfg = AuroraConfig.get();
-        synchronized (SESSION_HISTORY) {
-            if (activeScope != null && !SESSION_HISTORY.isEmpty() && cfg.chatEnabled && cfg.chatPerServerHistory) {
-                int limit = Math.max(50, Math.min(500, cfg.chatPerServerMaxSaved));
-                ChatHistoryStore.saveAsync(activeScope, SESSION_HISTORY, limit);
-            }
-            activeScope = null;
-            SESSION_HISTORY.clear();
-            unsavedMessages = 0;
-        }
+        lastDisconnectFlush = SESSION.disconnect();
         clearMeta();
     }
 }

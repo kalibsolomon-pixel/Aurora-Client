@@ -18,6 +18,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /**
@@ -67,12 +68,25 @@ public class ProfileManager {
      * Mirrors {@code AuroraConfig.WRITER}'s rationale: disk I/O is
      * slow/unpredictable and must not stall the client tick thread.
      */
-    private static final com.aurora.client.config.AtomicJsonWriter WRITER =
+    private static final com.aurora.client.config.AtomicJsonWriter DEFAULT_WRITER =
             new com.aurora.client.config.AtomicJsonWriter("Aurora-ProfileSave");
+
+    private volatile com.aurora.client.config.AtomicJsonWriter writer = DEFAULT_WRITER;
 
     private static final ProfileManager INSTANCE = new ProfileManager();
 
     public static ProfileManager getInstance() { return INSTANCE; }
+
+    /** Replaces the writer for deterministic fault-injection tests; null restores the default writer. */
+    void setWriterForTest(com.aurora.client.config.AtomicJsonWriter testWriter) {
+        this.writer = testWriter != null ? testWriter : DEFAULT_WRITER;
+        invalidateCache();
+    }
+
+    /** Flushes pending async profile writes (tests and shutdown). */
+    public boolean flushPending(long timeoutMs) {
+        return writer.flush(timeoutMs);
+    }
 
     /** Name of the profile currently applied to the live config. */
     private String currentProfileName = "default";
@@ -329,10 +343,9 @@ public class ProfileManager {
     public String onServerJoin(String serverAddress) {
         String target = matchProfileForServer(serverAddress);
         if (target == null || target.equals(currentProfileName)) return null;
-        if (autoSwitchPreviousProfile == null) {
-            autoSwitchPreviousProfile = currentProfileName;
-        }
-        if (switchTo(target)) {
+        String prior = autoSwitchPreviousProfile == null ? currentProfileName : autoSwitchPreviousProfile;
+        if (switchToInternal(target, false)) {
+            autoSwitchPreviousProfile = prior;
             autoSwitchedToProfile = target;
             return target;
         }
@@ -341,8 +354,8 @@ public class ProfileManager {
 
     /**
      * Restores the pre-server profile after disconnecting from a server that
-     * triggered an auto-switch, unless the player manually switched to a
-     * different profile during the session.
+     * triggered an auto-switch, unless the player manually switched profiles
+     * during the session.
      *
      * @return the restored profile name, or {@code null} if no restore occurred.
      */
@@ -354,7 +367,7 @@ public class ProfileManager {
         if (restore == null || expectedActive == null) return null;
         if (!currentProfileName.equals(expectedActive)) return null;
         if (restore.equals(currentProfileName) || !nameExists(restore)) return null;
-        return switchTo(restore) ? restore : null;
+        return switchToInternal(restore, false) ? restore : null;
     }
 
     // ------------------------------------------------------------------
@@ -378,28 +391,60 @@ public class ProfileManager {
     }
 
     /**
-     * Rename a profile (keeping its contents). The active profile's pointer
-     * is updated if it was the renamed one.
+     * Rename a profile (keeping its contents). The old file is retained until
+     * the replacement has been written durably, and the active-profile pointer
+     * and auto-switch bookkeeping are updated only after the write succeeds.
      *
-     * @return {@code true} on success; {@code false} if {@code oldName} is
-     *         missing, {@code newName} is taken/invalid, or they're equal.
+     * @return {@code true} if the rename was validated, serialized, and queued;
+     *         {@code false} if {@code oldName} is missing, {@code newName} is
+     *         taken/invalid, they are equal, or serialization fails.
      */
     public boolean rename(String oldName, String newName) {
-        if (!isValidName(newName) || oldName.equals(newName)) return false;
-        if (!nameExists(oldName) || ProfileNameValidator.problem(newName, listProfileNames(), oldName) != null) return false;
-        Profile p = readProfileFile(oldName);
-        if (p == null) return false;
-        p.name = newName;
-        Path oldFile = pathFor(oldName);
-        writeProfileFile(p);
-        WRITER.delete(oldFile); // ordered after any queued write for the old name
-        if (currentProfileName.equals(oldName)) {
-            currentProfileName = newName;
-            AuroraConfig.get().activeProfile = newName;
-            AuroraConfig.save();
+        CompletableFuture<Boolean> future = renameAsync(oldName, newName);
+        return !future.isDone() || Boolean.TRUE.equals(future.getNow(false));
+    }
+
+    /**
+     * Asynchronous rename returning the durable write outcome. Keeps the old
+     * file and active-profile pointer intact if writing the new file fails.
+     */
+    public CompletableFuture<Boolean> renameAsync(String oldName, String newName) {
+        if (!isValidName(newName) || oldName == null || oldName.equals(newName)) {
+            return CompletableFuture.completedFuture(false);
         }
-        invalidateCache();
-        return true;
+        if (!nameExists(oldName) || ProfileNameValidator.problem(newName, listProfileNames(), oldName) != null) {
+            return CompletableFuture.completedFuture(false);
+        }
+        Profile p = readProfileFile(oldName);
+        if (p == null) return CompletableFuture.completedFuture(false);
+        p.name = newName;
+        String json = serializeProfile(p);
+        if (json == null) return CompletableFuture.completedFuture(false);
+
+        Path oldFile = pathFor(oldName);
+        Path newFile = pathFor(newName);
+        Path deleteAfter = oldFile.equals(newFile) ? null : oldFile;
+        return writer.submitAndDelete(newFile, json, deleteAfter).thenApply(ok -> {
+            if (Boolean.TRUE.equals(ok)) {
+                if (currentProfileName.equals(oldName)) {
+                    currentProfileName = newName;
+                    AuroraConfig.get().activeProfile = newName;
+                    AuroraConfig.save();
+                }
+                if (oldName.equals(autoSwitchPreviousProfile)) {
+                    autoSwitchPreviousProfile = newName;
+                }
+                if (oldName.equals(autoSwitchedToProfile)) {
+                    autoSwitchedToProfile = newName;
+                }
+                invalidateCache();
+                return true;
+            }
+            LOGGER.error("ProfileManager: failed to rename profile '{}' to '{}'; keeping '{}'",
+                    oldName, newName, oldName);
+            invalidateCache();
+            return false;
+        });
     }
 
     /**
@@ -413,7 +458,11 @@ public class ProfileManager {
         if (currentProfileName.equals(name)) return false; // never delete active
         // Ordered through the writer: a still-queued save for this profile can
         // no longer land after the delete and resurrect it.
-        WRITER.delete(pathFor(name));
+        writer.delete(pathFor(name));
+        if (name.equals(autoSwitchPreviousProfile)) {
+            autoSwitchPreviousProfile = null;
+            autoSwitchedToProfile = null;
+        }
         invalidateCache();
         return true;
     }
@@ -453,11 +502,22 @@ public class ProfileManager {
      *         exist or equals the current profile.
      */
     public boolean switchTo(String name) {
+        return switchToInternal(name, true);
+    }
+
+    private boolean switchToInternal(String name, boolean userInitiated) {
         if (name == null || name.equals(currentProfileName) || !nameExists(name)) return false;
         // Persist outgoing state so the user doesn't lose edits.
         saveCurrent();
         // Apply incoming.
         applyProfileByName(name);
+        if (userInitiated) {
+            // Any manual profile switch during a session cancels automatic
+            // disconnect restoration, even if the user later switches back to
+            // the profile that had been auto-selected.
+            autoSwitchPreviousProfile = null;
+            autoSwitchedToProfile = null;
+        }
         // Persist the pointer.
         AuroraConfig.get().activeProfile = currentProfileName;
         AuroraConfig.save();
@@ -502,7 +562,7 @@ public class ProfileManager {
         // Through the SAME ordered writer as the async path, then a bounded
         // wait: the old inline write raced a queued async write for the same
         // fixed .tmp path, and that older snapshot could land afterwards.
-        if (!WRITER.flush(com.aurora.client.config.AuroraConfig.SHUTDOWN_FLUSH_MS))
+        if (!writer.flush(com.aurora.client.config.AuroraConfig.SHUTDOWN_FLUSH_MS))
             LOGGER.error("ProfileManager: profile '{}' was NOT confirmed saved; the previous file is intact", p.name);
     }
 
@@ -711,7 +771,7 @@ public class ProfileManager {
         // Read-your-writes: a queued/in-flight write (or delete) is newer than
         // the disk. Reading the disk here let create→switchTo fail (the new
         // file was not written yet) and could apply a stale profile.
-        String pending = WRITER.latest(file);
+        String pending = writer.latest(file);
         if (pending == com.aurora.client.config.AtomicJsonWriter.DELETED) return null;
         if (pending == null && !Files.exists(file)) return null;
         try {
@@ -727,19 +787,24 @@ public class ProfileManager {
         }
     }
 
+    private String serializeProfile(Profile p) {
+        try {
+            return GSON.toJson(p);
+        } catch (Throwable t) {
+            LOGGER.error("ProfileManager: failed to serialize profile '{}'", p.name, t);
+            return null;
+        }
+    }
+
     /**
      * Atomic <b>async</b> write: serialize on the calling thread, submit the
      * temp-file + {@code ATOMIC_MOVE} rename to the save executor.
      */
-    private void writeProfileFile(Profile p) {
-        final String json;
-        try {
-            json = GSON.toJson(p);
-        } catch (Throwable t) {
-            LOGGER.error("ProfileManager: failed to serialize profile '{}'", p.name, t);
-            return;
-        }
-        WRITER.submit(pathFor(p.name), json);
+    private boolean writeProfileFile(Profile p) {
+        String json = serializeProfile(p);
+        if (json == null) return false;
+        writer.submit(pathFor(p.name), json);
+        return true;
     }
 
     // ------------------------------------------------------------------
@@ -752,7 +817,7 @@ public class ProfileManager {
         // neither view: a just-created profile was missing and a just-deleted
         // one stayed listed. In this order anything absent from the snapshot
         // had already reached the disk when the directory was read.
-        var pending = WRITER.latestAll();
+        var pending = writer.latestAll();
         List<String> names = new ArrayList<>();
         try (DirectoryStream<Path> ds = Files.newDirectoryStream(profilesDir(), "*.json")) {
             for (Path p : ds) {

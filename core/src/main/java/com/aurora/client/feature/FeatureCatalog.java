@@ -462,6 +462,7 @@ public final class FeatureCatalog {
         mixin("ItemLayerQuadsAccessor", "flat item icons in Aurora screens");
         mixin("ScreenPanoramaAccessor", "blurred glass over the menu panorama");
         mixin("KeyMappingComboMixin", "Ctrl, Shift and Alt combos on key bindings");
+        mixin("KeyMappingGlobalMatchMixin", "Ctrl, Shift and Alt combos on screenshot, fullscreen and global shortcuts");
         mixin("KeyBindsScreenComboMixin", "Ctrl, Shift and Alt combos in the Controls screen");
         mixin("KeyBindsListEntryConflictMixin", "keybind conflict warnings for Aurora and profile hotkeys in Controls");
         mixin("FolderRepositorySourceMixin", "discovering resource packs inside subfolders", "resourcepack_browser")

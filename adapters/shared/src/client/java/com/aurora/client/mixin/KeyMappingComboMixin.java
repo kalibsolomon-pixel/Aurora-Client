@@ -123,9 +123,9 @@ public abstract class KeyMappingComboMixin implements KeyComboHolder {
      */
     @Inject(method = "matches(Lnet/minecraft/client/input/KeyEvent;)Z", at = @At("RETURN"), cancellable = true)
     private void aurora$matchCombo(net.minecraft.client.input.KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
-        if (!cir.getReturnValueZ() || !KeyCombo.Registry.hasCombos()) return;
-        int binding = VanillaKeyCombos.binding((KeyMapping) (Object) this);
-        if (binding >= 0 && !KeyCombo.resolves(binding, AuroraKey.heldModifiers())) cir.setReturnValue(false);
+        if (cir.getReturnValueZ() && !VanillaKeyCombos.matchesWithCombos((KeyMapping) (Object) this)) {
+            cir.setReturnValue(false);
+        }
     }
 
     /** Gives a waiting modifier's winners the press they skipped, if it taps. */

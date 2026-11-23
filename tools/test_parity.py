@@ -133,6 +133,102 @@ class ParityTest(unittest.TestCase):
         with patch.object(acceptance, 'fingerprint', return_value='same'):
             with self.assertRaises(ValueError): acceptance.verify(ROOT, dict(sourceInputsSha256='same', rows=[]))
 
+    def _make_fake_log(self, mixins, renderer, vulkanmod=False):
+        lines = []
+        if vulkanmod:
+            lines.append('\t- vulkanmod 0.6.8+26.1.2')
+        lines.append(f'Renderer: {renderer} | Device: TestGPU')
+        lines.append(f'All {mixins} Aurora mixins applied.')
+        for i in range(1, 7):
+            lines.append(f'[diagnostics] run {i} of 6')
+            lines.append('Aurora CPU per frame: 0.050 ms mean, 0.045 ms median, 0.100 ms p95')
+            lines.append('fills per frame: 10.0')
+            lines.append('glass captures per frame: 0.0')
+            lines.append('- overhead budget: within budget')
+        return '\n'.join(lines) + '\n'
+
+    def _populate_valid_logs(self, logs_dir, fp):
+        for mc, backend, name in acceptance.required_rows(ROOT):
+            row_dir = logs_dir / mc / backend
+            row_dir.mkdir(parents=True, exist_ok=True)
+            manifest = json.loads((ROOT / f'adapters/{acceptance.versions(ROOT)[mc]["adapter"]}/src/client/resources/aurora.mixins.json').read_text())
+            count = len(manifest['client'])
+            renderer = 'OpenGL' if backend == 'OPENGL' else 'Vulkan'
+            is_vm = backend == 'VULKANMOD'
+            log_path = row_dir / f'{name}-latest.log'
+            log_bytes = self._make_fake_log(count, renderer, vulkanmod=is_vm).encode('utf-8')
+            log_path.write_bytes(log_bytes)
+            result = dict(
+                minecraft=mc,
+                set=name,
+                requestedBackend=backend,
+                backend=backend,
+                observedRenderer=renderer,
+                vulkanModLoaded=is_vm,
+                logFile=log_path.name,
+                logSha256=hashlib.sha256(log_bytes).hexdigest(),
+                outcome='6 reports logged; closed normally',
+                exitCode=0,
+                sourceInputsSha256=fp,
+            )
+            (row_dir / f'{name}-result.json').write_text(json.dumps(result), encoding='utf-8')
+
+    def test_record_validates_metadata_log_binding_and_vulkanmod_identity(self):
+        fp = 'f' * 64
+        with tempfile.TemporaryDirectory() as temporary:
+            logs_dir = Path(temporary)
+            self._populate_valid_logs(logs_dir, fp)
+            with patch.object(acceptance, 'fingerprint', return_value=fp):
+                evidence = acceptance.record(ROOT, logs_dir)
+                self.assertEqual(len(list(acceptance.required_rows(ROOT))), len(evidence['rows']))
+
+            # Negative case 1: swapped Minecraft version in result.json
+            with tempfile.TemporaryDirectory() as d:
+                p = Path(d)
+                self._populate_valid_logs(p, fp)
+                res_path = p / '26.1.2/OPENGL/baseline-result.json'
+                res = json.loads(res_path.read_text(encoding='utf-8'))
+                res['minecraft'] = '26.2'
+                res_path.write_text(json.dumps(res), encoding='utf-8')
+                with patch.object(acceptance, 'fingerprint', return_value=fp), self.assertRaises(ValueError):
+                    acceptance.record(ROOT, p)
+
+            # Negative case 2: swapped set name in result.json
+            with tempfile.TemporaryDirectory() as d:
+                p = Path(d)
+                self._populate_valid_logs(p, fp)
+                res_path = p / '26.3/VULKAN/baseline-result.json'
+                res = json.loads(res_path.read_text(encoding='utf-8'))
+                res['set'] = 'A-performance-stack'
+                res_path.write_text(json.dumps(res), encoding='utf-8')
+                with patch.object(acceptance, 'fingerprint', return_value=fp), self.assertRaises(ValueError):
+                    acceptance.record(ROOT, p)
+
+            # Negative case 3: stale/modified log no longer matches result.json logSha256
+            with tempfile.TemporaryDirectory() as d:
+                p = Path(d)
+                self._populate_valid_logs(p, fp)
+                log_path = p / '26.3/OPENGL/baseline-latest.log'
+                log_path.write_text(log_path.read_text(encoding='utf-8') + '# modified\n', encoding='utf-8')
+                with patch.object(acceptance, 'fingerprint', return_value=fp), self.assertRaises(ValueError):
+                    acceptance.record(ROOT, p)
+
+            # Negative case 4: native Vulkan log/result supplied to a VULKANMOD row
+            with tempfile.TemporaryDirectory() as d:
+                p = Path(d)
+                self._populate_valid_logs(p, fp)
+                manifest = json.loads((ROOT / 'adapters/minecraft-26.1/src/client/resources/aurora.mixins.json').read_text())
+                log_path = p / '26.1.2/VULKANMOD/C-vulkanmod-latest.log'
+                native_vulkan_log = self._make_fake_log(len(manifest['client']), 'Vulkan', vulkanmod=False).encode('utf-8')
+                log_path.write_bytes(native_vulkan_log)
+                res_path = p / '26.1.2/VULKANMOD/C-vulkanmod-result.json'
+                res = json.loads(res_path.read_text(encoding='utf-8'))
+                res['vulkanModLoaded'] = False
+                res['logSha256'] = hashlib.sha256(native_vulkan_log).hexdigest()
+                res_path.write_text(json.dumps(res), encoding='utf-8')
+                with patch.object(acceptance, 'fingerprint', return_value=fp), self.assertRaises(ValueError):
+                    acceptance.record(ROOT, p)
+
 
 if __name__ == '__main__':
     unittest.main()

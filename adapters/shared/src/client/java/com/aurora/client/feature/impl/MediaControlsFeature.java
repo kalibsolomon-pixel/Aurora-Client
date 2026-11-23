@@ -19,7 +19,7 @@ public class MediaControlsFeature implements Feature {
     public void onTick(Minecraft client) {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.mediaControlsEnabled) {
-            SystemMediaBridge.tickPoll(false);
+            SystemMediaBridge.tick(false, false);
             return;
         }
         if (AuroraKeybinds.consumePress("key.aurora.media_play_pause")) {
@@ -37,6 +37,6 @@ public class MediaControlsFeature implements Feature {
         if (AuroraKeybinds.consumePress("key.aurora.media_vol_down")) {
             SystemMediaBridge.dispatch(MediaAction.VOLUME_DOWN);
         }
-        SystemMediaBridge.tickPoll(cfg.mediaNowPlayingHudEnabled);
+        SystemMediaBridge.tick(true, cfg.mediaNowPlayingHudEnabled);
     }
 }

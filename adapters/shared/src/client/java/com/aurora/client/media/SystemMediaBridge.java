@@ -17,7 +17,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.LongSupplier;
 
 /**
  * Cross-platform OS media control dispatcher and Windows-first GSMTC Now Playing poller.
@@ -28,15 +30,35 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class SystemMediaBridge {
 
     private static final long POLL_INTERVAL_MS = 2_000L;
+    /** Keep the command helper warm between isolated keypresses when the HUD is off. */
+    static final long IDLE_SHUTDOWN_MS = 120_000L;
     private static final String OS = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
     private static final boolean WINDOWS = OS.contains("win");
     private static final boolean MAC = OS.contains("mac");
 
+    @FunctionalInterface
+    interface WinProcessFactory {
+        Process start() throws IOException;
+    }
+
+    private static final WinProcessFactory REAL_WIN_FACTORY = () -> new ProcessBuilder(
+            "powershell.exe", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden",
+            "-EncodedCommand", encodedHelperScript()).start();
+
+    private static volatile WinProcessFactory winProcessFactory = REAL_WIN_FACTORY;
+    private static volatile LongSupplier clock = System::currentTimeMillis;
+    private static volatile boolean windowsOverride = WINDOWS;
+
     private static final AtomicReference<MediaTrackState> STATE = new AtomicReference<>(MediaTrackState.EMPTY);
     private static final AtomicBoolean POLL_IN_FLIGHT = new AtomicBoolean(false);
+    private static final AtomicBoolean CLOSE_SCHEDULED = new AtomicBoolean(false);
+    private static final AtomicInteger SCHEDULED_CLOSES = new AtomicInteger(0);
 
     private static volatile ExecutorService executor;
     private static volatile long lastPollRequestMs = 0L;
+    private static volatile long lastHelperUseMs = 0L;
+    private static volatile boolean controlsActive = false;
+    private static volatile boolean hudPollingActive = false;
 
     // Reusable persistent Windows helper (only spawned on demand on Windows), guarded by
     // HELPER rather than the class lock: worker() runs on the tick thread and must never
@@ -49,7 +71,45 @@ public final class SystemMediaBridge {
 
     private SystemMediaBridge() {}
 
-    public static boolean isWindows() { return WINDOWS; }
+    public static boolean isWindows() { return windowsOverride; }
+
+    /** Installs deterministic test seams (package-private). */
+    static void configureForTest(WinProcessFactory factory, LongSupplier testClock, boolean pretendWindows) {
+        closeWinProcess();
+        winProcessFactory = factory != null ? factory : REAL_WIN_FACTORY;
+        clock = testClock != null ? testClock : System::currentTimeMillis;
+        windowsOverride = pretendWindows;
+        STATE.set(MediaTrackState.EMPTY);
+        COVER.set(null);
+        POLL_IN_FLIGHT.set(false);
+        CLOSE_SCHEDULED.set(false);
+        SCHEDULED_CLOSES.set(0);
+        lastPollRequestMs = 0L;
+        lastHelperUseMs = 0L;
+        controlsActive = false;
+        hudPollingActive = false;
+        winBackoffUntilMs = 0L;
+    }
+
+    static void resetForTest() {
+        configureForTest(null, null, WINDOWS);
+    }
+
+    static int scheduledCloseCountForTest() {
+        return SCHEDULED_CLOSES.get();
+    }
+
+    /** Waits for currently queued worker tasks to finish (tests only). */
+    static boolean awaitWorkerIdleForTest(long timeoutMs) {
+        ExecutorService exec = executor;
+        if (exec == null) return true;
+        try {
+            exec.submit(() -> {}).get(timeoutMs, TimeUnit.MILLISECONDS);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     /** Latest polled desktop media track state (never null). */
     public static MediaTrackState currentTrack() { return STATE.get(); }
@@ -81,9 +141,10 @@ public final class SystemMediaBridge {
     /** Dispatches an OS media control action asynchronously off the tick thread. */
     public static void dispatch(MediaAction action) {
         if (action == null) return;
+        lastHelperUseMs = clock.getAsLong();
         worker().execute(() -> {
             try {
-                if (WINDOWS) {
+                if (windowsOverride) {
                     dispatchWindows(action);
                 } else if (MAC) {
                     dispatchMac(action);
@@ -97,20 +158,41 @@ public final class SystemMediaBridge {
     }
 
     /**
-     * Lightweight tick-thread heartbeat. Schedules an async Windows GSMTC poll at most
-     * once every {@value #POLL_INTERVAL_MS} ms while {@code hudEnabled} is true; shuts down
-     * the helper cleanly when disabled.
+     * Lightweight tick-thread heartbeat separating Media Controls helper
+     * lifetime from Now Playing HUD polling:
+     * <ul>
+     *   <li>Disabling Now Playing while Media Controls stays on stops polling
+     *       and clears HUD track state on transition, keeping the warm helper
+     *       alive until {@value #IDLE_SHUTDOWN_MS} ms of inactivity so isolated
+     *       media keypresses do not restart PowerShell.</li>
+     *   <li>Disabling Media Controls altogether shuts down the helper
+     *       immediately, coalescing close requests so a stalled helper never
+     *       accumulates closure tasks on the worker queue.</li>
+     * </ul>
      */
-    public static void tickPoll(boolean hudEnabled) {
-        if (!WINDOWS) return;
-        if (!hudEnabled) {
-            if (winProcess != null || STATE.get().active()) {
-                STATE.set(MediaTrackState.EMPTY);
-                shutdownHelperAsync();
+    public static void tick(boolean controlsEnabled, boolean hudEnabled) {
+        if (!windowsOverride) return;
+        controlsActive = controlsEnabled;
+        if (!controlsEnabled) {
+            hudPollingActive = false;
+            clearTrackUiState();
+            if (winProcess != null) {
+                shutdownHelperAsync(false);
             }
             return;
         }
-        long now = System.currentTimeMillis();
+        long now = clock.getAsLong();
+        if (!hudEnabled) {
+            if (hudPollingActive || STATE.get().active() || COVER.get() != null) {
+                hudPollingActive = false;
+                clearTrackUiState();
+            }
+            if (winProcess != null && lastHelperUseMs > 0L && now - lastHelperUseMs >= IDLE_SHUTDOWN_MS) {
+                shutdownHelperAsync(true);
+            }
+            return;
+        }
+        hudPollingActive = true;
         if (now - lastPollRequestMs < POLL_INTERVAL_MS) return;
         if (!POLL_IN_FLIGHT.compareAndSet(false, true)) return;
         lastPollRequestMs = now;
@@ -124,10 +206,24 @@ public final class SystemMediaBridge {
         });
     }
 
+    /**
+     * Legacy single-flag entry point; delegates to {@link #tick(boolean, boolean)}.
+     */
+    public static void tickPoll(boolean hudEnabled) {
+        tick(hudEnabled, hudEnabled);
+    }
+
     /** Stops any active Windows helper process and clears cached track state. */
     public static void shutdown() {
+        controlsActive = false;
+        hudPollingActive = false;
+        clearTrackUiState();
+        shutdownHelperAsync(false);
+    }
+
+    private static void clearTrackUiState() {
         STATE.set(MediaTrackState.EMPTY);
-        shutdownHelperAsync();
+        COVER.set(null);
     }
 
     private static synchronized ExecutorService worker() {
@@ -146,13 +242,23 @@ public final class SystemMediaBridge {
         return executor;
     }
 
-    private static void shutdownHelperAsync() {
+    private static void shutdownHelperAsync(boolean idleOnly) {
+        if (!CLOSE_SCHEDULED.compareAndSet(false, true)) return;
+        SCHEDULED_CLOSES.incrementAndGet();
         ExecutorService exec = executor;
         if (exec == null) {
-            closeWinProcess();
+            CLOSE_SCHEDULED.set(false);
+            if (!idleOnly || shouldCloseForIdle()) closeWinProcess();
             return;
         }
-        exec.execute(SystemMediaBridge::closeWinProcess);
+        exec.execute(() -> {
+            CLOSE_SCHEDULED.set(false);
+            if (!idleOnly || shouldCloseForIdle()) closeWinProcess();
+        });
+    }
+
+    private static boolean shouldCloseForIdle() {
+        return !controlsActive || (!hudPollingActive && clock.getAsLong() - lastHelperUseMs >= IDLE_SHUTDOWN_MS);
     }
 
     // ---- Windows persistent PowerShell helper (WinRT GSMTC, Win32 keybd_event fallback) ----
@@ -177,15 +283,13 @@ public final class SystemMediaBridge {
     private static boolean ensureWinHelper() {
         synchronized (HELPER) {
             if (winProcess != null && winProcess.isAlive()) return true;
-            long now = System.currentTimeMillis();
+            long now = clock.getAsLong();
             if (now < winBackoffUntilMs) return false;
             closeWinProcess();
             try {
-                ProcessBuilder pb = new ProcessBuilder(
-                        "powershell.exe", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden",
-                        "-EncodedCommand", encodedHelperScript());
-                Process process = pb.start();
+                Process process = winProcessFactory.start();
                 winProcess = process;
+                lastHelperUseMs = now;
                 winIn = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
                 winLines = new LinkedBlockingQueue<>();
                 pump(process.getInputStream(), winLines, "aurora-media-stdout");
@@ -275,6 +379,7 @@ public final class SystemMediaBridge {
     private static void dispatchWindows(MediaAction action) throws IOException {
         synchronized (HELPER) {
             if (!ensureWinHelper()) return;
+            lastHelperUseMs = clock.getAsLong();
             // The helper asks the media session itself (works whatever window has focus) and
             // falls back to the virtual media key; volume is always the key.
             winIn.write("CMD " + action.name() + " " + action.windowsVk() + "\n");
@@ -288,6 +393,7 @@ public final class SystemMediaBridge {
     private static void pollWindowsGsmtc() {
         synchronized (HELPER) {
             if (!ensureWinHelper()) return;
+            lastHelperUseMs = clock.getAsLong();
             try {
                 winIn.write(com.aurora.client.config.AuroraConfig.get().mediaHudShowArt ? "POLL ART\n" : "POLL\n");
                 winIn.flush();
@@ -300,9 +406,11 @@ public final class SystemMediaBridge {
                     else sb.append(line).append('\n');
                 }
                 if (line == null) return;
-                MediaTrackState state = MediaTrackState.parseLines(sb.toString(), System.currentTimeMillis());
-                STATE.set(state);
-                if (art != null && state.active()) acceptCover(state.trackKey(), art);
+                MediaTrackState state = MediaTrackState.parseLines(sb.toString(), clock.getAsLong());
+                if (hudPollingActive) {
+                    STATE.set(state);
+                    if (art != null && state.active()) acceptCover(state.trackKey(), art);
+                }
             } catch (IOException e) {
                 closeWinProcess();
             }

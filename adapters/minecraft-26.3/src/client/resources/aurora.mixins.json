@@ -108,6 +108,7 @@
     "ItemLayerQuadsAccessor",
     "ScreenPanoramaAccessor",
     "KeyMappingComboMixin",
+    "KeyMappingGlobalMatchMixin",
     "KeyBindsScreenComboMixin",
     "KeyBindsListEntryConflictMixin",
     "FolderRepositorySourceMixin",

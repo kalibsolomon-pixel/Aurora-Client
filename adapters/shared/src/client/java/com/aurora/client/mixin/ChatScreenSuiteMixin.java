@@ -57,13 +57,9 @@ public abstract class ChatScreenSuiteMixin extends Screen {
         aurora$searchBox.setFocused(false);
         aurora$searchBox.setResponder(query -> {
             ChatComponent chat = NativeUi.chat(minecraft);
-            if (chat == null) return;
-            if (query == null || query.isBlank()) {
-                chat.setVisibleMessageFilter(msg -> true);
-            } else {
-                chat.setVisibleMessageFilter(msg -> ChatFormatting.matchesSearch(msg.content().getString(), query));
+            if (chat instanceof ChatSuiteAccess access) {
+                access.aurora$setSearchQuery(query);
             }
-            chat.resetChatScroll();
         });
         this.addRenderableWidget(aurora$searchBox);
     }
@@ -72,8 +68,8 @@ public abstract class ChatScreenSuiteMixin extends Screen {
     private void aurora$clearChatFilterOnClose(CallbackInfo ci) {
         if (minecraft == null || aurora$searchBox == null) return;
         ChatComponent chat = NativeUi.chat(minecraft);
-        if (chat != null) {
-            chat.setVisibleMessageFilter(msg -> true);
+        if (chat instanceof ChatSuiteAccess access) {
+            access.aurora$setSearchQuery("");
         }
     }
 

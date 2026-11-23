@@ -133,8 +133,14 @@ for name in only:
         close_game()
         gradle.wait(timeout=60)
     time.sleep(2)
+    saved_log = OUT / f"{name}-latest.log"
+    log_sha256 = None
+    log_text = ""
     if LOG.exists() and os.path.getmtime(LOG) > started:
-        shutil.copy2(LOG, OUT / f"{name}-latest.log")
+        shutil.copy2(LOG, saved_log)
+        log_bytes = saved_log.read_bytes()
+        log_sha256 = hashlib.sha256(log_bytes).hexdigest()
+        log_text = log_bytes.decode("utf-8", errors="replace")
     else:
         outcome += "; no new latest.log"
     crashes = run_dir / "crash-reports"
@@ -142,15 +148,38 @@ for name in only:
     if newest and os.path.getmtime(newest) > started:
         shutil.copy2(newest, OUT / f"{name}-crash.txt")
         outcome += f"; crash report {newest.name}"
+    allowed_backends = PINS.get("set_backends", {}).get(name)
+    if graphics_backend:
+        requested_backend = graphics_backend
+    elif allowed_backends and len(allowed_backends) == 1:
+        requested_backend = allowed_backends[0].upper()
+    else:
+        requested_backend = "OPENGL"
+    renderer = re.search(r"^Renderer: ([^|\n]+)", log_text, re.M)
+    observed_renderer = renderer.group(1).strip() if renderer else None
+    vulkanmod_loaded = bool(
+        re.search(r"(?im)^\s*-\s*vulkanmod(?:\s|$)", log_text)
+        or re.search(r"\bVulkanMod\b", log_text)
+    )
     print(f"  {outcome}", flush=True)
-    (OUT / f'{name}-result.json').write_text(json.dumps(dict(minecraft=PINS['minecraft'], backend=graphics_backend,
-                                                          outcome=outcome, exitCode=gradle.returncode,
-                                                          sourceInputsSha256=source_inputs), indent=2))
+    (OUT / f'{name}-result.json').write_text(json.dumps(dict(
+        minecraft=PINS['minecraft'],
+        set=name,
+        requestedBackend=requested_backend,
+        backend=requested_backend,
+        observedRenderer=observed_renderer,
+        vulkanModLoaded=vulkanmod_loaded,
+        stagedMods=list(PINS['sets'][name]),
+        logFile=saved_log.name,
+        logSha256=log_sha256,
+        outcome=outcome,
+        exitCode=gradle.returncode,
+        sourceInputsSha256=source_inputs,
+    ), indent=2))
     failed |= outcome != f"{runs} reports logged; closed normally" or gradle.returncode != 0
     if graphics_backend:
-        renderer = re.search(r"^Renderer: ([^|\n]+)", text, re.M)
-        if not renderer or renderer.group(1).strip().upper() != graphics_backend:
-            print(f"  requested {graphics_backend}, actual {renderer.group(1).strip() if renderer else 'unknown'}", flush=True)
+        if not observed_renderer or observed_renderer.upper() != graphics_backend:
+            print(f"  requested {graphics_backend}, actual {observed_renderer or 'unknown'}", flush=True)
             failed = True
     for f in staged:
         f.unlink()
