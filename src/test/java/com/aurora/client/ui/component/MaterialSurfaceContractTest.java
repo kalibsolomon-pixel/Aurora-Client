@@ -45,11 +45,21 @@ class MaterialSurfaceContractTest {
         assertFalse(material.contains("windowBevelEnabled"));
         assertFalse(material.contains("backgroundOpacity()"));
         for (String host : new String[]{"AuroraScreen", "FeatureDetailScreen", "ManagerListScreen", "IconPickerScreen",
-                "ProfileOptionsScreen", "ColorPickerScreen", "ResourcePackBrowserScreen", "ScreenshotManagerScreen", "ResourcePackManagerScreen"}) {
+                "ProfileOptionsScreen", "ColorPickerScreen", "ResourcePackBrowserScreen", "ScreenshotManagerScreen"}) {
             String code = SourceTree.read("screen/" + host + ".java");
             int dim = code.indexOf("GlassSurface.overlayDim(", code.indexOf("GlassSurface.beginGlassPass()"));
             assertTrue(dim >= 0 && code.indexOf("MaterialSurface.parent(", dim) > dim, host);
         }
+    }
+
+    @Test void resourcePackManagerKeepsVanillasLayoutWithoutAWindow() {
+        // Owner, 2026-11-23: vanilla's pack screen with Aurora's elements, not a bordered window.
+        String code = SourceTree.read("screen/ResourcePackManagerScreen.java");
+        assertFalse(code.contains("MaterialSurface.parent("));
+        assertFalse(code.contains("GlassSurface."));
+        assertFalse(code.contains("glassBackground(true)"));
+        assertTrue(code.contains("super.extractBackground(g, mouseX, mouseY, delta);"));
+        assertTrue(code.contains("private static final int LIST_W = 200;"));
     }
 
     @Test

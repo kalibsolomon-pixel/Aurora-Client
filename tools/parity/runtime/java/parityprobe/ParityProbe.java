@@ -545,6 +545,7 @@ public final class ParityProbe implements ClientModInitializer {
             }
             case "hud-editor" -> NativeUi.setScreen(client, new HudEditorScreen());
             case "profiles" -> NativeUi.setScreen(client, new ProfileManagerScreen(AuroraScreen.create()));
+            case "packs" -> NativeUi.setScreen(client, com.aurora.client.screen.ResourcePackManagerScreen.open(null));
             case "profile-create" -> {
                 var screen = (ProfileManagerScreen) NativeUi.screen(client);
                 var begin = ProfileManagerScreen.class.getDeclaredMethod("beginCreate");
