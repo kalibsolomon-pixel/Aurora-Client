@@ -89,28 +89,66 @@ def verify(root, evidence):
         validate_runs(row['runs'])
 
 
+def has_vulkanmod_in_log(text):
+    return bool(
+        re.search(r'(?im)^\s*-\s*vulkanmod(?:\s|$)', text)
+        or re.search(r'\bVulkanMod\b', text)
+    )
+
+
 def record(root, logs):
+    expected_fp = fingerprint(root)
     rows = []
     for mc, backend, name in required_rows(root):
         directory = logs / mc / backend
         log = directory / (name + '-latest.log')
-        text = log.read_text(encoding='utf-8', errors='replace')
-        result = json.loads((directory / (name + '-result.json')).read_text())
-        if (result.get('sourceInputsSha256') != fingerprint(root)
+        log_bytes = log.read_bytes()
+        log_sha256 = hashlib.sha256(log_bytes).hexdigest()
+        text = log_bytes.decode('utf-8', errors='replace')
+        result = json.loads((directory / (name + '-result.json')).read_text(encoding='utf-8'))
+        if (result.get('sourceInputsSha256') != expected_fp
                 or result.get('outcome') != '6 reports logged; closed normally'):
             raise ValueError(f'Stale or incomplete matrix run: {mc}/{backend}/{name}')
+        if result.get('minecraft') != mc:
+            raise ValueError(f'Mismatched Minecraft version in result: {mc}/{backend}/{name} (got {result.get("minecraft")})')
+        if result.get('set') != name:
+            raise ValueError(f'Mismatched matrix set in result: {mc}/{backend}/{name} (got {result.get("set")})')
+        result_backend = (result.get('requestedBackend') or result.get('backend') or '').strip().upper()
+        if result_backend != backend:
+            raise ValueError(f'Mismatched backend in result: {mc}/{backend}/{name} (got {result_backend or None})')
+        if result.get('logFile') != log.name or result.get('logSha256') != log_sha256:
+            raise ValueError(f'Result does not match log file: {mc}/{backend}/{name}')
+
         manifest = json.loads((root / f'adapters/{versions(root)[mc]["adapter"]}/src/client/resources/aurora.mixins.json').read_text())
         count = len(manifest['client'])
         reported = re.search(r'^Renderer: ([^|\n]+)', text, re.M)
-        expected_backend = 'VULKAN' if backend == 'VULKANMOD' else backend
-        if not reported or expected_backend not in reported[1].strip().upper():
-            raise ValueError(f'Wrong actual renderer: {mc}/{backend}/{name}')
+        if not reported:
+            raise ValueError(f'Missing renderer line in log: {mc}/{backend}/{name}')
+        observed_log = reported[1].strip().upper()
+        observed_result = (result.get('observedRenderer') or '').strip().upper()
+        if observed_result != observed_log:
+            raise ValueError(f'Mismatched observed renderer between result and log: {mc}/{backend}/{name}')
+        vulkanmod_in_log = has_vulkanmod_in_log(text)
+        if bool(result.get('vulkanModLoaded')) != vulkanmod_in_log:
+            raise ValueError(f'Mismatched VulkanMod presence between result and log: {mc}/{backend}/{name}')
+
+        if backend == 'OPENGL':
+            backend_ok = observed_log == 'OPENGL' and not vulkanmod_in_log
+        elif backend == 'VULKAN':
+            backend_ok = observed_log == 'VULKAN' and not vulkanmod_in_log
+        elif backend == 'VULKANMOD':
+            backend_ok = observed_log in ('VULKAN', 'VULKANMOD') and vulkanmod_in_log
+        else:
+            raise ValueError(f'Unsupported backend {backend}: {mc}/{backend}/{name}')
+        if not backend_ok:
+            raise ValueError(f'Wrong actual renderer: {mc}/{backend}/{name} (observed {observed_log}, vulkanMod={vulkanmod_in_log})')
+
         healthy = re.search(rf'All {count} Aurora mixins applied(?:\.| or stood down)', text) is not None and 'Features not fully working' not in text
         clean = not re.search(r'^\[[^\n]+\] \[[^\n]+/(?:ERROR|WARN)\] \((?:Aurora|aurora[^)]*)\)', text, re.M)
         rows.append(dict(minecraft=mc, backend=backend, set=name, exitCode=result['exitCode'],
-                         healthy=healthy, clean=clean, mixins=count, logSha256=hashlib.sha256(log.read_bytes()).hexdigest(),
+                         healthy=healthy, clean=clean, mixins=count, logSha256=log_sha256,
                          runs=measurements(text)))
-    evidence = dict(schemaVersion=1, sourceInputsSha256=fingerprint(root), rows=rows)
+    evidence = dict(schemaVersion=1, sourceInputsSha256=expected_fp, rows=rows)
     verify(root, evidence)
     return evidence
 

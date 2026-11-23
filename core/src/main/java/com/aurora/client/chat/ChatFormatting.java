@@ -3,6 +3,7 @@ package com.aurora.client.chat;
 import com.aurora.client.config.AuroraConfig;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalTime;
@@ -159,13 +160,46 @@ public final class ChatFormatting {
         return true;
     }
 
+    private static final String SINGLEPLAYER_SAVE_PREFIX = "sp-save:";
+    private static final boolean WINDOWS_FS =
+            System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
+
+    /**
+     * Builds a stable, collision-free scope key for a singleplayer world from
+     * its actual save root directory. Survives display-name changes and keeps
+     * worlds with identical display names isolated.
+     */
+    public static String singleplayerScope(Path worldRoot) {
+        if (worldRoot == null) return null;
+        String normalized = worldRoot.toAbsolutePath().normalize().toString();
+        if (normalized.isBlank()) return null;
+        if (WINDOWS_FS) normalized = normalized.toLowerCase(Locale.ROOT);
+        return SINGLEPLAYER_SAVE_PREFIX + normalized;
+    }
+
     /**
      * Converts a server address or singleplayer world identifier into a safe,
      * deterministic filename stem for per-server chat history storage.
      */
     public static String sanitizeScopeKey(String scope) {
         if (scope == null || scope.isBlank()) return "unknown";
-        String lower = scope.trim().toLowerCase(Locale.ROOT);
+        String trimmed = scope.trim();
+        if (trimmed.startsWith(SINGLEPLAYER_SAVE_PREFIX)) {
+            String rawPath = trimmed.substring(SINGLEPLAYER_SAVE_PREFIX.length());
+            String leaf = rawPath;
+            int slash = Math.max(rawPath.lastIndexOf('/'), rawPath.lastIndexOf('\\'));
+            if (slash >= 0 && slash + 1 < rawPath.length()) {
+                leaf = rawPath.substring(slash + 1);
+            }
+            String stem = sanitizeStem("sp_" + leaf.toLowerCase(Locale.ROOT));
+            return stem + "-" + shortHash(trimmed);
+        }
+        String lower = trimmed.toLowerCase(Locale.ROOT);
+        String stem = sanitizeStem(lower);
+        return stem + "-" + shortHash(lower);
+    }
+
+    private static String sanitizeStem(String lower) {
         StringBuilder safe = new StringBuilder(Math.min(lower.length(), 40));
         for (int i = 0; i < lower.length() && safe.length() < 40; i++) {
             char c = lower.charAt(i);
@@ -176,8 +210,7 @@ public final class ChatFormatting {
             }
         }
         String stem = safe.toString().replaceAll("^_+|_+$", "");
-        if (stem.isEmpty()) stem = "world";
-        return stem + "-" + shortHash(lower);
+        return stem.isEmpty() ? "world" : stem;
     }
 
     private static String shortHash(String s) {

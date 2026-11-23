@@ -294,6 +294,28 @@ public final class PackFolderTree {
         return slash < 0 ? rest : rest.substring(0, slash);
     }
 
+    /** Half-open index range {@code [first, lastExclusive)} intersecting a scroll viewport. */
+    public record VisibleRange(int first, int lastExclusive) {
+        public boolean isEmpty() { return first >= lastExclusive; }
+    }
+
+    /**
+     * Computes the half-open index range {@code [first, lastExclusive)} for a
+     * uniform-height section starting at {@code sectionOffset} pixels inside a
+     * scrollable list whose visible window is {@code [scrollOffset, scrollOffset + viewportHeight]}.
+     */
+    public static VisibleRange visibleRange(int count, int sectionOffset, int rowHeight,
+                                            int rowGap, int scrollOffset, int viewportHeight) {
+        if (count <= 0 || rowHeight <= 0 || viewportHeight <= 0) return new VisibleRange(0, 0);
+        int step = rowHeight + Math.max(0, rowGap);
+        int relStart = scrollOffset - sectionOffset;
+        int relEnd = relStart + viewportHeight;
+        if (relEnd < 0) return new VisibleRange(0, 0);
+        int first = Math.max(0, Math.floorDiv(relStart - rowHeight + step - 1, step));
+        int lastExcl = Math.min(count, Math.floorDiv(relEnd, step) + 1);
+        return first < lastExcl ? new VisibleRange(first, lastExcl) : new VisibleRange(0, 0);
+    }
+
     private static boolean matchesAllTerms(PackItem pack, String[] terms) {
         String haystack = (pack.title() + " " + pack.description() + " " + pack.folderPath() + " " + pack.id())
                 .toLowerCase(Locale.ROOT);

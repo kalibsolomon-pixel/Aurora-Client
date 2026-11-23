@@ -7,6 +7,9 @@ public interface ChatSuiteAccess {
     /** Returns the {@link GuiMessage} under the given GUI-scaled cursor coordinates, or null. */
     GuiMessage aurora$messageAtScreenPos(double mouseX, double mouseY);
 
+    /** Sets Aurora's inline chat search query without replacing vanilla's visibleMessageFilter. */
+    void aurora$setSearchQuery(String query);
+
     /** Returns the number of visible messages currently matching the active filter. */
     int aurora$visibleMessageCount();
 

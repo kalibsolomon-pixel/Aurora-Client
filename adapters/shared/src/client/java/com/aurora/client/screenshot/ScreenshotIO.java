@@ -181,16 +181,14 @@ public final class ScreenshotIO {
                 if (rect.width() < 4 || rect.height() < 4) {
                     throw new IllegalArgumentException("Crop selection is too small");
                 }
-                Path out = ScreenshotIndex.croppedOutputPath(source);
                 try (NativeImage cropped = new NativeImage(NativeImage.Format.RGBA, rect.width(), rect.height(), false)) {
                     for (int y = 0; y < rect.height(); y++) {
                         for (int x = 0; x < rect.width(); x++) {
                             cropped.setPixel(x, y, raw.getPixel(rect.x() + x, rect.y() + y));
                         }
                     }
-                    cropped.writeToFile(out);
+                    return ScreenshotIndex.writeCroppedAtomically(source, cropped::writeToFile);
                 }
-                return out;
             } catch (Exception e) {
                 throw new RuntimeException(e.getMessage(), e);
             }

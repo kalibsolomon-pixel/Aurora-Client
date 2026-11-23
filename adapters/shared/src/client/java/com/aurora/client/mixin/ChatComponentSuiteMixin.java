@@ -46,6 +46,7 @@ public abstract class ChatComponentSuiteMixin implements ChatSuiteAccess {
     @Shadow private int chatScrollbarPos;
 
     @Shadow protected abstract void refreshTrimmedMessages();
+    @Shadow public abstract void resetChatScroll();
     @Shadow protected abstract double getScale();
     @Shadow protected abstract int getLineHeight();
     @Shadow public abstract int getLinesPerPage();
@@ -54,6 +55,11 @@ public abstract class ChatComponentSuiteMixin implements ChatSuiteAccess {
                                                GuiMessageSource source, GuiMessageTag tag);
 
     @Unique private boolean aurora$inDecoratedAdd;
+    @Unique private String aurora$searchQuery = "";
+    @Unique private ChatSuite.MessageMeta aurora$pendingMeta;
+    @Unique private GuiMessage aurora$pendingDuplicateToRemove;
+    @Unique private boolean aurora$pendingRecordHistory;
+    @Unique private boolean aurora$duplicateRemoved;
 
     @ModifyConstant(
             method = {"addMessageToQueue", "addMessageToDisplayQueue"},
@@ -63,6 +69,52 @@ public abstract class ChatComponentSuiteMixin implements ChatSuiteAccess {
         AuroraConfig cfg = AuroraConfig.get();
         if (!cfg.chatEnabled) return vanillaLimit;
         return Math.max(100, Math.min(5000, cfg.chatHistoryLimit));
+    }
+
+    /**
+     * Applies Aurora's search query strictly to display lines so incoming
+     * messages are never discarded from {@code allMessages} or the chat log,
+     * and any native or mod-provided {@code visibleMessageFilter} stays intact.
+     */
+    @Inject(
+            method = "addMessageToDisplayQueue(Lnet/minecraft/client/multiplayer/chat/GuiMessage;)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void aurora$filterDisplayedMessage(GuiMessage message, CallbackInfo ci) {
+        if (aurora$searchQuery == null || aurora$searchQuery.isBlank() || !ChatSuite.isEnabled()) return;
+        if (!ChatFormatting.matchesSearch(message.content().getString(), aurora$searchQuery)) {
+            ci.cancel();
+        }
+    }
+
+    /**
+     * Attaches metadata to the exact {@link GuiMessage} accepted by vanilla,
+     * commits any duplicate removal, and records the accepted message to
+     * per-server history. If vanilla's {@code visibleMessageFilter} rejected
+     * the message, this hook never runs and older rows keep their metadata.
+     */
+    @Inject(
+            method = "addMessageToQueue(Lnet/minecraft/client/multiplayer/chat/GuiMessage;)V",
+            at = @At("HEAD")
+    )
+    private void aurora$attachAcceptedMessageMeta(GuiMessage message, CallbackInfo ci) {
+        if (aurora$pendingMeta == null) return;
+        ChatSuite.MessageMeta meta = aurora$pendingMeta;
+        GuiMessage dup = aurora$pendingDuplicateToRemove;
+        boolean record = aurora$pendingRecordHistory;
+        aurora$pendingMeta = null;
+        aurora$pendingDuplicateToRemove = null;
+        aurora$pendingRecordHistory = false;
+
+        if (dup != null && allMessages.remove(dup)) {
+            ChatSuite.removeMeta(dup);
+            aurora$duplicateRemoved = true;
+        }
+        ChatSuite.putMeta(message, meta);
+        if (record) {
+            ChatSuite.recordIncoming(minecraft, meta.copyText());
+        }
     }
 
     @Inject(
@@ -79,11 +131,8 @@ public abstract class ChatComponentSuiteMixin implements ChatSuiteAccess {
         String canonical = ChatFormatting.normalizeForDuplicate(rawPlain);
         String copyText = ChatFormatting.extractCopyText(rawPlain);
 
-        if (!ChatSuite.isReplayingHistory()) {
-            ChatSuite.recordIncoming(minecraft, copyText);
-        }
-
         int repeatCount = 1;
+        GuiMessage duplicateMatch = null;
         if (cfg.chatCompactDuplicates && !ChatSuite.isReplayingHistory() && !canonical.isEmpty() && !allMessages.isEmpty()) {
             int window = Math.max(1, Math.min(50, cfg.chatCompactWindow));
             int limit = Math.min(allMessages.size(), window);
@@ -95,9 +144,7 @@ public abstract class ChatComponentSuiteMixin implements ChatSuiteAccess {
                         : ChatFormatting.normalizeForDuplicate(existing.content().getString());
                 if (canonical.equals(prevCanonical)) {
                     repeatCount = (prev != null ? prev.repeatCount() : 1) + 1;
-                    allMessages.remove(i);
-                    ChatSuite.removeMeta(existing);
-                    refreshTrimmedMessages();
+                    duplicateMatch = existing;
                     break;
                 }
             }
@@ -105,13 +152,21 @@ public abstract class ChatComponentSuiteMixin implements ChatSuiteAccess {
 
         Component decorated = ChatSuite.decorate(minecraft, message, repeatCount);
         aurora$inDecoratedAdd = true;
+        aurora$pendingMeta = new ChatSuite.MessageMeta(canonical, repeatCount, copyText);
+        aurora$pendingDuplicateToRemove = duplicateMatch;
+        aurora$pendingRecordHistory = !ChatSuite.isReplayingHistory();
+        aurora$duplicateRemoved = false;
         try {
             addMessage(decorated, signature, source, tag);
-            if (!allMessages.isEmpty()) {
-                ChatSuite.putMeta(allMessages.getFirst(), new ChatSuite.MessageMeta(canonical, repeatCount, copyText));
+            if (aurora$duplicateRemoved) {
+                refreshTrimmedMessages();
             }
         } finally {
             aurora$inDecoratedAdd = false;
+            aurora$pendingMeta = null;
+            aurora$pendingDuplicateToRemove = null;
+            aurora$pendingRecordHistory = false;
+            aurora$duplicateRemoved = false;
         }
         ci.cancel();
     }
@@ -164,6 +219,15 @@ public abstract class ChatComponentSuiteMixin implements ChatSuiteAccess {
         int lineIndex = visibleRow + chatScrollbarPos;
         if (lineIndex < 0 || lineIndex >= trimmedMessages.size()) return null;
         return trimmedMessages.get(lineIndex).parent();
+    }
+
+    @Override
+    public void aurora$setSearchQuery(String query) {
+        String normalized = query == null ? "" : query;
+        if (normalized.equals(aurora$searchQuery)) return;
+        aurora$searchQuery = normalized;
+        refreshTrimmedMessages();
+        resetChatScroll();
     }
 
     @Override

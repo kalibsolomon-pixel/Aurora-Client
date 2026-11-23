@@ -254,8 +254,21 @@ public class ProfileOptionsScreen extends Screen implements ThemedScreen {
 
     private void done() {
         String before = name;
-        if (!commitRename()) return;
+        if (nameField != null) {
+            String candidate = nameField.getValue().trim();
+            if (!candidate.equals(name)) {
+                String problem = ProfileNameValidator.problem(candidate,
+                        ProfileManager.getInstance().listProfileNames(), name);
+                if (problem != null) {
+                    nameError = problem;
+                    return;
+                }
+            }
+        }
+        // Persist server bindings onto the existing profile BEFORE renaming so
+        // the rename writes a single up-to-date snapshot to the new filename.
         commitServers();
+        if (!commitRename()) return;
         close(before.equals(name) ? null : "Renamed → " + name);
     }
 

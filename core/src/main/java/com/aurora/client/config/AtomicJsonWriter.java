@@ -8,9 +8,12 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Ordered, coalescing, crash-safe JSON file writer shared by Aurora's config
@@ -102,8 +105,19 @@ public final class AtomicJsonWriter {
     private Thread worker;
 
     private static final class Pending {
-        final Path target; String content; long generation; int round; long notBeforeNanos;
-        Pending(Path target, String content, long generation) { this.target = target; this.content = content; this.generation = generation; }
+        final Path target;
+        String content;
+        long generation;
+        int round;
+        long notBeforeNanos;
+        Path deleteAfter;
+        final List<CompletableFuture<Boolean>> outcomes = new ArrayList<>();
+
+        Pending(Path target, String content, long generation) {
+            this.target = target;
+            this.content = content;
+            this.generation = generation;
+        }
     }
 
     public AtomicJsonWriter(String name) { this(name, REAL_FILES, Thread::sleep, 1000); }
@@ -145,6 +159,35 @@ public final class AtomicJsonWriter {
 
     /** Queues {@code content} for {@code target}; replaces any not-yet-started older content for it. */
     public void submit(Path target, String content) {
+        submitInternal(target, content, null, null);
+    }
+
+    /**
+     * Queues {@code content} for {@code target} and returns a future completed
+     * with {@code true} once the write lands durably, or {@code false} if it
+     * fails definitively after all retry rounds.
+     */
+    public CompletableFuture<Boolean> submitWithResult(Path target, String content) {
+        CompletableFuture<Boolean> outcome = new CompletableFuture<>();
+        submitInternal(target, content, null, outcome);
+        return outcome;
+    }
+
+    /**
+     * Queues {@code content} for {@code target} and deletes {@code deleteAfterSuccess}
+     * <b>only after</b> {@code target} has been durably written and moved into place.
+     * If {@code target} fails definitively, {@code deleteAfterSuccess} is left intact.
+     */
+    public CompletableFuture<Boolean> submitAndDelete(Path target, String content, Path deleteAfterSuccess) {
+        CompletableFuture<Boolean> outcome = new CompletableFuture<>();
+        Path dependent = (deleteAfterSuccess != null && !deleteAfterSuccess.equals(target))
+                ? deleteAfterSuccess : null;
+        submitInternal(target, content, dependent, outcome);
+        return outcome;
+    }
+
+    private void submitInternal(Path target, String content, Path deleteAfterSuccess,
+                                CompletableFuture<Boolean> outcome) {
         synchronized (lock) {
             long generation = nextGeneration++;
             Pending existing = queue.get(target);
@@ -153,8 +196,13 @@ public final class AtomicJsonWriter {
                 existing.generation = generation;
                 existing.round = 0;
                 existing.notBeforeNanos = 0;
+                if (deleteAfterSuccess != null) existing.deleteAfter = deleteAfterSuccess;
+                if (outcome != null) existing.outcomes.add(outcome);
             } else {
-                queue.put(target, new Pending(target, content, generation));
+                Pending next = new Pending(target, content, generation);
+                next.deleteAfter = deleteAfterSuccess;
+                if (outcome != null) next.outcomes.add(outcome);
+                queue.put(target, next);
             }
             ensureWorker();
             lock.notifyAll();
@@ -225,25 +273,95 @@ public final class AtomicJsonWriter {
                 inFlightContent = job.content;
             }
             boolean ok = writeWithBurstRetry(job);
+            Path pendingDelete = null;
+            List<CompletableFuture<Boolean>> toComplete = null;
+            boolean completionValue = false;
             synchronized (lock) {
-                inFlight = null;
-                inFlightContent = null;
-                if (!ok) {
-                    if (queue.containsKey(job.target)) {
-                        // Superseded while we were failing: the newer content will be written instead.
+                if (ok) {
+                    if (job.deleteAfter != null) {
+                        Pending newerForOld = queue.get(job.deleteAfter);
+                        if (newerForOld == null || newerForOld.generation < job.generation) {
+                            pendingDelete = job.deleteAfter;
+                            inFlight = pendingDelete;
+                            inFlightContent = null;
+                        }
+                    }
+                    if (!job.outcomes.isEmpty()) {
+                        toComplete = new ArrayList<>(job.outcomes);
+                        job.outcomes.clear();
+                        completionValue = true;
+                    }
+                    if (pendingDelete == null && toComplete == null) {
+                        inFlight = null;
+                        inFlightContent = null;
+                        lock.notifyAll();
+                    }
+                } else {
+                    Pending superseded = queue.get(job.target);
+                    if (superseded != null) {
+                        // Superseded while we were failing: carry forward any dependent delete and outcome futures.
+                        if (job.deleteAfter != null && superseded.deleteAfter == null) {
+                            superseded.deleteAfter = job.deleteAfter;
+                        }
+                        if (!job.outcomes.isEmpty()) {
+                            superseded.outcomes.addAll(job.outcomes);
+                            job.outcomes.clear();
+                        }
+                        inFlight = null;
+                        inFlightContent = null;
+                        lock.notifyAll();
                     } else if (job.round + 1 < MAX_ROUNDS) {
                         job.round++;
                         job.notBeforeNanos = System.nanoTime() + roundDelayMs * job.round * 1_000_000L;
                         queue.put(job.target, job);
                         LOGGER.warn("[{}] {} still locked; keeping the new content pending (round {}/{})",
                                 name, job.target.getFileName(), job.round + 1, MAX_ROUNDS);
+                        inFlight = null;
+                        inFlightContent = null;
+                        lock.notifyAll();
                     } else {
                         failures++;
                         LOGGER.error("[{}] giving up on {} after {} rounds; the previous file is intact, "
                                 + "the next save will try again", name, job.target.getFileName(), MAX_ROUNDS);
+                        if (!job.outcomes.isEmpty()) {
+                            toComplete = new ArrayList<>(job.outcomes);
+                            job.outcomes.clear();
+                            completionValue = false;
+                        } else {
+                            inFlight = null;
+                            inFlightContent = null;
+                            lock.notifyAll();
+                        }
                     }
                 }
-                lock.notifyAll();
+            }
+            if (pendingDelete != null) {
+                Pending delJob = new Pending(pendingDelete, null, job.generation);
+                boolean delOk = deleteWithBurstRetry(delJob);
+                if (!delOk) {
+                    synchronized (lock) {
+                        Pending newerForOld = queue.get(pendingDelete);
+                        if (newerForOld == null) {
+                            delJob.round = 1;
+                            delJob.notBeforeNanos = System.nanoTime() + roundDelayMs * 1_000_000L;
+                            queue.put(pendingDelete, delJob);
+                            LOGGER.warn("[{}] {} still locked after replacement; scheduling delete retry",
+                                    name, pendingDelete.getFileName());
+                        }
+                    }
+                }
+            }
+            if (toComplete != null) {
+                for (CompletableFuture<Boolean> future : toComplete) {
+                    future.complete(completionValue);
+                }
+            }
+            if (pendingDelete != null || toComplete != null) {
+                synchronized (lock) {
+                    inFlight = null;
+                    inFlightContent = null;
+                    lock.notifyAll();
+                }
             }
         }
     }
