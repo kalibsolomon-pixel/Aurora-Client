@@ -39,9 +39,9 @@ class SquareModeConformanceTest {
         String src = read(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java");
         // Isolated raised-glass path (paintGlassPass) — sidebar tabs,
         // Profiles, and the layout pair all share the resolved token.
-        assertTrue(src.contains("chipGlass[i] = GlassSurface.card(g, catX, catY, TAB_W, TAB_H,"),
+        assertTrue(src.contains("chipGlass[i] = GlassSurface.card(g, catX, catY, navW(), TAB_H,"),
                 "chip glass uses the resolved control radius");
-        assertTrue(src.contains("profGlass = GlassSurface.card(g, profX, profY, TAB_W, TAB_H, ctrlRadius)"),
+        assertTrue(src.contains("profGlass = GlassSurface.card(g, profX, profY, navW(), TAB_H, ctrlRadius)"),
                 "Profiles glass uses the resolved control radius");
         assertTrue(src.contains("layoutGlass[index] = GlassSurface.card(g, box.x(), box.top(), box.width(), box.height(), ctrlRadius"),
                 "layout-button glass uses the resolved control radius");

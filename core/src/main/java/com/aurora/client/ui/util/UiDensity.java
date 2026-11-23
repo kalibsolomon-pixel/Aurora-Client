@@ -44,6 +44,11 @@ public final class UiDensity {
     /** Extra vertical separation between navigation tabs and the Profiles action. */
     public static final int SIDEBAR_GROUP_GAP = 10;
     public static final int SIDEBAR = FRAME_EDGE + TAB_W, INSET = 14;
+    /** Icon rail: the sidebar items as {@value #TAB_H} px squares, once the window is shrunk below its
+     * full size (owner, 2026-11-23: Settings felt cramped at GUI scale 4 and above). */
+    public static final int RAIL_W = TAB_H, RAIL = FRAME_EDGE + RAIL_W, RAIL_INSET = 10;
+    /** Below this logical height a window keeps only {@link #FRAME_GAP} to the screen edge. */
+    public static final int SHORT_SCREEN = 300;
 
     // ---- Content ----
     /** Feature cards keep their original size (owner ruling, 2026-10-30). */
@@ -73,9 +78,24 @@ public final class UiDensity {
     /** The uniform window: {@value #WINDOW_WIDTH}×{@value #WINDOW_HEIGHT}, centered, shrunk to fit. */
     // Window history: 420×272 (4-column grid) → 336×288 (3×3 grid, 2026-10-30) → 336×292 (header inset, 2026-11-18).
     public static Rect window(int width, int height) {
-        int w = Math.min(WINDOW_WIDTH, Math.max(1, width - 2 * WINDOW_MARGIN));
-        int h = Math.min(WINDOW_HEIGHT, Math.max(1, height - 2 * WINDOW_MARGIN));
+        int margin = windowMargin(height);
+        int w = Math.min(WINDOW_WIDTH, Math.max(1, width - 2 * margin));
+        int h = Math.min(WINDOW_HEIGHT, Math.max(1, height - 2 * margin));
         return new Rect((width - w) / 2, (height - h) / 2, w, h);
+    }
+    /** Space between a shrunk window and the screen edge: {@value #WINDOW_MARGIN}, or {@value #FRAME_GAP}
+     * on screens shorter than {@value #SHORT_SCREEN} (GUI scale 4 at 1080p is 270 tall). The window never
+     * grows past {@value #WINDOW_WIDTH}×{@value #WINDOW_HEIGHT}; the smaller margin only gives a shrunk one room. */
+    public static int windowMargin(int height) { return height < SHORT_SCREEN ? FRAME_GAP : WINDOW_MARGIN; }
+    /** Under 320 px wide the navigation moves to a row of tabs above the content. */
+    public static boolean topNavigation(Rect frame) { return frame.width() < 320; }
+    /** A shrunk window that still has a sidebar shows it as the icon rail. */
+    public static boolean railNavigation(Rect frame) {
+        return !topNavigation(frame) && (frame.width() < WINDOW_WIDTH || frame.height() < WINDOW_HEIGHT);
+    }
+    /** Left edge of the main window's content column, relative to the frame. */
+    public static int contentLeft(Rect frame) {
+        return topNavigation(frame) ? FRAME_EDGE : railNavigation(frame) ? RAIL + RAIL_INSET : SIDEBAR + INSET;
     }
     public static Rect mainFrame(int width, int height) { return window(width, height); }
     public static Rect detailFrame(int width, int height) { return window(width, height); }
@@ -91,8 +111,8 @@ public final class UiDensity {
     /** Right inset of a scrolling column: the frame room plus the scrollbar and its gap. */
     public static int scrollRightInset() { return FRAME_EDGE + SCROLLBAR_W + SCROLLBAR_GAP; }
     public static Rect mainContent(Rect frame) {
-        boolean horizontal = frame.width() < 320;
-        int left = horizontal ? FRAME_EDGE : SIDEBAR + INSET;
+        boolean horizontal = topNavigation(frame);
+        int left = contentLeft(frame);
         int top = horizontal ? HEADER + HEADER_BODY_GAP + TAB_H + HEADER_BODY_GAP : HEADER + HEADER_BODY_GAP;
         return new Rect(frame.x() + left, frame.y() + top, Math.max(1, frame.width() - left - scrollRightInset()),
                 Math.max(1, frame.height() - top - FRAME_EDGE));
