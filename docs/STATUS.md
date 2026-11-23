@@ -9,9 +9,13 @@ Ephemera 1.0.0 compatibility & optimization pass adds the zero-allocation `ephem
 
 Pulsar accuracy pass fixes inclusive exchange/round end-boundary combo splitting (`Combos`), prevents live same-tick trade combo inflation (`CombatEngine`), pairs knockback `VELOCITY` packets across `[tick - 1, tick + 1]` without double-claiming and with strongest-impulse tie-breaking (`FightAnalytics`), aligns combo sprint-reset attribution with post-fight `Combos` streaks, and exposes fact-backed **Combo Rating** and **Jump-Reset / Knockback Control Rating** (`CombatBreakdown.ComboProfile` & `KnockbackControl`) across the in-game dashboard (`FlowPage`, `DefensePage`) and offline HTML reports (`ReportExporter`).
 
-Folder-Aware Resource Pack Manager (`resourcepackFoldersEnabled`, on by default, cosmetic) discovers resource packs nested inside organizing subfolders under `resourcepacks/` (path-qualified `file/<folder>/<name>` IDs while keeping top-level vanilla IDs untouched) and adds Aurora's themed `ResourcePackManagerScreen` with folder navigation, clickable breadcrumbs, global recursive search, async pack icon loading, and load-order reordering from both **Options → Resource Packs** and **Settings → General → Resource Packs**. The manager keeps vanilla's full-screen pack layout with Aurora's controls inside it instead of a bordered window (2026-11-23).
+Folder-Aware Resource Pack Manager (`resourcepackFoldersEnabled`, on by default, cosmetic) discovers resource packs nested inside organizing subfolders under `resourcepacks/` (path-qualified `file/<folder>/<name>` IDs while keeping top-level vanilla IDs untouched) and adds Aurora's themed `ResourcePackManagerScreen` with folder navigation, clickable breadcrumbs, global recursive search, async pack icon loading, and load-order reordering from both **Options → Resource Packs** and **Settings → Tools → Resource Packs**. The manager keeps vanilla's full-screen pack layout with Aurora's controls inside it instead of a bordered window (2026-11-23).
 
 Media Controls (`mediaControlsEnabled`, off by default, cosmetic) adds cross-platform desktop playback keybinds (Play/Pause, Next, Previous, Volume Up, Volume Down — dispatched asynchronously off the tick thread on Windows, macOS, and Linux) plus a Windows-first **Now Playing** HUD overlay (`NowPlayingModule`, polled off-thread via WinRT GSMTC only while enabled, zero background work when off).
+
+The Settings tab has six pages since 2026-11-23: Appearance, World & HUD, Performance, Audio & Keys, Privacy and Tools. Display Settings (`miscellaneous`) is no longer one catalog feature: Frame Pacing, Decoupled Input, Tab List, Nametags, Per-Sound Volume, Streamer Mode and Server List each have their own fair-play class, mixin bindings, reset and page entry, and a feature whose mixin is not working shows its warning in place of its page summary. Config fields, defaults and profiles are unchanged.
+
+Aurora windows keep their 460×308 size; on screens under 300 px tall the margin to the screen edge is 6 px instead of 12, and a shrunk main window shows its sidebar as an icon rail so the content column gets the room (GUI scale 4 at 1080p: 396×202 instead of 334×190). `WindowViewportMatrixTest` checks every GUI scale on 768p, 1080p, 1440p and 4K (2026-11-23).
 
 UI cache refinement crops static captures to their panel/body bounds, keeps
 unified chrome through screenshot suppression, retires screen textures after
@@ -36,13 +40,13 @@ in the initial 26.3 pass, and deterministically under an early lookup on all thr
 failure after the apply does ([ADR 0010](adr/0010-opt-in-sdf-text-with-vanilla-layout.md),
 [report](reports/2026-11-20-sdf-immediatelyfast.md#rrls-sdf-text-and-the-first-shader-apply)).
 
-Gradient Dithering (Settings → Display, on by default, cosmetic) adds an 8x8 ordered dither of
+Gradient Dithering (Settings → World & HUD, on by default, cosmetic) adds an 8x8 ordered dither of
 under half an 8-bit step to the sky, sunrise glow, End sky, clouds and terrain (vanilla and
 Sodium), so dusk skies, fog and dark scenes stop banding; GUI and HUD are never dithered. It
 stands down for VulkanMod and while an Iris shader pack is in use. Checked on 26.1.2, 26.2 and
 26.3 (OpenGL; 26.3 also native Vulkan); [evidence](reports/2026-11-20-gradient-dither.md).
 
-Smooth Fog (Settings → Display, off by default, cosmetic) replaces Minecraft's linear distance fog
+Smooth Fog (Settings → World & HUD, off by default, cosmetic) replaces Minecraft's linear distance fog
 ramp with a cubic Hermite S-curve over the exact same start and end distances, composing cleanly
 with Sodium and Gradient Dithering in one pass; it stands down for VulkanMod and while an Iris
 shader pack is in use. Checked on 26.1.2, 26.2 and 26.3 (OpenGL; 26.2 and 26.3 also native
@@ -56,7 +60,7 @@ optional stack-count hiding, and empty-state auto-hide across 26.1.2, 26.2, and 
 Tab list and nametag polish expands existing Ping and Display Settings controls across 26.1.2,
 26.2, and 26.3 without adding a new feature: Ping's tab-list readout now widens the ping slot so
 3-digit latencies never overlap player names and supports an optional `"ms"` suffix and text
-shadow, while Settings → Display gains Tab List (hide server header/footer/player heads, highlight
+shadow, while Settings → World & HUD gains Tab List (hide server header/footer/player heads, highlight
 own row, custom background opacity) and Nametags (show own nametag in third person, text shadow,
 custom background opacity, and scale).
 
@@ -66,12 +70,12 @@ Local Weather (vanilla-equivalent, off by default), Custom Skies (sky presets/co
 toggles, star brightness, void dark-disc hiding), first-person Fire Overlay height/opacity/hide,
 and Hurt Camera toggle/strength across 26.1.2, 26.2, and 26.3.
 
-Per-Sound Volume (Settings → Sound, cosmetic, 0–100% attenuation only) lets players lower or mute
+Per-Sound Volume (Settings → Audio & Keys, cosmetic, 0–100% attenuation only) lets players lower or mute
 individual Minecraft sounds through a searchable mixer with customized, recently played, and
 common-sound lists across 26.1.2, 26.2, and 26.3, strictly clamped to 0–100% so sounds can never
 be amplified above vanilla.
 
-Streamer Mode (Settings → Display, off by default, local display-only privacy masking under Display
+Streamer Mode (Settings → Privacy, off by default, local display-only privacy masking under Display
 Settings) masks your username (with a custom alias across title screen, tab list, chat, and
 nametag), replaces your own skin with the default Steve skin, masks server addresses on Direct
 Connection, Edit Server, ConnectScreen, raw-IP server list entries and chat, hides coordinates on
@@ -92,7 +96,7 @@ and disconnecting restores the prior profile unless the player manually switched
 Profiles with bound servers show a globe indicator badge and are searchable by server pattern in
 `ProfileManagerScreen`.
 
-Screenshot Manager (`Settings → General → Screenshots`) adds a themed in-game gallery for
+Screenshot Manager (`Settings → Tools → Screenshots`) adds a themed in-game gallery for
 `screenshots/` with async thumbnail/preview decoding and deferred frame-boundary texture eviction
 (`UiLayerCache.beginFrame()`), filename search, inline rename with validation, press-again delete
 confirmation, OS clipboard image copy, and non-destructive drag-to-crop PNG export.

@@ -11,8 +11,15 @@ import com.aurora.client.ui.component.MaterialSurface;
 import com.aurora.client.ui.component.ScrollbarChrome;
 import com.aurora.client.ui.component.ThemedScreen;
 import com.aurora.client.ui.component.Toast;
+import com.aurora.client.ui.interaction.FocusReveal;
+import com.aurora.client.ui.interaction.MinecraftSemanticFeedback;
+import com.aurora.client.ui.interaction.SemanticAction;
+import com.aurora.client.ui.interaction.SemanticActionControl;
+import com.aurora.client.ui.interaction.SemanticControlGroup;
+import com.aurora.client.ui.interaction.SemanticControlHost;
 import com.aurora.client.ui.util.AuroraFontRenderer;
 import com.aurora.client.ui.util.MaterialIconRenderer;
+import com.aurora.client.ui.util.OverlayLayout;
 import com.aurora.client.ui.util.RenderUtil;
 import com.aurora.client.ui.util.UiDensity;
 import com.aurora.client.util.AuroraTheme;
@@ -21,6 +28,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.packs.PackSelectionModel;
 import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
@@ -121,6 +129,34 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
     private final List<CrumbHit> crumbHits = new ArrayList<>();
     private record CrumbHit(int x, int y, int w, int h, String folderPath) {}
 
+    // Semantic controls for keyboard navigation, focus reveal, and narration
+    private final SemanticControlHost semanticHost = new SemanticControlHost(
+            this::addWidget,
+            this::removeWidget,
+            this::getFocused,
+            this::setFocused);
+    private final List<SemanticActionControl> crumbControls = new ArrayList<>();
+    private SemanticActionControl upFolderControl;
+    private final List<SemanticActionControl> folderControls = new ArrayList<>();
+    private final List<SemanticActionControl> availablePackControls = new ArrayList<>();
+    private final List<SelectedRowControls> selectedRowControls = new ArrayList<>();
+    private final Map<SemanticActionControl, Integer> leftControlTop = new HashMap<>();
+    private final Map<SemanticActionControl, Integer> leftControlHeight = new HashMap<>();
+    private final Map<SemanticActionControl, Integer> rightControlTop = new HashMap<>();
+    private final Map<SemanticActionControl, Integer> rightControlHeight = new HashMap<>();
+    private final Map<String, SemanticActionControl> focusKeys = new HashMap<>();
+    private String pendingFocusKey;
+
+    private record SelectedRowControls(String packId, SemanticActionControl up,
+                                       SemanticActionControl down, SemanticActionControl remove) {
+        SemanticActionControl firstFocusable() {
+            if (up != null && up.action().enabled()) return up;
+            if (down != null && down.action().enabled()) return down;
+            if (remove != null && remove.action().enabled()) return remove;
+            return null;
+        }
+    }
+
     /** Opens the manager directly from an Aurora screen (reloading packs first). */
     public static ResourcePackManagerScreen open(Screen parent) {
         Minecraft mc = Minecraft.getInstance();
@@ -187,10 +223,347 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         }
 
         currentView = PackFolderTree.buildView(items, diskFolders, currentFolder, searchQuery);
+        rebuildSemanticControls();
+    }
+
+    private void rebuildSemanticControls() {
+        GuiEventListener prevFocused = this.getFocused();
+        boolean preserveSearchFocus = (searchField != null && prevFocused == searchField);
+        String restoreKey = pendingFocusKey;
+        pendingFocusKey = null;
+        if (restoreKey == null && prevFocused instanceof SemanticActionControl prevCtrl) {
+            restoreKey = keyOfControl(prevCtrl);
+        }
+
+        semanticHost.clear();
+        crumbControls.clear();
+        upFolderControl = null;
+        folderControls.clear();
+        availablePackControls.clear();
+        selectedRowControls.clear();
+        leftControlTop.clear();
+        leftControlHeight.clear();
+        rightControlTop.clear();
+        rightControlHeight.clear();
+        focusKeys.clear();
+
+        if (currentView == null) return;
+
+        // 1. Breadcrumbs (horizontal roving group)
+        SemanticControlGroup crumbGroup = SemanticControlGroup.horizontal();
+        List<PackFolderTree.Breadcrumb> crumbs = currentView.breadcrumbs();
+        for (int i = 0; i < crumbs.size(); i++) {
+            PackFolderTree.Breadcrumb crumb = crumbs.get(i);
+            boolean isCurrent = (i == crumbs.size() - 1) && !currentView.searching();
+            String path = crumb.path();
+            SemanticActionControl ctrl = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Folder: " + crumb.label()),
+                    () -> Component.literal("Navigates to this resource pack folder."),
+                    () -> isCurrent ? Component.literal("Current folder") : Component.empty(),
+                    () -> !isCurrent,
+                    () -> {
+                        if (!searchQuery.isEmpty() && searchField != null) {
+                            searchQuery = "";
+                            searchField.setValue("");
+                        }
+                        pendingFocusKey = "left:first";
+                        enterFolder(path);
+                    }),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    null,
+                    SemanticActionControl.PointerRouting.MANUAL);
+            crumbGroup.attach(ctrl);
+            semanticHost.register(ctrl);
+            crumbControls.add(ctrl);
+            focusKeys.put("crumb:" + path, ctrl);
+        }
+
+        // 2. Left pane (vertical roving group: ".." + folders + available packs)
+        SemanticControlGroup leftGroup = SemanticControlGroup.vertical();
+        int leftOffset = 0;
+        if (!currentView.searching() && !currentFolder.isEmpty()) {
+            String parentPath = PackFolderTree.parentFolder(currentFolder);
+            SemanticActionControl upCtrl = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Parent folder"),
+                    () -> Component.literal("Moves up one resource pack folder."),
+                    () -> Component.literal("Up a folder"),
+                    () -> true,
+                    () -> {
+                        pendingFocusKey = "left:first";
+                        enterFolder(parentPath);
+                    }),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    null,
+                    SemanticActionControl.PointerRouting.MANUAL);
+            leftGroup.attach(upCtrl);
+            semanticHost.register(upCtrl);
+            upFolderControl = upCtrl;
+            leftControlTop.put(upCtrl, leftOffset);
+            leftControlHeight.put(upCtrl, FOLDER_ROW_H);
+            focusKeys.put("left:up", upCtrl);
+            focusKeys.putIfAbsent("left:first", upCtrl);
+            leftOffset += FOLDER_ROW_H + ROW_GAP;
+        }
+
+        for (int i = 0; i < currentView.folders().size(); i++) {
+            PackFolderTree.FolderEntry folder = currentView.folders().get(i);
+            String countLabel = folder.packCount() == 0
+                    ? "Empty"
+                    : folder.packCount() + (folder.packCount() == 1 ? " pack" : " packs");
+            SemanticActionControl ctrl = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Folder: " + folder.name()),
+                    () -> Component.literal("Opens this resource pack folder."),
+                    () -> Component.literal(countLabel),
+                    () -> true,
+                    () -> {
+                        pendingFocusKey = "left:first";
+                        enterFolder(folder.path());
+                    }),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    null,
+                    SemanticActionControl.PointerRouting.MANUAL);
+            leftGroup.attach(ctrl);
+            semanticHost.register(ctrl);
+            folderControls.add(ctrl);
+            leftControlTop.put(ctrl, leftOffset);
+            leftControlHeight.put(ctrl, FOLDER_ROW_H);
+            focusKeys.put("left:folder:" + folder.path(), ctrl);
+            focusKeys.putIfAbsent("left:first", ctrl);
+            leftOffset += FOLDER_ROW_H + ROW_GAP;
+        }
+
+        for (int i = 0; i < currentView.packs().size(); i++) {
+            final int packIdx = i;
+            PackFolderTree.PackItem item = currentView.packs().get(i);
+            PackSelectionModel.Entry entry = item.originalIndex() >= 0 && item.originalIndex() < unselectedEntries.size()
+                    ? unselectedEntries.get(item.originalIndex()) : null;
+            boolean selectable = entry != null && entry.canSelect();
+            String sub = buildSubtitle(item.folderPath(), item.description(),
+                    entry != null ? entry.getCompatibility() : PackCompatibility.COMPATIBLE,
+                    currentView.searching());
+            SemanticActionControl ctrl = new SemanticActionControl(SemanticAction.button(
+                    Component.literal(item.title()),
+                    () -> Component.literal("Select resource pack"),
+                    () -> Component.literal(sub),
+                    () -> selectable,
+                    () -> selectAvailablePack(packIdx, true)),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    null,
+                    SemanticActionControl.PointerRouting.MANUAL);
+            leftGroup.attach(ctrl);
+            semanticHost.register(ctrl);
+            availablePackControls.add(ctrl);
+            leftControlTop.put(ctrl, leftOffset);
+            leftControlHeight.put(ctrl, ROW_H);
+            focusKeys.put("left:pack:" + item.id(), ctrl);
+            focusKeys.put("left:pack-idx:" + packIdx, ctrl);
+            focusKeys.putIfAbsent("left:first", ctrl);
+            leftOffset += ROW_H + ROW_GAP;
+        }
+
+        // 3. Right pane (selected packs: Move Up, Move Down, Remove)
+        SemanticControlGroup rightGroup = SemanticControlGroup.vertical();
+        int rightOffset = 0;
+        for (int i = 0; i < selectedEntries.size(); i++) {
+            final int rowIdx = i;
+            PackSelectionModel.Entry entry = selectedEntries.get(i);
+            String packId = entry.getId();
+            String title = entry.getTitle().getString();
+            String folder = PackFolderTree.folderOfPackId(packId);
+            String sub = buildSubtitle(folder, entry.getDescription().getString(),
+                    entry.getCompatibility(), !folder.isEmpty());
+
+            SemanticActionControl upBtn = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Move " + title + " up"),
+                    () -> Component.literal("Moves this selected resource pack higher in load priority."),
+                    () -> Component.literal(sub),
+                    entry::canMoveUp,
+                    () -> reorderSelectedPack(rowIdx, true)),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    null,
+                    SemanticActionControl.PointerRouting.MANUAL);
+            SemanticActionControl downBtn = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Move " + title + " down"),
+                    () -> Component.literal("Moves this selected resource pack lower in load priority."),
+                    () -> Component.literal(sub),
+                    entry::canMoveDown,
+                    () -> reorderSelectedPack(rowIdx, false)),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    null,
+                    SemanticActionControl.PointerRouting.MANUAL);
+            SemanticActionControl removeBtn = new SemanticActionControl(SemanticAction.button(
+                    Component.literal("Remove " + title),
+                    () -> Component.literal("Removes this resource pack from the selected list."),
+                    () -> Component.literal(sub),
+                    entry::canUnselect,
+                    () -> unselectSelectedPack(rowIdx)),
+                    MinecraftSemanticFeedback.INSTANCE,
+                    null,
+                    SemanticActionControl.PointerRouting.MANUAL);
+
+            rightGroup.attach(upBtn);
+            rightGroup.attach(downBtn);
+            rightGroup.attach(removeBtn);
+            semanticHost.register(upBtn);
+            semanticHost.register(downBtn);
+            semanticHost.register(removeBtn);
+
+            SelectedRowControls rowCtrls = new SelectedRowControls(packId, upBtn, downBtn, removeBtn);
+            selectedRowControls.add(rowCtrls);
+
+            rightControlTop.put(upBtn, rightOffset);
+            rightControlHeight.put(upBtn, ROW_H);
+            rightControlTop.put(downBtn, rightOffset);
+            rightControlHeight.put(downBtn, ROW_H);
+            rightControlTop.put(removeBtn, rightOffset);
+            rightControlHeight.put(removeBtn, ROW_H);
+
+            focusKeys.put("right:" + packId + ":up", upBtn);
+            focusKeys.put("right:" + packId + ":down", downBtn);
+            focusKeys.put("right:" + packId + ":remove", removeBtn);
+            SemanticActionControl rowDefault = rowCtrls.firstFocusable();
+            if (rowDefault != null) {
+                focusKeys.put("right:idx:" + rowIdx, rowDefault);
+                focusKeys.putIfAbsent("right:first", rowDefault);
+            }
+            rightOffset += ROW_H + ROW_GAP;
+        }
+
+        syncScrollFocusTargets();
+
+        if (preserveSearchFocus) {
+            this.setFocused(searchField);
+        } else if (restoreKey != null) {
+            SemanticActionControl restored = resolveRestoreTarget(restoreKey);
+            if (restored != null) {
+                this.setFocused(restored);
+                revealFocusedControl(restored);
+            }
+        }
+    }
+
+    private String keyOfControl(SemanticActionControl control) {
+        for (Map.Entry<String, SemanticActionControl> e : focusKeys.entrySet()) {
+            if (e.getValue() == control && !e.getKey().endsWith(":first")) {
+                return e.getKey();
+            }
+        }
+        return null;
+    }
+
+    private SemanticActionControl resolveRestoreTarget(String key) {
+        SemanticActionControl direct = focusKeys.get(key);
+        if (direct != null && direct.canReceiveFocus()) return direct;
+        if (key.startsWith("right:")) {
+            int lastColon = key.lastIndexOf(':');
+            if (lastColon > 6) {
+                String packId = key.substring(6, lastColon);
+                for (SelectedRowControls row : selectedRowControls) {
+                    if (row.packId().equals(packId)) {
+                        SemanticActionControl fallback = row.firstFocusable();
+                        if (fallback != null && fallback.canReceiveFocus()) return fallback;
+                    }
+                }
+            }
+            if (key.startsWith("right:idx:")) {
+                try {
+                    int idx = Integer.parseInt(key.substring("right:idx:".length()));
+                    for (int i = Math.min(idx, selectedRowControls.size() - 1); i >= 0; i--) {
+                        SemanticActionControl fallback = selectedRowControls.get(i).firstFocusable();
+                        if (fallback != null && fallback.canReceiveFocus()) return fallback;
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+            SemanticActionControl firstRight = focusKeys.get("right:first");
+            if (firstRight != null && firstRight.canReceiveFocus()) return firstRight;
+        }
+        if (key.startsWith("left:pack-idx:")) {
+            try {
+                int idx = Integer.parseInt(key.substring("left:pack-idx:".length()));
+                for (int i = Math.min(idx, availablePackControls.size() - 1); i >= 0; i--) {
+                    SemanticActionControl c = availablePackControls.get(i);
+                    if (c.canReceiveFocus()) return c;
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+        SemanticActionControl firstLeft = focusKeys.get("left:first");
+        return firstLeft != null && firstLeft.canReceiveFocus() ? firstLeft : null;
+    }
+
+    private void syncScrollFocusTargets() {
+        for (SemanticActionControl ctrl : leftControlTop.keySet()) {
+            ctrl.setScrollFocusTarget(true);
+        }
+        for (SemanticActionControl ctrl : rightControlTop.keySet()) {
+            ctrl.setScrollFocusTarget(true);
+        }
+    }
+
+    private void selectAvailablePack(int packIdx, boolean keepFocusInLeft) {
+        if (currentView == null || packIdx < 0 || packIdx >= currentView.packs().size()) return;
+        PackFolderTree.PackItem item = currentView.packs().get(packIdx);
+        if (item.originalIndex() < 0 || item.originalIndex() >= unselectedEntries.size()) return;
+        PackSelectionModel.Entry entry = unselectedEntries.get(item.originalIndex());
+        if (!entry.canSelect()) return;
+        if (keepFocusInLeft) {
+            pendingFocusKey = "left:pack-idx:" + packIdx;
+        }
+        entry.select();
+        rebuildLists();
+    }
+
+    private void reorderSelectedPack(int rowIdx, boolean moveUp) {
+        if (rowIdx < 0 || rowIdx >= selectedEntries.size()) return;
+        PackSelectionModel.Entry entry = selectedEntries.get(rowIdx);
+        if (moveUp) {
+            if (!entry.canMoveUp()) return;
+            pendingFocusKey = "right:" + entry.getId() + ":up";
+            entry.moveUp();
+        } else {
+            if (!entry.canMoveDown()) return;
+            pendingFocusKey = "right:" + entry.getId() + ":down";
+            entry.moveDown();
+        }
+        rebuildLists();
+    }
+
+    private void unselectSelectedPack(int rowIdx) {
+        if (rowIdx < 0 || rowIdx >= selectedEntries.size()) return;
+        PackSelectionModel.Entry entry = selectedEntries.get(rowIdx);
+        if (!entry.canUnselect()) return;
+        pendingFocusKey = "right:idx:" + rowIdx;
+        entry.unselect();
+        rebuildLists();
+    }
+
+    private void revealFocusedControl(GuiEventListener focused) {
+        if (!(focused instanceof SemanticActionControl control) || listH <= 0) return;
+        Integer lTop = leftControlTop.get(control);
+        if (lTop != null) {
+            int h = leftControlHeight.getOrDefault(control, ROW_H);
+            int maxScroll = Math.max(0, leftContentHeight() - listH);
+            double top = listTop + lTop;
+            double target = OverlayLayout.scrollToReveal(leftScroll.target(), maxScroll,
+                    top, top + h, listTop, listTop + listH, FocusReveal.MARGIN);
+            if (AuroraConfig.get().reducedMotion) leftScroll.set(target);
+            else if (target != leftScroll.target()) leftScroll.retarget(target, maxScroll);
+            return;
+        }
+        Integer rTop = rightControlTop.get(control);
+        if (rTop != null) {
+            int h = rightControlHeight.getOrDefault(control, ROW_H);
+            int maxScroll = Math.max(0, rightContentHeight() - listH);
+            double top = listTop + rTop;
+            double target = OverlayLayout.scrollToReveal(rightScroll.target(), maxScroll,
+                    top, top + h, listTop, listTop + listH, FocusReveal.MARGIN);
+            if (AuroraConfig.get().reducedMotion) rightScroll.set(target);
+            else if (target != rightScroll.target()) rightScroll.retarget(target, maxScroll);
+        }
     }
 
     @Override
     protected void init() {
+        semanticHost.beginRebuild();
         int centerX = this.width / 2;
         int listW = Math.max(1, Math.min(LIST_W, (this.width - LIST_GAP - 2 * 8) / 2));
         leftW = listW;
@@ -227,6 +600,8 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         crumbH = 18;
         listTop = crumbY + crumbH + 2;
         listH = Math.max(0, footerTop - 4 - listTop);
+        semanticHost.finishRebuild();
+        syncScrollFocusTargets();
     }
 
     private record FooterButton(String label, String shortLabel, String tooltip, Runnable action, boolean optional) {}
@@ -394,71 +769,74 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
 
     private boolean handleLeftClick(double mx, double my) {
         if (currentView == null) return false;
-        int y = listTop - (int) Math.round(leftScroll.current());
+        int scrollOff = (int) Math.round(leftScroll.current());
+        int sectionOffset = 0;
 
         // ".." Up row
         if (!currentView.searching() && !currentFolder.isEmpty()) {
+            int y = listTop + sectionOffset - scrollOff;
             if (my >= y && my <= y + FOLDER_ROW_H) {
                 enterFolder(PackFolderTree.parentFolder(currentFolder));
                 return true;
             }
-            y += FOLDER_ROW_H + ROW_GAP;
+            sectionOffset += FOLDER_ROW_H + ROW_GAP;
         }
 
-        // Subfolder rows
-        for (PackFolderTree.FolderEntry folder : currentView.folders()) {
+        // Subfolder rows (O(visible))
+        int folderCount = currentView.folders().size();
+        PackFolderTree.VisibleRange folderRange = PackFolderTree.visibleRange(
+                folderCount, sectionOffset, FOLDER_ROW_H, ROW_GAP, scrollOff, listH);
+        for (int i = folderRange.first(); i < folderRange.lastExclusive(); i++) {
+            int y = listTop + sectionOffset + i * (FOLDER_ROW_H + ROW_GAP) - scrollOff;
             if (my >= y && my <= y + FOLDER_ROW_H) {
-                enterFolder(folder.path());
+                enterFolder(currentView.folders().get(i).path());
                 return true;
             }
-            y += FOLDER_ROW_H + ROW_GAP;
         }
+        sectionOffset += folderCount * (FOLDER_ROW_H + ROW_GAP);
 
-        // Pack rows
-        for (PackFolderTree.PackItem item : currentView.packs()) {
+        // Pack rows (O(visible))
+        int packCount = currentView.packs().size();
+        PackFolderTree.VisibleRange packRange = PackFolderTree.visibleRange(
+                packCount, sectionOffset, ROW_H, ROW_GAP, scrollOff, listH);
+        for (int i = packRange.first(); i < packRange.lastExclusive(); i++) {
+            int y = listTop + sectionOffset + i * (ROW_H + ROW_GAP) - scrollOff;
             if (my >= y && my <= y + ROW_H) {
-                if (item.originalIndex() >= 0 && item.originalIndex() < unselectedEntries.size()) {
-                    PackSelectionModel.Entry entry = unselectedEntries.get(item.originalIndex());
-                    if (entry.canSelect()) {
-                        entry.select();
-                        rebuildLists();
-                    }
-                }
+                selectAvailablePack(i, false);
                 return true;
             }
-            y += ROW_H + ROW_GAP;
         }
         return false;
     }
 
     private boolean handleRightClick(double mx, double my) {
-        int y = listTop - (int) Math.round(rightScroll.current());
+        int scrollOff = (int) Math.round(rightScroll.current());
         int cardW = rightW - SCROLLBAR_W - 4;
-        for (PackSelectionModel.Entry entry : selectedEntries) {
+        PackFolderTree.VisibleRange visible = PackFolderTree.visibleRange(
+                selectedEntries.size(), 0, ROW_H, ROW_GAP, scrollOff, listH);
+        for (int i = visible.first(); i < visible.lastExclusive(); i++) {
+            int y = listTop + i * (ROW_H + ROW_GAP) - scrollOff;
             if (my >= y && my <= y + ROW_H) {
+                PackSelectionModel.Entry entry = selectedEntries.get(i);
                 int btnY = y + (ROW_H - ACTION_BTN) / 2;
                 int removeX = rightX + cardW - 6 - ACTION_BTN;
                 int downX = removeX - 3 - ACTION_BTN;
                 int upX = downX - 3 - ACTION_BTN;
 
                 if (entry.canUnselect() && inBox(mx, my, removeX, btnY, ACTION_BTN, ACTION_BTN)) {
-                    entry.unselect();
-                    rebuildLists();
+                    unselectSelectedPack(i);
                     return true;
                 }
                 if (entry.canMoveDown() && inBox(mx, my, downX, btnY, ACTION_BTN, ACTION_BTN)) {
-                    entry.moveDown();
-                    rebuildLists();
+                    reorderSelectedPack(i, false);
                     return true;
                 }
                 if (entry.canMoveUp() && inBox(mx, my, upX, btnY, ACTION_BTN, ACTION_BTN)) {
-                    entry.moveUp();
-                    rebuildLists();
+                    reorderSelectedPack(i, true);
                     return true;
                 }
                 return true;
             }
-            y += ROW_H + ROW_GAP;
         }
         return false;
     }
@@ -487,10 +865,56 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         }
         if (key == InputConstants.KEY_BACKSPACE && (searchField == null || !searchField.isFocused())
                 && !currentFolder.isEmpty()) {
+            pendingFocusKey = "left:first";
             enterFolder(PackFolderTree.parentFolder(currentFolder));
             return true;
         }
-        return super.keyPressed(event);
+        // Pressing Down from the search box jumps straight into the first matching pack/folder row.
+        if (key == InputConstants.KEY_DOWN && searchField != null && searchField.isFocused()) {
+            SemanticActionControl firstLeft = focusKeys.get("left:first");
+            if (firstLeft != null && firstLeft.canReceiveFocus()) {
+                searchField.setFocused(false);
+                this.setFocused(firstLeft);
+                revealFocusedControl(firstLeft);
+                return true;
+            }
+        }
+
+        GuiEventListener before = this.getFocused();
+        // Horizontal roving between Move Up / Move Down / Remove within a selected pack row.
+        if ((key == InputConstants.KEY_LEFT || key == InputConstants.KEY_RIGHT)
+                && before instanceof SemanticActionControl currentCtrl
+                && roveSelectedRowHorizontal(currentCtrl, key == InputConstants.KEY_RIGHT ? 1 : -1)) {
+            revealFocusedControl(this.getFocused());
+            return true;
+        }
+
+        boolean handled = SemanticControlGroup.rove(before, event, this::setFocused)
+                || super.keyPressed(event);
+        if (FocusReveal.navigation(event) && before != this.getFocused()) {
+            revealFocusedControl(this.getFocused());
+        }
+        return handled;
+    }
+
+    private boolean roveSelectedRowHorizontal(SemanticActionControl current, int delta) {
+        for (SelectedRowControls row : selectedRowControls) {
+            SemanticActionControl[] actions = {row.up(), row.down(), row.remove()};
+            int idx = -1;
+            for (int i = 0; i < actions.length; i++) {
+                if (actions[i] == current) { idx = i; break; }
+            }
+            if (idx < 0) continue;
+            for (int step = 1; step < actions.length; step++) {
+                SemanticActionControl candidate = actions[Math.floorMod(idx + step * delta, actions.length)];
+                if (candidate != null && candidate.canReceiveFocus()) {
+                    this.setFocused(candidate);
+                    return true;
+                }
+            }
+            return false;
+        }
+        return false;
     }
 
     @Override
@@ -514,6 +938,8 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         PackIconLoader.drainReady();
         leftScroll.advance(Math.max(0, leftContentHeight() - listH));
         rightScroll.advance(Math.max(0, rightContentHeight() - listH));
+        semanticHost.beginAvailabilitySweep();
+        syncScrollFocusTargets();
 
         int onBg = MaterialSurface.color(ThemeToken.ON_BACKGROUND);
         int secondary = ThemeManager.color(ThemeToken.ON_BACKGROUND_SECONDARY);
@@ -545,6 +971,7 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
 
         // Toast notifications
         toast.render(ctx, this.font, this.width, this.height, Math.round(AuroraTheme.RADIUS_SMALL));
+        semanticHost.finishAvailabilitySweep();
     }
 
     private void renderLeftHeading(GuiGraphicsExtractor ctx, int mouseX, int mouseY,
@@ -555,6 +982,7 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         int headingRight = leftX + leftW - SCROLLBAR_W - 4;
         int packs = currentView.packs().size();
         if (currentView.searching()) {
+            // Search spans every folder; Escape clears it. The crumb controls sit out this frame.
             String heading = "Matches in all folders (" + packs + ")";
             ctx.text(this.font, AuroraFontRenderer.ellipsize(this.font, heading, headingRight - leftX, 0),
                     leftX, textY, secondary, false);
@@ -581,13 +1009,23 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
             if (remaining <= 20) break;
             String label = AuroraFontRenderer.ellipsize(this.font, crumb.label(), Math.min(remaining, 140), 0);
             int w = this.font.width(label) + 10;
-            boolean hovered = !isLast && inBox(mouseX, mouseY, x, crumbY, w, crumbH);
-            if (hovered) {
+            SemanticActionControl ctrl = i < crumbControls.size() ? crumbControls.get(i) : null;
+            if (ctrl != null) {
+                ctrl.setBounds(x, crumbY, w, crumbH);
+                ctrl.setAvailable(true);
+                ctrl.updatePointer(mouseX, mouseY);
+            }
+            boolean focused = ctrl != null && ctrl.isFocused();
+            boolean hovered = inBox(mouseX, mouseY, x, crumbY, w, crumbH);
+            if ((hovered || focused) && !isLast) {
                 RenderUtil.drawRoundedRectAA(ctx, x, crumbY, w, crumbH, AuroraTheme.RADIUS_SMALL,
                         ThemeManager.withAlpha(accent, 42));
             }
-            ctx.text(this.font, label, x + 5, textY, isLast ? onBg : (hovered ? accent : secondary), false);
-            if (!isLast) crumbHits.add(new CrumbHit(x, crumbY, w, crumbH, crumb.path()));
+            if (focused) {
+                RenderUtil.drawRoundedOutlineAA(ctx, x, crumbY, w, crumbH, AuroraTheme.RADIUS_SMALL, 1f, accent);
+            }
+            ctx.text(this.font, label, x + 5, textY, isLast ? onBg : (hovered || focused ? accent : secondary), false);
+            crumbHits.add(new CrumbHit(x, crumbY, w, crumbH, crumb.path()));
             x += w;
             if (!isLast) {
                 MaterialIconRenderer.drawIcon(ctx, this.font, ICON_CHEVRON,
@@ -602,44 +1040,73 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         int cardW = leftW - SCROLLBAR_W - 4;
         if (cardW <= 0 || listH <= 0) return; // no room: an empty scissor would crash the frame
         int maxScroll = Math.max(0, leftContentHeight() - listH);
+        int scrollOff = (int) Math.round(leftScroll.current());
 
         ctx.enableScissor(leftX, listTop, leftX + leftW, listTop + listH);
-        int y = listTop - (int) Math.round(leftScroll.current());
 
         if (currentView != null) {
+            int sectionOffset = 0;
+
             // ".." Up row
             if (!currentView.searching() && !currentFolder.isEmpty()) {
-                if (y + FOLDER_ROW_H >= listTop && y <= listTop + listH) {
+                int y = listTop + sectionOffset - scrollOff;
+                boolean visible = y + FOLDER_ROW_H >= listTop && y <= listTop + listH;
+                if (upFolderControl != null) {
+                    upFolderControl.setBounds(leftX, y, cardW, FOLDER_ROW_H);
+                    upFolderControl.setAvailable(visible);
+                    upFolderControl.updatePointer(mouseX, mouseY);
+                }
+                if (visible) {
                     boolean hover = inBox(mouseX, mouseY, leftX, y, cardW, FOLDER_ROW_H)
                             && mouseY >= listTop && mouseY <= listTop + listH;
-                    drawFolderRow(ctx, leftX, y, cardW, ICON_BACK, "..", "Up a folder", hover, onBg, secondary, accent, false);
+                    boolean focused = upFolderControl != null && upFolderControl.isFocused();
+                    drawFolderRow(ctx, leftX, y, cardW, ICON_BACK, "..", "Up a folder", hover, focused, onBg, secondary, accent, false);
                 }
-                y += FOLDER_ROW_H + ROW_GAP;
+                sectionOffset += FOLDER_ROW_H + ROW_GAP;
             }
 
-            // Child folder rows
-            for (PackFolderTree.FolderEntry folder : currentView.folders()) {
-                if (y + FOLDER_ROW_H >= listTop && y <= listTop + listH) {
-                    boolean hover = inBox(mouseX, mouseY, leftX, y, cardW, FOLDER_ROW_H)
-                            && mouseY >= listTop && mouseY <= listTop + listH;
-                    String countLabel = folder.packCount() == 0
-                            ? "Empty"
-                            : folder.packCount() + (folder.packCount() == 1 ? " pack" : " packs");
-                    drawFolderRow(ctx, leftX, y, cardW, ICON_FOLDER, folder.name(), countLabel, hover, onBg, secondary, accent, true);
+            // Child folder rows (viewport-culled to visible indices only)
+            int folderCount = currentView.folders().size();
+            PackFolderTree.VisibleRange folderRange = PackFolderTree.visibleRange(
+                    folderCount, sectionOffset, FOLDER_ROW_H, ROW_GAP, scrollOff, listH);
+            for (int i = folderRange.first(); i < folderRange.lastExclusive(); i++) {
+                int y = listTop + sectionOffset + i * (FOLDER_ROW_H + ROW_GAP) - scrollOff;
+                PackFolderTree.FolderEntry folder = currentView.folders().get(i);
+                SemanticActionControl ctrl = i < folderControls.size() ? folderControls.get(i) : null;
+                if (ctrl != null) {
+                    ctrl.setBounds(leftX, y, cardW, FOLDER_ROW_H);
+                    ctrl.setAvailable(true);
+                    ctrl.updatePointer(mouseX, mouseY);
                 }
-                y += FOLDER_ROW_H + ROW_GAP;
+                boolean hover = inBox(mouseX, mouseY, leftX, y, cardW, FOLDER_ROW_H)
+                        && mouseY >= listTop && mouseY <= listTop + listH;
+                boolean focused = ctrl != null && ctrl.isFocused();
+                String countLabel = folder.packCount() == 0
+                        ? "Empty"
+                        : folder.packCount() + (folder.packCount() == 1 ? " pack" : " packs");
+                drawFolderRow(ctx, leftX, y, cardW, ICON_FOLDER, folder.name(), countLabel, hover, focused, onBg, secondary, accent, true);
             }
+            sectionOffset += folderCount * (FOLDER_ROW_H + ROW_GAP);
 
-            // Pack rows
-            for (PackFolderTree.PackItem item : currentView.packs()) {
-                if (y + ROW_H >= listTop && y <= listTop + listH) {
-                    boolean hover = inBox(mouseX, mouseY, leftX, y, cardW, ROW_H)
-                            && mouseY >= listTop && mouseY <= listTop + listH;
-                    PackSelectionModel.Entry entry = item.originalIndex() >= 0 && item.originalIndex() < unselectedEntries.size()
-                            ? unselectedEntries.get(item.originalIndex()) : null;
-                    drawAvailablePackRow(ctx, leftX, y, cardW, item, entry, hover, onBg, secondary, accent);
+            // Pack rows (viewport-culled to visible indices only)
+            int packCount = currentView.packs().size();
+            PackFolderTree.VisibleRange packRange = PackFolderTree.visibleRange(
+                    packCount, sectionOffset, ROW_H, ROW_GAP, scrollOff, listH);
+            for (int i = packRange.first(); i < packRange.lastExclusive(); i++) {
+                int y = listTop + sectionOffset + i * (ROW_H + ROW_GAP) - scrollOff;
+                PackFolderTree.PackItem item = currentView.packs().get(i);
+                SemanticActionControl ctrl = i < availablePackControls.size() ? availablePackControls.get(i) : null;
+                if (ctrl != null) {
+                    ctrl.setBounds(leftX, y, cardW, ROW_H);
+                    ctrl.setAvailable(true);
+                    ctrl.updatePointer(mouseX, mouseY);
                 }
-                y += ROW_H + ROW_GAP;
+                boolean hover = inBox(mouseX, mouseY, leftX, y, cardW, ROW_H)
+                        && mouseY >= listTop && mouseY <= listTop + listH;
+                boolean focused = ctrl != null && ctrl.isFocused();
+                PackSelectionModel.Entry entry = item.originalIndex() >= 0 && item.originalIndex() < unselectedEntries.size()
+                        ? unselectedEntries.get(item.originalIndex()) : null;
+                drawAvailablePackRow(ctx, leftX, y, cardW, item, entry, hover, focused, onBg, secondary, accent);
             }
 
             if (currentView.folders().isEmpty() && currentView.packs().isEmpty()) {
@@ -647,7 +1114,8 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
                         ? "No matching resource packs."
                         : "This folder has no unselected packs.";
                 String fitted = AuroraFontRenderer.ellipsize(this.font, emptyMsg, cardW - 12, 0);
-                ctx.text(this.font, fitted, leftX + 6, y + 10, secondary, false);
+                // Under the ".." row when there is one, not on it.
+                ctx.text(this.font, fitted, leftX + 6, listTop + sectionOffset - scrollOff + 10, secondary, false);
             }
         }
         ctx.disableScissor();
@@ -668,17 +1136,19 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
         int cardW = rightW - SCROLLBAR_W - 4;
         if (cardW <= 0 || listH <= 0) return;
         int maxScroll = Math.max(0, rightContentHeight() - listH);
+        int scrollOff = (int) Math.round(rightScroll.current());
 
         ctx.enableScissor(rightX, listTop, rightX + rightW, listTop + listH);
-        int y = listTop - (int) Math.round(rightScroll.current());
+        PackFolderTree.VisibleRange visible = PackFolderTree.visibleRange(
+                selectedEntries.size(), 0, ROW_H, ROW_GAP, scrollOff, listH);
 
-        for (PackSelectionModel.Entry entry : selectedEntries) {
-            if (y + ROW_H >= listTop && y <= listTop + listH) {
-                boolean hover = inBox(mouseX, mouseY, rightX, y, cardW, ROW_H)
-                        && mouseY >= listTop && mouseY <= listTop + listH;
-                drawSelectedPackRow(ctx, rightX, y, cardW, entry, hover, mouseX, mouseY, onBg, secondary, accent);
-            }
-            y += ROW_H + ROW_GAP;
+        for (int i = visible.first(); i < visible.lastExclusive(); i++) {
+            int y = listTop + i * (ROW_H + ROW_GAP) - scrollOff;
+            PackSelectionModel.Entry entry = selectedEntries.get(i);
+            SelectedRowControls rowCtrls = i < selectedRowControls.size() ? selectedRowControls.get(i) : null;
+            boolean hover = inBox(mouseX, mouseY, rightX, y, cardW, ROW_H)
+                    && mouseY >= listTop && mouseY <= listTop + listH;
+            drawSelectedPackRow(ctx, rightX, y, cardW, entry, rowCtrls, hover, mouseX, mouseY, onBg, secondary, accent);
         }
         ctx.disableScissor();
 
@@ -695,9 +1165,12 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
 
     private void drawFolderRow(GuiGraphicsExtractor ctx, int x, int y, int w,
                                String iconGlyph, String name, String countText,
-                               boolean hover, int onBg, int secondary, int accent, boolean showChevron) {
+                               boolean hover, boolean focused, int onBg, int secondary, int accent, boolean showChevron) {
         float r = AuroraTheme.RADIUS_SMALL;
-        MaterialSurface.selection(ctx, x, y, w, FOLDER_ROW_H, r, false, hover ? 1f : 0f);
+        MaterialSurface.selection(ctx, x, y, w, FOLDER_ROW_H, r, focused, hover ? 1f : 0f);
+        if (focused) {
+            RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, FOLDER_ROW_H, r, 1f, accent);
+        }
         MaterialIconRenderer.drawIcon(ctx, this.font, iconGlyph,
                 x + 15f, y + FOLDER_ROW_H / 2f, 14f, showChevron ? accent : secondary);
 
@@ -719,9 +1192,12 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
 
     private void drawAvailablePackRow(GuiGraphicsExtractor ctx, int x, int y, int w,
                                       PackFolderTree.PackItem item, PackSelectionModel.Entry entry,
-                                      boolean hover, int onBg, int secondary, int accent) {
+                                      boolean hover, boolean focused, int onBg, int secondary, int accent) {
         float r = AuroraTheme.RADIUS_SMALL;
-        MaterialSurface.selection(ctx, x, y, w, ROW_H, r, false, hover ? 1f : 0f);
+        MaterialSurface.selection(ctx, x, y, w, ROW_H, r, focused, hover ? 1f : 0f);
+        if (focused) {
+            RenderUtil.drawRoundedOutlineAA(ctx, x, y, w, ROW_H, r, 1f, accent);
+        }
 
         int iconX = x + 6;
         int iconY = y + (ROW_H - ICON_SIZE) / 2;
@@ -744,18 +1220,22 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
                 textX, y + 20, subColor, false);
 
         if (entry != null && entry.canSelect()) {
-            int btnFill = hover ? ThemeManager.withAlpha(accent, 75) : ThemeManager.withAlpha(onBg, 22);
+            boolean active = hover || focused;
+            int btnFill = active ? ThemeManager.withAlpha(accent, 75) : ThemeManager.withAlpha(onBg, 22);
             RenderUtil.drawRoundedRectAA(ctx, addX, addY, ACTION_BTN, ACTION_BTN, AuroraTheme.RADIUS_SMALL, btnFill);
             MaterialIconRenderer.drawIcon(ctx, this.font, ICON_ADD,
-                    addX + ACTION_BTN / 2f, addY + ACTION_BTN / 2f, 12f, hover ? accent : onBg);
+                    addX + ACTION_BTN / 2f, addY + ACTION_BTN / 2f, 12f, active ? accent : onBg);
         }
     }
 
     private void drawSelectedPackRow(GuiGraphicsExtractor ctx, int x, int y, int w,
-                                     PackSelectionModel.Entry entry, boolean hover,
-                                     int mouseX, int mouseY, int onBg, int secondary, int accent) {
+                                     PackSelectionModel.Entry entry, SelectedRowControls rowCtrls,
+                                     boolean hover, int mouseX, int mouseY, int onBg, int secondary, int accent) {
+        boolean rowFocused = rowCtrls != null && ((rowCtrls.up() != null && rowCtrls.up().isFocused())
+                || (rowCtrls.down() != null && rowCtrls.down().isFocused())
+                || (rowCtrls.remove() != null && rowCtrls.remove().isFocused()));
         float r = AuroraTheme.RADIUS_SMALL;
-        MaterialSurface.selection(ctx, x, y, w, ROW_H, r, false, hover ? 0.8f : 0f);
+        MaterialSurface.selection(ctx, x, y, w, ROW_H, r, rowFocused, hover ? 0.8f : 0f);
 
         int iconX = x + 6;
         int iconY = y + (ROW_H - ICON_SIZE) / 2;
@@ -783,17 +1263,38 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
 
         if (hasControls) {
             if (entry.canMoveUp()) {
+                SemanticActionControl upCtrl = rowCtrls != null ? rowCtrls.up() : null;
+                if (upCtrl != null) {
+                    upCtrl.setBounds(upX, btnY, ACTION_BTN, ACTION_BTN);
+                    upCtrl.setAvailable(true);
+                    upCtrl.updatePointer(mouseX, mouseY);
+                }
                 drawMiniAction(ctx, upX, btnY, ICON_UP,
-                        inBox(mouseX, mouseY, upX, btnY, ACTION_BTN, ACTION_BTN), onBg, accent);
+                        inBox(mouseX, mouseY, upX, btnY, ACTION_BTN, ACTION_BTN),
+                        upCtrl != null && upCtrl.isFocused(), onBg, accent);
             }
             if (entry.canMoveDown()) {
+                SemanticActionControl downCtrl = rowCtrls != null ? rowCtrls.down() : null;
+                if (downCtrl != null) {
+                    downCtrl.setBounds(downX, btnY, ACTION_BTN, ACTION_BTN);
+                    downCtrl.setAvailable(true);
+                    downCtrl.updatePointer(mouseX, mouseY);
+                }
                 drawMiniAction(ctx, downX, btnY, ICON_DOWN,
-                        inBox(mouseX, mouseY, downX, btnY, ACTION_BTN, ACTION_BTN), onBg, accent);
+                        inBox(mouseX, mouseY, downX, btnY, ACTION_BTN, ACTION_BTN),
+                        downCtrl != null && downCtrl.isFocused(), onBg, accent);
             }
             if (entry.canUnselect()) {
+                SemanticActionControl removeCtrl = rowCtrls != null ? rowCtrls.remove() : null;
+                if (removeCtrl != null) {
+                    removeCtrl.setBounds(removeX, btnY, ACTION_BTN, ACTION_BTN);
+                    removeCtrl.setAvailable(true);
+                    removeCtrl.updatePointer(mouseX, mouseY);
+                }
                 int danger = ThemeManager.color(ThemeToken.SEMANTIC_ERROR);
                 drawMiniAction(ctx, removeX, btnY, ICON_CLOSE,
-                        inBox(mouseX, mouseY, removeX, btnY, ACTION_BTN, ACTION_BTN), onBg, danger);
+                        inBox(mouseX, mouseY, removeX, btnY, ACTION_BTN, ACTION_BTN),
+                        removeCtrl != null && removeCtrl.isFocused(), onBg, danger);
             }
         } else {
             ctx.text(this.font, "Required", x + w - 46, AuroraFontRenderer.textY(this.font, y, ROW_H), secondary, false);
@@ -801,11 +1302,14 @@ public class ResourcePackManagerScreen extends Screen implements ThemedScreen {
     }
 
     private void drawMiniAction(GuiGraphicsExtractor ctx, int x, int y, String glyph,
-                                boolean hovered, int onBg, int activeColor) {
-        int bg = hovered ? ThemeManager.withAlpha(activeColor, 65) : ThemeManager.withAlpha(onBg, 18);
+                                boolean hovered, boolean focused, int onBg, int activeColor) {
+        int bg = (hovered || focused) ? ThemeManager.withAlpha(activeColor, 65) : ThemeManager.withAlpha(onBg, 18);
         RenderUtil.drawRoundedRectAA(ctx, x, y, ACTION_BTN, ACTION_BTN, AuroraTheme.RADIUS_SMALL, bg);
+        if (focused) {
+            RenderUtil.drawRoundedOutlineAA(ctx, x, y, ACTION_BTN, ACTION_BTN, AuroraTheme.RADIUS_SMALL, 1f, activeColor);
+        }
         MaterialIconRenderer.drawIcon(ctx, this.font, glyph,
-                x + ACTION_BTN / 2f, y + ACTION_BTN / 2f, 11f, hovered ? activeColor : onBg);
+                x + ACTION_BTN / 2f, y + ACTION_BTN / 2f, 11f, (hovered || focused) ? activeColor : onBg);
     }
 
     private void drawPackIcon(GuiGraphicsExtractor ctx, String packId, int x, int y, int size, int secondary) {

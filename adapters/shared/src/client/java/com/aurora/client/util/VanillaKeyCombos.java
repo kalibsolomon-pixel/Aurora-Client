@@ -51,6 +51,25 @@ public final class VanillaKeyCombos {
     }
 
     /**
+     * Checks whether a key match on {@code mapping} wins combo resolution for
+     * the currently held modifiers. Also consumes deferred modifier bits when
+     * a combo wins so releasing the modifier afterwards does not tap its own
+     * binding.
+     */
+    public static boolean matchesWithCombos(KeyMapping mapping) {
+        if (!KeyCombo.Registry.hasCombos()) return true;
+        int binding = binding(mapping);
+        if (binding < 0) return true;
+        int stored = KeyCombo.key(binding);
+        if (KeyCombo.Deferral.waiting(stored)) return false;
+        int held = AuroraKey.heldModifiers();
+        if (!KeyCombo.resolves(binding, held)) return false;
+        int bits = KeyCombo.comboBits(stored, held);
+        if (bits != 0) KeyCombo.Deferral.consume(bits);
+        return true;
+    }
+
+    /**
      * Rebuilds {@link KeyCombo.Registry} from every mapping (Minecraft's and
      * the mirrors of Aurora's) plus the profile hotkeys. Once per client tick;
      * no allocation in the steady state.

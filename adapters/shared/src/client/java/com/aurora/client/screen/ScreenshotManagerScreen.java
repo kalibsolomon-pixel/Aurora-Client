@@ -63,6 +63,7 @@ public class ScreenshotManagerScreen extends Screen implements ThemedScreen {
     private ScreenshotIndex.Entry selected;
     private boolean cropMode;
     private boolean draggingCrop;
+    private boolean savingCrop;
     private float cropX0, cropY0, cropX1, cropY1;
     private int previewX, previewY, previewW, previewH;
 
@@ -191,9 +192,10 @@ public class ScreenshotManagerScreen extends Screen implements ThemedScreen {
         saveCropBtn = null;
         if (cropMode) {
             saveCropBtn = this.addRenderableWidget(ButtonWidget.semantic(bx, actionY, btnW, bh,
-                    Component.literal("Save crop"),
+                    Component.literal(savingCrop ? "Saving..." : "Save crop"),
                     "Saves the selected region as a new PNG file alongside the original.",
                     this::saveCrop).glassStyle(Button.GlassStyle.STAINED).primary(true));
+            saveCropBtn.active = !savingCrop;
             bx += btnW + gap;
         }
 
@@ -246,6 +248,7 @@ public class ScreenshotManagerScreen extends Screen implements ThemedScreen {
         selected = entry;
         cropMode = false;
         draggingCrop = false;
+        savingCrop = false;
         renameError = null;
         deleteConfirm.disarm();
         rebuildWidgets();
@@ -255,6 +258,7 @@ public class ScreenshotManagerScreen extends Screen implements ThemedScreen {
         selected = null;
         cropMode = false;
         draggingCrop = false;
+        savingCrop = false;
         renameError = null;
         deleteConfirm.disarm();
         rebuildWidgets();
@@ -293,6 +297,7 @@ public class ScreenshotManagerScreen extends Screen implements ThemedScreen {
     }
 
     private void toggleCropMode() {
+        if (savingCrop) return;
         cropMode = !cropMode;
         draggingCrop = false;
         if (cropMode) {
@@ -303,14 +308,26 @@ public class ScreenshotManagerScreen extends Screen implements ThemedScreen {
     }
 
     private void saveCrop() {
-        if (selected == null || !cropMode) return;
+        if (selected == null || !cropMode || savingCrop) return;
         Path src = selected.path();
         float x0 = cropX0, y0 = cropY0, x1 = cropX1, y1 = cropY1;
+        savingCrop = true;
+        if (saveCropBtn != null) {
+            saveCropBtn.active = false;
+            saveCropBtn.setMessage(Component.literal("Saving..."));
+        }
         ScreenshotIO.cropAsync(src, x0, y0, x1, y1).whenComplete((out, err) -> {
             if (this.minecraft == null) return;
             this.minecraft.execute(() -> {
+                savingCrop = false;
                 if (err != null) {
-                    toast.flash("Crop failed: " + err.getMessage(), 2200L);
+                    Throwable cause = err instanceof java.util.concurrent.CompletionException ce && ce.getCause() != null
+                            ? ce.getCause() : err;
+                    toast.flash("Crop failed: " + cause.getMessage(), 2200L);
+                    if (saveCropBtn != null) {
+                        saveCropBtn.active = true;
+                        saveCropBtn.setMessage(Component.literal("Save crop"));
+                    }
                 } else {
                     cropMode = false;
                     draggingCrop = false;

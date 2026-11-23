@@ -39,7 +39,7 @@ public final class SearchMatcher {
     /** A normalized search target, prepared once and matched many times. */
     public record Target(String text, String[] words) {}
 
-    /** The typo tolerance the owner set (Settings → General → Search), clamped to 0–3. */
+    /** The typo tolerance the owner set (Settings → Tools → Search), clamped to 0–3. */
     public static int configuredTolerance() {
         AuroraConfig config = AuroraConfig.get();
         return config == null ? 0 : Math.max(0, Math.min(MAX_TOLERANCE, config.searchTypoTolerance));

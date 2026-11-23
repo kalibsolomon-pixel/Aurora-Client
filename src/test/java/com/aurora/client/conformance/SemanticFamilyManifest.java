@@ -117,7 +117,8 @@ public final class SemanticFamilyManifest {
                             SRC + "screen/setting/PixelCanvasSetting.java",
                             SRC + "screen/ManagerListScreen.java",
                             SRC + "screen/ProfileManagerScreen.java",
-                            SRC + "screen/WaypointManagerScreen.java"),
+                            SRC + "screen/WaypointManagerScreen.java",
+                            SRC + "screen/ResourcePackManagerScreen.java"),
                     "Ordinary discrete actions. Custom rows play the semantic click; "
                             + "vanilla-backed ButtonWidgets carry NONE (vanilla's own funnel)."),
             new Family("toggle", Hover.CANONICAL_140, Press.THUMB_PULSE,

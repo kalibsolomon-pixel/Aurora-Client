@@ -222,7 +222,8 @@ class FeatureCatalogTest {
         // Display Settings left the grid for the Settings tab's pages (2026-11-12).
         // Vanilla HUD, Inventory HUD, Chat Suite, and Media Controls joined the Modules grid (2026-11-21/22).
         assertEquals(39, FeatureCatalog.featuresOn(FeatureCatalog.Tab.MODULES).size());
-        // Gradient Dithering and Smooth Fog joined the Display page (2026-11-20/21).
-        assertEquals(8, FeatureCatalog.featuresOn(FeatureCatalog.Tab.SETTINGS).size());
+        // Gradient Dithering and Smooth Fog joined the Display page (2026-11-20/21); Display Settings
+        // split into its seven features (2026-11-23).
+        assertEquals(14, FeatureCatalog.featuresOn(FeatureCatalog.Tab.SETTINGS).size());
     }
 }

@@ -104,4 +104,23 @@ class PackFolderTreeTest {
         Path cleaned = PackFolderTree.resolveSubfolder(root, "../outside");
         assertTrue(cleaned.startsWith(root.toAbsolutePath().normalize()));
     }
+
+    @Test
+    void visibleRangeComputesExactViewportSliceInConstantTime() {
+        // 10,000 rows, height 40, gap 4 (step 44), viewport height 200
+        var top = PackFolderTree.visibleRange(10_000, 0, 40, 4, 0, 200);
+        assertEquals(new PackFolderTree.VisibleRange(0, 5), top);
+
+        // Scrolled down to pixel 4400 (exact start of row 100)
+        var mid = PackFolderTree.visibleRange(10_000, 0, 40, 4, 4400, 200);
+        assertEquals(new PackFolderTree.VisibleRange(100, 105), mid);
+
+        // Section starting at offset 200, viewport [0, 150] -> empty (below viewport)
+        var below = PackFolderTree.visibleRange(50, 200, 40, 4, 0, 150);
+        assertTrue(below.isEmpty());
+
+        // Scrolled past all rows -> empty
+        var past = PackFolderTree.visibleRange(5, 0, 40, 4, 500, 200);
+        assertTrue(past.isEmpty());
+    }
 }

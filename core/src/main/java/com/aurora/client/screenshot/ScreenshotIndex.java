@@ -2,6 +2,7 @@ package com.aurora.client.screenshot;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -135,6 +136,67 @@ public final class ScreenshotIndex {
         int x2 = Math.min(imgW, Math.max(x + 1, Math.round(right * imgW)));
         int y2 = Math.min(imgH, Math.max(y + 1, Math.round(bottom * imgH)));
         return new CropRect(x, y, x2 - x, y2 - y);
+    }
+
+    /** Writer callback used by {@link #writeCroppedAtomically(Path, PathWriter)}. */
+    @FunctionalInterface
+    public interface PathWriter {
+        void write(Path target) throws IOException;
+    }
+
+    private static final Object CROP_PUBLISH_LOCK = new Object();
+
+    /**
+     * Writes a cropped screenshot into a unique sibling temporary file first,
+     * then atomically publishes it to the first unused {@code _crop*.png}
+     * filename without overwriting existing files. On any encoding or I/O
+     * failure, the temporary file is removed and no partial output is left at
+     * a final screenshot filename.
+     */
+    public static Path writeCroppedAtomically(Path source, PathWriter writer) throws IOException {
+        if (source == null || writer == null) {
+            throw new IllegalArgumentException("Source path and writer are required");
+        }
+        Path dir = source.getParent();
+        if (dir == null) {
+            throw new IOException("Source screenshot has no parent directory");
+        }
+        String base = stripPng(source.getFileName().toString());
+        Path temp = Files.createTempFile(dir, "." + base + "_crop_", ".tmp");
+        boolean published = false;
+        try {
+            writer.write(temp);
+            synchronized (CROP_PUBLISH_LOCK) {
+                for (int i = 1; i < 1000; i++) {
+                    Path candidate = i == 1
+                            ? dir.resolve(base + "_crop.png")
+                            : dir.resolve(base + "_crop_" + i + ".png");
+                    try {
+                        Files.move(temp, candidate);
+                        published = true;
+                        return candidate;
+                    } catch (FileAlreadyExistsException ignored) {
+                        // Claim the next suffix.
+                    }
+                }
+                for (int attempt = 0; attempt < 16; attempt++) {
+                    Path candidate = dir.resolve(base + "_crop_" + System.currentTimeMillis()
+                            + (attempt == 0 ? "" : "_" + attempt) + ".png");
+                    try {
+                        Files.move(temp, candidate);
+                        published = true;
+                        return candidate;
+                    } catch (FileAlreadyExistsException ignored) {
+                        // Retry with a different suffix.
+                    }
+                }
+                throw new IOException("Could not allocate a unique cropped screenshot filename");
+            }
+        } finally {
+            if (!published) {
+                try { Files.deleteIfExists(temp); } catch (IOException ignored) {}
+            }
+        }
     }
 
     /** Generates a non-colliding sibling output path for a cropped screenshot. */

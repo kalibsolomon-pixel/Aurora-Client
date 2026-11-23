@@ -139,6 +139,12 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     private ClipBand measuredContent;
     private float BOX_W = com.aurora.client.ui.util.UiDensity.MAIN_WIDTH;
     private float BOX_H = com.aurora.client.ui.util.UiDensity.MAIN_HEIGHT;
+    /** The frame from the last init; decides between the labelled sidebar and the icon rail. */
+    private com.aurora.client.ui.util.UiDensity.Rect frameRect =
+            com.aurora.client.ui.util.UiDensity.window(com.aurora.client.ui.util.UiDensity.MAIN_WIDTH,
+                    com.aurora.client.ui.util.UiDensity.MAIN_HEIGHT);
+    /** Sidebar icons in the rail, in nav order: Features, Settings, Profiles. */
+    private static final String[] RAIL_ICONS = {"apps", "settings", "manage_accounts"};
 
     // Sidebar nav tabs: one pitch drives every tab's Y (22px tab + 4px gap),
     // with SIDEBAR_GROUP_GAP separating the navigation tabs from the Profiles action.
@@ -186,7 +192,9 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     /** The summary fitted to the content column (the shared ellipsize memo caches it). */
     private String pageSummaryLine(FeatureMetadata m, Font tr) {
         if (m.pageSummary == null || m.pageSummary.isEmpty()) return null;
-        return com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, m.pageSummary, contentWidth() - 8, 1);
+        // A feature whose mixin is not working says so in place of its summary (2026-11-23).
+        String broken = com.aurora.client.health.FeatureHealth.headlineFor(m.id);
+        return com.aurora.client.ui.util.AuroraFontRenderer.ellipsize(tr, broken != null ? broken : m.pageSummary, contentWidth() - 8, 1);
     }
 
     /** Gap between inline rows inside an entry. */
@@ -200,7 +208,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
      * search field, so the content viewport is identical on both tabs.
      */
     private int selectedPage = 0;
-    private final List<FeatureRegistry.SettingsPage> pages = FeatureRegistry.settingsPages();
+    private final List<SettingsPages.Page> pages = FeatureRegistry.settingsPages();
     /** Every entry on every page, in page order: init, invalidation and teardown walk all of them. */
     private final List<FeatureMetadata> allPageEntries = pages.stream()
             .flatMap(page -> page.entries().stream()).toList();
@@ -398,6 +406,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         var body = com.aurora.client.ui.util.UiDensity.mainContent(frame);
         measuredContent = new ClipBand(body.x(), body.y(), body.width(), body.height());
         BOX_W = frame.width(); BOX_H = frame.height();
+        frameRect = frame;
         super.init();
         semanticHost.beginRebuild();
         scrolls[0].resetClock();
@@ -775,17 +784,17 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         chromeLayout.begin(viewport);
         for (int index = 0; index < 3; index++) {
             String id = index == 2 ? "toolbar/profiles" : "toolbar/category/" + index;
-            float left = boxX() + UiDensity.FRAME_EDGE + (narrowNavigation() ? index * (TAB_W + 4) : 0);
+            float left = boxX() + UiDensity.FRAME_EDGE + (narrowNavigation() ? index * (navW() + 4) : 0);
             float top = boxY() + (narrowNavigation() ? TAB_FIRST_Y
                     : TAB_FIRST_Y + index * TAB_PITCH + (index == 2 ? UiDensity.SIDEBAR_GROUP_GAP : 0));
-            chromeLayout.place(id, id, left, top, TAB_W, TAB_H, true);
+            chromeLayout.place(id, id, left, top, navW(), TAB_H, true);
         }
-        float left = boxX() + UiDensity.SIDEBAR + UiDensity.INSET;
+        float left = boxX() + toolbarLeft();
         float top = boxY() + UiDensity.headerY(TOOL);
         // The toolbar ends where the scrollbar does, at the frame room.
         // The search field keeps SEARCH_GAP of air past the view toggles (council 2026-11-18: its
         // placeholder started flush against the grid button).
-        int searchWidth = Math.max(1, (int) BOX_W - UiDensity.SIDEBAR - UiDensity.INSET - (int) (2 * TOOL_STEP) - SEARCH_GAP - UiDensity.FRAME_EDGE);
+        int searchWidth = Math.max(1, (int) BOX_W - toolbarLeft() - (int) (2 * TOOL_STEP) - SEARCH_GAP - UiDensity.FRAME_EDGE);
         if (selectedCategory == 0) {
             chromeLayout.place("toolbar/list", "toolbar/list", left, top, TOOL, TOOL, true);
             chromeLayout.place("toolbar/grid", "toolbar/grid", left + TOOL_STEP, top, TOOL, TOOL, true);
@@ -826,13 +835,23 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
     private float boxX() { return (float) Math.floor((this.width - BOX_W) / 2.0f); }
     private float boxY() { return (float) Math.floor((this.height - BOX_H) / 2.0f); }
 
-    private float mainX() { return boxX() + (narrowNavigation() ? UiDensity.FRAME_EDGE : UiDensity.SIDEBAR + UiDensity.INSET); }
+    private float mainX() { return boxX() + UiDensity.contentLeft(frameRect); }
     private ClipBand contentViewport() {
         return selectedCategory == 1 && laidOutSettingsBand == measuredContent
                 && laidOutPage == pageEntries() ? settingsLayout.viewport() : measuredContent;
     }
 
     private boolean narrowNavigation() { return BOX_W < 320; }
+    /** A shrunk window shows the sidebar as icon squares and gives the content the room (owner, 2026-11-23). */
+    private boolean railNavigation() { return UiDensity.railNavigation(frameRect); }
+    private float navW() { return railNavigation() ? UiDensity.RAIL_W : TAB_W; }
+    /** Toolbar start, relative to the frame: past the sidebar, or with the rail just past the AURORA title. */
+    private int toolbarLeft() {
+        if (!railNavigation()) return UiDensity.SIDEBAR + UiDensity.INSET;
+        int titleRight = UiDensity.FRAME_EDGE + 8 + this.font.width(com.aurora.client.ui.util.AuroraFontRenderer.role(
+                "AURORA", com.aurora.client.ui.util.AuroraFontRenderer.Role.TITLE));
+        return Math.max(UiDensity.contentLeft(frameRect), titleRight + UiDensity.INSET);
+    }
     private float navX(int index) { return chromeLayout.at(index).x(); }
     private float navY(int index) { return chromeLayout.at(index).top(); }
     private int contentWidth() { return contentViewport().width; }
@@ -1099,11 +1118,11 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         for (int i = 0; i < 2; i++) {
             float catY = navY(i);
             float catX = navX(i);
-            chipGlass[i] = GlassSurface.card(g, catX, catY, TAB_W, TAB_H, ctrlRadius);
+            chipGlass[i] = GlassSurface.card(g, catX, catY, navW(), TAB_H, ctrlRadius);
         }
         float profY = navY(2);
         float profX = navX(2);
-        profGlass = GlassSurface.card(g, profX, profY, TAB_W, TAB_H, ctrlRadius);
+        profGlass = GlassSurface.card(g, profX, profY, navW(), TAB_H, ctrlRadius);
 
         if (selectedCategory == 0) {
             for (int index = 0; index < layoutGlass.length; index++) {
@@ -1178,24 +1197,24 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
             // channel: the stained glass tint (or the flat accent wash
             // below), visible at hover 0; the selected tab's label
             // treatment is fixed, so the channels can never alias.
-            boolean hover = Widget.inBounds(mouseX, mouseY, catX, catY, TAB_W, TAB_H);
+            boolean hover = Widget.inBounds(mouseX, mouseY, catX, catY, navW(), TAB_H);
             float hoverT = MaterialSurface.unified() ? pilotHover(PILOT_TABS[i],hover) : tabHovers[i].update(hover);
             SemanticActionControl control = tabControls[i];
             if (control != null) {
-                control.setBounds((int) (catX), (int) catY, (int) TAB_W, (int) TAB_H);
+                control.setBounds((int) (catX), (int) catY, (int) navW(), (int) TAB_H);
                 control.setAvailable(true); // static sidebar chrome — always interactive
                 control.updatePointer(mouseX, mouseY);
             }
             // Raised glass was painted pre-dim: neutral for the inactive tab,
             // accent-stained for the selected tab. Preserve the established
             // flat fallback if the glass renderer declines this frame.
-            if(MaterialSurface.unified()) MaterialSurface.selection(g,catX,catY,TAB_W,TAB_H,ctrlRadius,sel,hoverT,true);
+            if(MaterialSurface.unified()) MaterialSurface.selection(g,catX,catY,navW(),TAB_H,ctrlRadius,sel,hoverT,true);
             else if (!chipGlass[i]) {
                 if (sel) {
-                    RenderUtil.drawRoundedRectAA(g, catX, catY, TAB_W, TAB_H, ctrlRadius,
+                    RenderUtil.drawRoundedRectAA(g, catX, catY, navW(), TAB_H, ctrlRadius,
                             alpha(ThemeToken.ACCENT, 0x26 / 255f));
                 } else if (hoverT > 0f) {
-                    RenderUtil.drawRoundedRectAA(g, catX, catY, TAB_W, TAB_H, ctrlRadius,
+                    RenderUtil.drawRoundedRectAA(g, catX, catY, navW(), TAB_H, ctrlRadius,
                             AuroraAnim.lerpArgb(0x00000000,
                                     ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), hoverT));
                 }
@@ -1205,7 +1224,14 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
                     : AuroraAnim.lerpArgb(
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
                             MaterialSurface.color(ThemeToken.ON_BACKGROUND), hoverT);
-            g.text(tr, cats[i], (int) (catX + 8), AuroraFontRenderer.textY(tr, catY, TAB_H), txt, false);
+            if (railNavigation()) {
+                MaterialIconRenderer.drawIcon(g, tr, com.aurora.client.screen.IconCatalog.glyph(RAIL_ICONS[i]),
+                        catX + navW() / 2f, catY + TAB_H / 2f, 13f, txt);
+                if (hover && control != null) com.aurora.client.ui.component.TooltipPresenter.offer(control,
+                        cats[i], (int) catX, (int) catY, (int) navW(), (int) TAB_H);
+            } else {
+                g.text(tr, cats[i], (int) (catX + 8), AuroraFontRenderer.textY(tr, catY, TAB_H), txt, false);
+            }
             // Keyboard focus: the Button-family 1 px accent hairline — an
             // independent channel from both the selection tint and hover.
             // A SELECTED tab never takes a second indicator: its accent edge
@@ -1213,7 +1239,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
             // selection alone (owner ruling 2026-10-30 — the ring 2px outside
             // the selection edge doubled the highlight on click).
             if (control != null && control.isFocused() && !sel) {
-                RenderUtil.drawRoundedOutlineAA(g, catX, catY, TAB_W, TAB_H, ctrlRadius, 1.0f,
+                RenderUtil.drawRoundedOutlineAA(g, catX, catY, navW(), TAB_H, ctrlRadius, 1.0f,
                         ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
             }
         }
@@ -1221,33 +1247,41 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         if (!narrowNavigation() && MaterialSurface.unified()) {
             // Subtle rule between the navigation tabs and the Profiles manager action.
             int ruleY = Math.round(navY(1) + TAB_H + (navY(2) - (navY(1) + TAB_H)) / 2f);
-            g.fill((int) (navX(0) + 8), ruleY, (int) (navX(0) + TAB_W - 8), ruleY + 1,
+            int ruleInset = railNavigation() ? 4 : 8;
+            g.fill((int) (navX(0) + ruleInset), ruleY, (int) (navX(0) + navW() - ruleInset), ruleY + 1,
                     ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ON_BACKGROUND), 0x1A));
         }
 
         float profY = navY(2);
         float profX = navX(2);
-        boolean pHover = Widget.inBounds(mouseX, mouseY, profX, profY, TAB_W, TAB_H);
+        boolean pHover = Widget.inBounds(mouseX, mouseY, profX, profY, navW(), TAB_H);
         float profT = MaterialSurface.unified() ? pilotHover("profiles",pHover) : profilesHover.update(pHover);
         if (profilesControl != null) {
-            profilesControl.setBounds((int) (profX), (int) profY, (int) TAB_W, (int) TAB_H);
+            profilesControl.setBounds((int) (profX), (int) profY, (int) navW(), (int) TAB_H);
             profilesControl.setAvailable(true);
             profilesControl.updatePointer(mouseX, mouseY);
         }
         // Profiles is neutral raised glass; retain its hover fallback when
         // live glass is unavailable.
-        if(MaterialSurface.unified()) MaterialSurface.selection(g,profX,profY,TAB_W,TAB_H,ctrlRadius,false,profT,true);
+        if(MaterialSurface.unified()) MaterialSurface.selection(g,profX,profY,navW(),TAB_H,ctrlRadius,false,profT,true);
         else if (!profGlass && profT > 0f) {
-            RenderUtil.drawRoundedRectAA(g, profX, profY, TAB_W, TAB_H, ctrlRadius,
+            RenderUtil.drawRoundedRectAA(g, profX, profY, navW(), TAB_H, ctrlRadius,
                     AuroraAnim.lerpArgb(0x00000000,
                             ThemeManager.surfaceColor(ThemeToken.SURFACE_VARIANT), profT));
         }
-        g.text(tr, "Profiles", (int) (profX + 8), AuroraFontRenderer.textY(tr, profY, TAB_H),
-                AuroraAnim.lerpArgb(
-                        MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
-                        MaterialSurface.color(ThemeToken.ON_BACKGROUND), profT), false);
+        int profText = AuroraAnim.lerpArgb(
+                MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY),
+                MaterialSurface.color(ThemeToken.ON_BACKGROUND), profT);
+        if (railNavigation()) {
+            MaterialIconRenderer.drawIcon(g, tr, com.aurora.client.screen.IconCatalog.glyph(RAIL_ICONS[2]),
+                    profX + navW() / 2f, profY + TAB_H / 2f, 13f, profText);
+            if (pHover && profilesControl != null) com.aurora.client.ui.component.TooltipPresenter.offer(profilesControl,
+                    "Profiles", (int) profX, (int) profY, (int) navW(), (int) TAB_H);
+        } else {
+            g.text(tr, "Profiles", (int) (profX + 8), AuroraFontRenderer.textY(tr, profY, TAB_H), profText, false);
+        }
         if (profilesControl != null && profilesControl.isFocused()) {
-            RenderUtil.drawRoundedOutlineAA(g, profX, profY, TAB_W, TAB_H, ctrlRadius, 1.0f,
+            RenderUtil.drawRoundedOutlineAA(g, profX, profY, navW(), TAB_H, ctrlRadius, 1.0f,
                     ThemeManager.withAlpha(MaterialSurface.color(ThemeToken.ACCENT), 0x99));
         }
 
@@ -1585,7 +1619,10 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
             if (settingsReveal == m) paintReveal(g, mx + 4, y, contentWidth() - 4, headerH, ctrlRadius);
             String summary = pageSummaryLine(m, tr);
             if (summary != null && vp.intersects(mx + 4, y + headerH, contentWidth() - 4, SUMMARY_H))
-                g.text(tr, summary, (int) (mx + 4), AuroraFontRenderer.textY(tr, y + headerH, SUMMARY_H), MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
+                g.text(tr, summary, (int) (mx + 4), AuroraFontRenderer.textY(tr, y + headerH, SUMMARY_H),
+                        com.aurora.client.health.FeatureHealth.headlineFor(m.id) != null
+                                ? ThemeManager.color(ThemeToken.SEMANTIC_WARNING)
+                                : MaterialSurface.color(ThemeToken.ON_BACKGROUND_SECONDARY), false);
             if (m.settingsDetailOnly) {
                 y = settingsLayout.bounds(m).y(layoutScroll()) + headerBlockH(m);
                 // Detail-only entry: one muted hint line in place of the
@@ -2058,7 +2095,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         for (int i = 0; i < 2; i++) {
             float catY = navY(i);
             float catX = navX(i);
-            if (Widget.inBounds(mouseX, mouseY, catX, catY, TAB_W, TAB_H)) {
+            if (Widget.inBounds(mouseX, mouseY, catX, catY, navW(), TAB_H)) {
                 if (tabControls[i] != null && tabControls[i].activateFromPointer(mouseX, mouseY, button)) {
                     this.setFocused(tabControls[i]);
                 }
@@ -2067,7 +2104,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
         }
         float profY = navY(2);
         float profX = navX(2);
-        if (Widget.inBounds(mouseX, mouseY, profX, profY, TAB_W, TAB_H)) {
+        if (Widget.inBounds(mouseX, mouseY, profX, profY, navW(), TAB_H)) {
             if (profilesControl != null && profilesControl.activateFromPointer(mouseX, mouseY, button)) {
                 this.setFocused(profilesControl);
             }

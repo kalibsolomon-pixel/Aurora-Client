@@ -48,7 +48,7 @@ class ScreenLayoutTest {
         for (int[] viewport : new int[][]{{220, 200}, {319, 241}, {360, 312}, {853, 481}, {1280, 720}}) {
             var frame = UiDensity.window(viewport[0], viewport[1]);
             var content = UiDensity.mainContent(frame);
-            int mainX = frame.x() + (frame.width() < 320 ? 8 : UiDensity.SIDEBAR + UiDensity.INSET);
+            int mainX = frame.x() + UiDensity.contentLeft(frame);
             var band = new ClipBand(content.x(), content.y(), content.width(), content.height());
             for (boolean grid : new boolean[]{false, true}) {
                 int columns = grid ? UiDensity.columns(content.width()) : 1;

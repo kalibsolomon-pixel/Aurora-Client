@@ -262,4 +262,35 @@ class AtomicJsonWriterTest {
         assertTrue(writer.flush(5000));
         assertFalse(Files.exists(target), "the delete is ordered after the in-flight save");
     }
+
+    @Test void submitAndDeleteKeepsOldFileWhenReplacementFailsAndDeletesOnlyAfterSuccess() throws Exception {
+        Path oldFile = dir.resolve("profiles/old.json");
+        Path newFile = dir.resolve("profiles/new.json");
+        Files.createDirectories(oldFile.getParent());
+        Files.writeString(oldFile, "{\"name\":\"old\"}");
+
+        var denyNew = new java.util.concurrent.atomic.AtomicBoolean(true);
+        var ops = new Ops();
+        ops.hook = (s, t, n) -> {
+            if (denyNew.get() && t.equals(newFile)) {
+                throw denied(s, t);
+            }
+        };
+        var writer = new AtomicJsonWriter("t", ops, NO_SLEEP, 10);
+
+        var failedOutcome = writer.submitAndDelete(newFile, "{\"name\":\"new\"}", oldFile);
+        assertFalse(writer.flush(5000));
+        assertFalse(failedOutcome.join(), "failed replacement reports false");
+        assertTrue(Files.exists(oldFile), "old file must survive when the replacement fails");
+        assertEquals("{\"name\":\"old\"}", Files.readString(oldFile));
+        assertFalse(Files.exists(newFile), "failed replacement did not land");
+
+        // Retry after the lock clears: new file lands and only then is old file removed.
+        denyNew.set(false);
+        var okOutcome = writer.submitAndDelete(newFile, "{\"name\":\"new\"}", oldFile);
+        assertTrue(writer.flush(5000));
+        assertTrue(okOutcome.join(), "successful replacement reports true");
+        assertEquals("{\"name\":\"new\"}", Files.readString(newFile));
+        assertFalse(Files.exists(oldFile), "old file is deleted once the replacement is durable");
+    }
 }

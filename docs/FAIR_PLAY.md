@@ -81,7 +81,13 @@ Changing a default does not change an existing install: a player who already had
 | Resourcepack Browser | Cosmetic | Downloads resource packs from Modrinth. |
 | Chat | Vanilla equivalent | Reformats incoming chat locally (compacting duplicates, adding local timestamps and online player heads, searching, copying, peeking, and keeping longer per-server history). Off in a fresh install; never sends messages or packets. |
 | Media Controls | Cosmetic | Controls local desktop media playback and displays the currently playing track locally. |
-| Display Settings | Local timing | Frame pacing, a frame cap, vsync control, the point within a frame where mouse movement is applied, cosmetic tab-list and nametag styling (including your own nametag in third person), cosmetic per-sound volume attenuation (0–100% only), and Streamer Mode privacy masking (hides your own name, skin, coordinates, server address, and optionally replaces other players' nametags on your own screen). The rate and content of what is sent to the server are unchanged. |
+| Frame Pacing | Local timing | Frame pacing, a frame cap, vsync control and render sleeping: when frames are drawn on your own screen. The rate and content of what is sent to the server are unchanged. |
+| Decoupled Input | Local timing | Applies mouse movement at the start of each frame instead of later in it. What is sent to the server, and when, is unchanged. |
+| Tab List | Cosmetic | Hides the tab list's server header, footer or player heads, highlights your own row and sets its background opacity. |
+| Nametags | Cosmetic | Nametag scale, text shadow and background opacity, and your own nametag in third person. |
+| Per-Sound Volume | Cosmetic | Lowers or mutes individual sounds (0–100% attenuation only); nothing is made louder than vanilla. |
+| Streamer Mode | Cosmetic | Masks your own name, skin, coordinates and server address on your screen, and can replace other players' names with labels. It hides information; it never adds any. |
+| Server List | Vanilla equivalent | Reorders the Multiplayer server list by dragging, as vanilla's move buttons do. |
 | Custom Title | Cosmetic | Aurora's title screen and menu styling. |
 | Text & Fonts | Cosmetic | Changes the font. |
 | Theme | Cosmetic | Changes the colors of Aurora's own screens. |
