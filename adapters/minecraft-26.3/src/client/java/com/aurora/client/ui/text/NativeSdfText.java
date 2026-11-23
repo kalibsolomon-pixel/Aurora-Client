@@ -45,7 +45,22 @@ public final class NativeSdfText {
 
     static FontTexture createPage(int index) {
         Identifier name = Identifier.fromNamespaceAndPath("aurora", "font/sdf_" + index);
-        return new FontTexture(name::toString, GlyphRenderTypes.createForGrayscaleTexture(name), false);
+        FontTexture page = new FontTexture(name::toString, GlyphRenderTypes.createForGrayscaleTexture(name), false);
+        clear(page.getTexture());
+        return page;
+    }
+
+    /**
+     * Vanilla never clears a font page, so the space between and below cells holds
+     * whatever the driver left there; filtered and derivative samples at a glyph's
+     * edge can reach it. Zero is "far outside" in the distance field.
+     */
+    private static void clear(GpuTexture texture) {
+        int w = texture.getWidth(0);
+        int h = texture.getHeight(0);
+        try (NativeImage zeros = new NativeImage(NativeImage.Format.LUMINANCE, w, h, true)) {
+            RenderSystem.getDevice().createCommandEncoder().writeToTexture(texture, zeros, 0, 0, 0, 0);
+        }
     }
 
     /** The page's own texture size, not vanilla's 256: ImmediatelyFast resizes every font page. */

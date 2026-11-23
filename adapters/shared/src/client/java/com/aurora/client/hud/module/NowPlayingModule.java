@@ -3,6 +3,7 @@ package com.aurora.client.hud.module;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.hud.HudAnchor;
 import com.aurora.client.hud.HudTextPainter;
+import com.aurora.client.media.MediaCoverTexture;
 import com.aurora.client.media.MediaTrackState;
 import com.aurora.client.media.SystemMediaBridge;
 import com.aurora.client.theme.HudText;
@@ -13,6 +14,8 @@ import com.aurora.client.ui.util.MaterialIconRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
 
 /**
  * Now Playing HUD module (Windows-first via GSMTC).
@@ -27,6 +30,9 @@ public class NowPlayingModule extends HudModule {
 
     private static final int ICON_COL = 18;
     private static final int PAD_X = 4;
+    /** Cover art: inset from the module's edge, and the gap to the text column. */
+    private static final int ART_PAD = 2;
+    private static final int ART_GAP = 5;
     private static final String ICON_PLAY = "\uE037";
     private static final String ICON_PAUSE = "\uE034";
     private static final String ICON_MUSIC = "\uE405";
@@ -148,13 +154,35 @@ public class NowPlayingModule extends HudModule {
         int secondaryColor = ThemeManager.withAlpha(primaryColor, 185);
         int accent = ThemeManager.color(ThemeToken.ACCENT);
 
-        int textBlockH = cfg.mediaHudShowArtist ? 21 : 11;
-        String glyph = state.playing() ? ICON_PLAY : ICON_PAUSE;
-        MaterialIconRenderer.drawIcon(ctx, tr, glyph,
-                x + 8f, y + textBlockH / 2f + 1f, 13f, accent);
-
-        int textX = x + ICON_COL;
-        int textMax = Math.max(24, w - ICON_COL - PAD_X);
+        int textX;
+        if (cfg.mediaHudShowArt) {
+            // Cover square, full height: the cover dims with a pause glyph while paused;
+            // with no cover (or the editor's sample) a quiet placeholder keeps the layout.
+            int s = h - 2 * ART_PAD;
+            int ax = x + ART_PAD, ay = y + ART_PAD;
+            float glyphSize = Math.min(13f, s * 0.6f);
+            Identifier cover = MediaCoverTexture.forTrack(state);
+            if (cover != null) {
+                int size = SystemMediaBridge.COVER_SIZE;
+                ctx.blit(RenderPipelines.GUI_TEXTURED, cover, ax, ay, 0f, 0f, s, s, size, size, size, size,
+                        state.playing() ? 0xFFFFFFFF : 0xFF8C8C8C);
+                if (!state.playing()) {
+                    MaterialIconRenderer.drawIcon(ctx, tr, ICON_PAUSE, ax + s / 2f, ay + s / 2f, glyphSize, 0xFFFFFFFF);
+                }
+            } else {
+                ctx.fill(ax, ay, ax + s, ay + s, ThemeManager.withAlpha(primaryColor, 36));
+                MaterialIconRenderer.drawIcon(ctx, tr, state.playing() ? ICON_MUSIC : ICON_PAUSE,
+                        ax + s / 2f, ay + s / 2f, glyphSize, secondaryColor);
+            }
+            textX = ax + s + ART_GAP;
+        } else {
+            int textBlockH = cfg.mediaHudShowArtist ? 21 : 11;
+            String glyph = state.playing() ? ICON_PLAY : ICON_PAUSE;
+            MaterialIconRenderer.drawIcon(ctx, tr, glyph,
+                    x + 8f, y + textBlockH / 2f + 1f, 13f, accent);
+            textX = x + ICON_COL;
+        }
+        int textMax = Math.max(24, x + w - PAD_X - textX);
 
         String rawTitle = state.title().isEmpty() ? "Unknown Track" : state.title();
         HudTextPainter.draw(ctx, tr, fitCached(tr, rawTitle, textMax, true), textX, y + 1, primaryColor);
@@ -169,8 +197,9 @@ public class NowPlayingModule extends HudModule {
         if (cfg.mediaHudShowProgress) {
             long now = System.currentTimeMillis();
             float prog = state.progress(now);
-            int barX = x + 2;
-            int barW = Math.max(20, w - 4);
+            // Under the text column when the cover takes the left edge.
+            int barX = cfg.mediaHudShowArt ? textX : x + 2;
+            int barW = Math.max(20, x + w - 2 - barX);
             int barY = Math.min(y + h - 3, curY + 2);
             int trackBg = ThemeManager.withAlpha(primaryColor, 48);
             ctx.fill(barX, barY, barX + barW, barY + 2, trackBg);

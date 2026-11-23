@@ -28,8 +28,7 @@ public abstract class LavaOverlayMixin {
     private static void aurora$cancelFireOverlay(PoseStack matrices, SubmitNodeCollector vcp,
                                                  TextureAtlasSprite sprite, CallbackInfo ci) {
         AuroraConfig cfg = AuroraConfig.get();
-        if ((cfg.lavaClarityEnabled && cfg.lavaHideOverlay)
-                || cfg.fireOverlayHide
+        if (cfg.fireOverlayHide
                 || PackTweaksMath.clampFireOpacity(cfg.fireOverlayOpacity) <= 0.001) {
             ci.cancel();
         }

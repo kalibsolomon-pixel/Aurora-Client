@@ -176,7 +176,6 @@
   "underwaterFogMultiplier": 8.0,
   "lavaClarityEnabled": false,
   "lavaFogMultiplier": 8.0,
-  "lavaHideOverlay": true,
   "motionBlurStrength": 0.0,
   "colorSaturation": 1.0,
   "localTimeEnabled": false,

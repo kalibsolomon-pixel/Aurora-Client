@@ -29,6 +29,7 @@ class RetiredProfileFieldsTest {
         assertTrue(ProfileFieldSet.isRetired("hitregSettingsKey"));
         assertTrue(ProfileFieldSet.isRetired("smoothCamera"));
         assertTrue(ProfileFieldSet.isRetired("smoothCameraStrength"));
+        assertTrue(ProfileFieldSet.isRetired("lavaHideOverlay"));
         assertFalse(ProfileFieldSet.isRetired("hitregDelayMs"));
     }
 }

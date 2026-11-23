@@ -9,7 +9,12 @@ out vec4 fragColor;
 void main() {
     float encoded = texture(Sampler0, texCoord0).r * 255.0;
     float signedDistance = (encoded - 128.0) * (8.0 / 128.0);
-    float gradient = max(fwidth(signedDistance), 0.0001);
+    // The distance is in texels, so the edge's antialiasing width is texels per pixel.
+    // Take it from the interpolated UVs, not the sampled distance's derivative: on a quad's
+    // edge the GPU's 2x2 derivative block also samples beyond the glyph's cell, where
+    // the atlas holds a neighbour or nothing, and that showed as specks under glyphs.
+    vec2 footprint = fwidth(texCoord0 * vec2(textureSize(Sampler0, 0)));
+    float gradient = max(0.5 * (footprint.x + footprint.y), 0.0001);
     float coverage = clamp(0.5 + (signedDistance - 0.30) / gradient, 0.0, 1.0);
 
     vec4 color = vertexColor * ColorModulator;

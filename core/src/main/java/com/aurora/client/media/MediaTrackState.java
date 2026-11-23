@@ -21,6 +21,11 @@ public record MediaTrackState(
     public static final MediaTrackState EMPTY =
             new MediaTrackState(false, false, "", "", "", 0L, 0L, 0L);
 
+    /** Identifies the track (not its playback position), e.g. to match it with its cover art. */
+    public String trackKey() {
+        return title + '\n' + artist + '\n' + album;
+    }
+
     /** Sample track shown in the HUD Editor when no desktop player is active. */
     public static final MediaTrackState SAMPLE =
             new MediaTrackState(true, true, "Sweden", "C418", "Minecraft - Volume Alpha", 102_000L, 215_000L, 0L);

@@ -5,12 +5,17 @@ import com.aurora.client.AuroraClient;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Locale;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -33,10 +38,13 @@ public final class SystemMediaBridge {
     private static volatile ExecutorService executor;
     private static volatile long lastPollRequestMs = 0L;
 
-    // Reusable persistent Windows helper (only spawned on demand on Windows).
-    private static Process winProcess;
+    // Reusable persistent Windows helper (only spawned on demand on Windows), guarded by
+    // HELPER rather than the class lock: worker() runs on the tick thread and must never
+    // wait behind a helper read.
+    private static final Object HELPER = new Object();
+    private static volatile Process winProcess;
     private static BufferedWriter winIn;
-    private static BufferedReader winOut;
+    private static BlockingQueue<String> winLines;
     private static long winBackoffUntilMs = 0L;
 
     private SystemMediaBridge() {}
@@ -45,6 +53,30 @@ public final class SystemMediaBridge {
 
     /** Latest polled desktop media track state (never null). */
     public static MediaTrackState currentTrack() { return STATE.get(); }
+
+    /**
+     * A track's cover: a {@value #COVER_SIZE}-pixel square PNG, for the track with
+     * {@code trackKey} ({@link MediaTrackState#trackKey()}). {@code serial} rises with each new cover.
+     */
+    public record Cover(String trackKey, byte[] png, long serial) {}
+
+    public static final int COVER_SIZE = 96;
+    /** A 96-pixel PNG is a few tens of KB; anything far larger is not the helper's cover. */
+    private static final int MAX_COVER_BASE64 = 512 * 1024;
+    private static final AtomicReference<Cover> COVER = new AtomicReference<>();
+    private static long coverSerial;
+
+    /** The most recent cover, or null; it belongs to the current track only when the keys match. */
+    public static Cover currentCover() { return COVER.get(); }
+
+    private static void acceptCover(String trackKey, String base64) {
+        if (base64.isEmpty() || base64.length() > MAX_COVER_BASE64) return;
+        try {
+            COVER.set(new Cover(trackKey, Base64.getDecoder().decode(base64), ++coverSerial));
+        } catch (IllegalArgumentException e) {
+            AuroraClient.LOGGER.debug("[Media] unreadable cover art: {}", e.getMessage());
+        }
+    }
 
     /** Dispatches an OS media control action asynchronously off the tick thread. */
     public static void dispatch(MediaAction action) {
@@ -59,7 +91,7 @@ public final class SystemMediaBridge {
                     dispatchLinux(action);
                 }
             } catch (Throwable t) {
-                AuroraClient.LOGGER.debug("[Media] failed to dispatch {}: {}", action, t.getMessage());
+                AuroraClient.LOGGER.warn("[Media] failed to dispatch {}: {}", action, t.getMessage());
             }
         });
     }
@@ -105,7 +137,11 @@ public final class SystemMediaBridge {
                 t.setDaemon(true);
                 return t;
             });
-            Runtime.getRuntime().addShutdownHook(new Thread(SystemMediaBridge::closeWinProcess, "aurora-media-shutdown"));
+            // Lock-free: the worker may hold HELPER while it waits on a starting helper.
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                Process p = winProcess;
+                if (p != null) p.destroyForcibly();
+            }, "aurora-media-shutdown"));
         }
         return executor;
     }
@@ -119,124 +155,157 @@ public final class SystemMediaBridge {
         exec.execute(SystemMediaBridge::closeWinProcess);
     }
 
-    // ---- Windows persistent PowerShell helper (Win32 keybd_event + WinRT GSMTC) ----
+    // ---- Windows persistent PowerShell helper (WinRT GSMTC, Win32 keybd_event fallback) ----
 
-    private static final String WIN_HELPER_SCRIPT =
-            "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
-            + "Add-Type -Name K -Namespace AuroraWin -MemberDefinition "
-            + "'[DllImport(\"user32.dll\")] public static extern void keybd_event(byte v, byte s, uint f, UIntPtr e);'; "
-            + "$gsmtcReady = $false; "
-            + "try { "
-            + "  Add-Type -AssemblyName System.Runtime.WindowsRuntime; "
-            + "  $null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType=WindowsRuntime]; "
-            + "  $asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { "
-            + "    $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' "
-            + "  })[0]; "
-            + "  function AwaitOp($op, $t) { $m = $asTaskGeneric.MakeGenericMethod($t); $task = $m.Invoke($null, @($op)); $task.Wait(1500) | Out-Null; if ($task.IsCompletedSuccessfully) { return $task.Result } return $null }; "
-            + "  $mgr = AwaitOp ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]); "
-            + "  if ($mgr -ne $null) { $gsmtcReady = $true } "
-            + "} catch { $gsmtcReady = $false }; "
-            + "Write-Output 'READY'; "
-            + "while (($line = [Console]::ReadLine()) -ne $null) { "
-            + "  if ($line -eq 'QUIT') { break } "
-            + "  elseif ($line.StartsWith('VK ')) { "
-            + "    $vk = [byte][int]$line.Substring(3); "
-            + "    [AuroraWin.K]::keybd_event($vk, 0, 0, [UIntPtr]::Zero); "
-            + "    [AuroraWin.K]::keybd_event($vk, 0, 2, [UIntPtr]::Zero); "
-            + "    Write-Output 'OK'; "
-            + "  } elseif ($line -eq 'POLL') { "
-            + "    if ($gsmtcReady -and $mgr -ne $null) { "
-            + "      try { "
-            + "        $s = $mgr.GetCurrentSession(); "
-            + "        if ($s -ne $null) { "
-            + "          $info = $s.GetPlaybackInfo(); "
-            + "          $props = AwaitOp ($s.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties]); "
-            + "          $tl = $s.GetTimelineProperties(); "
-            + "          if ($props -ne $null) { "
-            + "            Write-Output ('STATUS=' + $info.PlaybackStatus); "
-            + "            Write-Output ('TITLE=' + $props.Title); "
-            + "            Write-Output ('ARTIST=' + $props.Artist); "
-            + "            Write-Output ('ALBUM=' + $props.AlbumTitle); "
-            + "            if ($tl -ne $null) { "
-            + "              Write-Output ('POS=' + [long]$tl.Position.TotalMilliseconds); "
-            + "              Write-Output ('DUR=' + [long]$tl.EndTime.TotalMilliseconds); "
-            + "            } "
-            + "          } "
-            + "        } "
-            + "      } catch {} "
-            + "    } "
-            + "    Write-Output '---END---'; "
-            + "  } "
-            + "}";
+    /** Longest wait for one helper reply; a stuck helper is restarted rather than waited on. */
+    private static final long REPLY_TIMEOUT_MS = 4_000L;
+    private static final long READY_TIMEOUT_MS = 15_000L;
+    /** Marks the end of the helper's stdout in {@link #winLines}; compared by identity. */
+    private static final String END_OF_STREAM = new String("<eof>");
 
-    private static synchronized boolean ensureWinHelper() {
-        if (winProcess != null && winProcess.isAlive()) return true;
-        long now = System.currentTimeMillis();
-        if (now < winBackoffUntilMs) return false;
-        closeWinProcess();
-        try {
-            ProcessBuilder pb = new ProcessBuilder(
-                    "powershell.exe", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden",
-                    "-Command", WIN_HELPER_SCRIPT);
-            pb.redirectErrorStream(false);
-            winProcess = pb.start();
-            winIn = new BufferedWriter(new OutputStreamWriter(winProcess.getOutputStream(), StandardCharsets.UTF_8));
-            winOut = new BufferedReader(new InputStreamReader(winProcess.getInputStream(), StandardCharsets.UTF_8));
-            String line = winOut.readLine();
-            if ("READY".equals(line)) return true;
-            closeWinProcess();
-            winBackoffUntilMs = now + 15_000L;
-            return false;
-        } catch (IOException e) {
-            closeWinProcess();
-            winBackoffUntilMs = now + 30_000L;
-            return false;
+    /** The helper script ({@code windows-media-helper.ps1}) as {@code -EncodedCommand} wants it. */
+    private static String encodedHelperScript() throws IOException {
+        try (InputStream in = SystemMediaBridge.class.getResourceAsStream("windows-media-helper.ps1")) {
+            if (in == null) throw new IOException("windows-media-helper.ps1 is missing from the jar");
+            String script = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            // UTF-16LE base64: the Windows command line never re-quotes the script (a plain
+            // -Command argument lost its inner double quotes, so its C# never compiled).
+            return Base64.getEncoder().encodeToString(script.getBytes(StandardCharsets.UTF_16LE));
         }
     }
 
-    private static synchronized void closeWinProcess() {
-        try {
-            if (winIn != null) {
-                winIn.write("QUIT\n");
-                winIn.flush();
-                winIn.close();
-            }
-        } catch (IOException ignored) {}
-        try { if (winOut != null) winOut.close(); } catch (IOException ignored) {}
-        if (winProcess != null) {
-            winProcess.destroyForcibly();
-        }
-        winProcess = null;
-        winIn = null;
-        winOut = null;
-    }
-
-    private static synchronized void dispatchWindows(MediaAction action) throws IOException {
-        if (!ensureWinHelper()) return;
-        winIn.write("VK " + action.windowsVk() + "\n");
-        winIn.flush();
-        String ack = winOut.readLine();
-        if (ack == null) closeWinProcess();
-    }
-
-    private static synchronized void pollWindowsGsmtc() {
-        if (!ensureWinHelper()) return;
-        try {
-            winIn.write("POLL\n");
-            winIn.flush();
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = winOut.readLine()) != null) {
-                if ("---END---".equals(line)) break;
-                sb.append(line).append('\n');
-            }
-            if (line == null) {
+    private static boolean ensureWinHelper() {
+        synchronized (HELPER) {
+            if (winProcess != null && winProcess.isAlive()) return true;
+            long now = System.currentTimeMillis();
+            if (now < winBackoffUntilMs) return false;
+            closeWinProcess();
+            try {
+                ProcessBuilder pb = new ProcessBuilder(
+                        "powershell.exe", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden",
+                        "-EncodedCommand", encodedHelperScript());
+                Process process = pb.start();
+                winProcess = process;
+                winIn = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
+                winLines = new LinkedBlockingQueue<>();
+                pump(process.getInputStream(), winLines, "aurora-media-stdout");
+                pump(process.getErrorStream(), null, "aurora-media-stderr");
+                String ready = nextLine(READY_TIMEOUT_MS);
+                if (ready != null && ready.startsWith("READY")) {
+                    AuroraClient.LOGGER.info("[Media] Windows media helper ready (media sessions: {}, media keys: {})",
+                            ready.contains("gsmtc=1") ? "yes" : "unavailable",
+                            ready.contains("keys=1") ? "yes" : "unavailable");
+                    return true;
+                }
+                AuroraClient.LOGGER.warn("[Media] Windows media helper did not start (first line: {}); retrying in 15 s", ready);
                 closeWinProcess();
-                return;
+                winBackoffUntilMs = now + 15_000L;
+                return false;
+            } catch (IOException e) {
+                AuroraClient.LOGGER.warn("[Media] could not start the Windows media helper: {}", e.getMessage());
+                closeWinProcess();
+                winBackoffUntilMs = now + 30_000L;
+                return false;
             }
-            STATE.set(MediaTrackState.parseLines(sb.toString(), System.currentTimeMillis()));
-        } catch (IOException e) {
-            closeWinProcess();
+        }
+    }
+
+    /**
+     * Drains one helper stream on a daemon thread, so a full pipe never blocks the
+     * helper and every read on the worker can time out. stdout lines go to
+     * {@code sink}; stderr lines are logged, apart from PowerShell's CLIXML progress records.
+     */
+    private static void pump(InputStream stream, BlockingQueue<String> sink, String name) {
+        Thread t = new Thread(() -> {
+            boolean warned = false;
+            try (BufferedReader r = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = r.readLine()) != null) {
+                    if (sink != null) {
+                        sink.add(line);
+                    } else if (!line.startsWith("#< CLIXML") && !line.startsWith("<Objs ")) {
+                        if (warned) AuroraClient.LOGGER.debug("[Media] helper: {}", line);
+                        else AuroraClient.LOGGER.warn("[Media] helper: {}", line);
+                        warned = true;
+                    }
+                }
+            } catch (IOException ignored) {
+                // the helper was closed
+            } finally {
+                if (sink != null) sink.add(END_OF_STREAM);
+            }
+        }, name);
+        t.setDaemon(true);
+        t.start();
+    }
+
+    /** The helper's next stdout line, or null after its exit or a timeout (both close it). */
+    private static String nextLine(long timeoutMs) {
+        BlockingQueue<String> lines = winLines;
+        if (lines == null) return null;
+        try {
+            String line = lines.poll(timeoutMs, TimeUnit.MILLISECONDS);
+            if (line != null && line != END_OF_STREAM) return line;
+            if (line == null) AuroraClient.LOGGER.warn("[Media] Windows media helper stopped answering; restarting it");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        closeWinProcess();
+        return null;
+    }
+
+    private static void closeWinProcess() {
+        synchronized (HELPER) {
+            try {
+                if (winIn != null) {
+                    winIn.write("QUIT\n");
+                    winIn.flush();
+                    winIn.close();
+                }
+            } catch (IOException ignored) {}
+            if (winProcess != null) {
+                winProcess.destroyForcibly();
+            }
+            winProcess = null;
+            winIn = null;
+            winLines = null;
+        }
+    }
+
+    private static void dispatchWindows(MediaAction action) throws IOException {
+        synchronized (HELPER) {
+            if (!ensureWinHelper()) return;
+            // The helper asks the media session itself (works whatever window has focus) and
+            // falls back to the virtual media key; volume is always the key.
+            winIn.write("CMD " + action.name() + " " + action.windowsVk() + "\n");
+            winIn.flush();
+            if ("OK 0".equals(nextLine(REPLY_TIMEOUT_MS))) {
+                AuroraClient.LOGGER.info("[Media] no media player took {}", action.label());
+            }
+        }
+    }
+
+    private static void pollWindowsGsmtc() {
+        synchronized (HELPER) {
+            if (!ensureWinHelper()) return;
+            try {
+                winIn.write(com.aurora.client.config.AuroraConfig.get().mediaHudShowArt ? "POLL ART\n" : "POLL\n");
+                winIn.flush();
+                StringBuilder sb = new StringBuilder();
+                String art = null;
+                String line;
+                while ((line = nextLine(REPLY_TIMEOUT_MS)) != null) {
+                    if ("---END---".equals(line)) break;
+                    if (line.startsWith("ART=")) art = line.substring(4);
+                    else sb.append(line).append('\n');
+                }
+                if (line == null) return;
+                MediaTrackState state = MediaTrackState.parseLines(sb.toString(), System.currentTimeMillis());
+                STATE.set(state);
+                if (art != null && state.active()) acceptCover(state.trackKey(), art);
+            } catch (IOException e) {
+                closeWinProcess();
+            }
         }
     }
 

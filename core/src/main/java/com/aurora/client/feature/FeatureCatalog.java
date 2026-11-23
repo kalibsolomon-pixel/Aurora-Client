@@ -389,7 +389,7 @@ public final class FeatureCatalog {
                 .gates("playerHealthIndicators", "hitColorHealthGradient");
         mixin("LavaClarityMixin", "lava clarity", "pack_tweaks").gates("lavaClarityEnabled");
         mixin("LavaOverlayMixin", "hiding and adjusting the first-person fire and lava overlay", "pack_tweaks")
-                .gates("lavaHideOverlay", "fireOverlayHide");
+                .gates("fireOverlayHide");
         mixin("LocalTimeMixin", "client-side local time override", "pack_tweaks").gates("localTimeEnabled");
         mixin("LocalWeatherMixin", "client-side local weather override", "pack_tweaks").gates("localWeatherEnabled");
         mixin("CustomSkyMixin", "custom skies, celestial visibility and star brightness", "pack_tweaks")

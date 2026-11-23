@@ -568,6 +568,7 @@ public class ProfileManager {
         if (p != null) {
             ThemeMigrator.migrateProfileFields(p.fields, LOGGER);
             PlayerHealthMigrator.migrateProfileFields(p.fields, LOGGER);
+            com.aurora.client.config.FireOverlayMigrator.migrateProfileFields(p.fields, LOGGER);
             com.aurora.client.config.KeybindMigrator.migrateProfileFields(p.fields, LOGGER);
             com.aurora.client.config.TextStyleMigrator.migrateProfileFields(p.fields, LOGGER);
         }

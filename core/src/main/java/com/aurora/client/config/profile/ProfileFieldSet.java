@@ -57,7 +57,7 @@ public final class ProfileFieldSet {
 
     /**
      * Fields Aurora has removed (3.5.1, 2026-11-15: entity movement smoothing and the
-     * Better Hitreg parts other than its custom delay; 3.8.1, 2026-11-22: Smooth Camera).
+     * Better Hitreg parts other than its custom delay; 3.8.1, 2026-11-22: Smooth Camera; after 3.8.1: Lava Clarity's fire switch).
      * Profiles saved before still carry them; restore skips them quietly, because nothing
      * is wrong with such a profile. Any other unknown field still logs a warning. The
      * reload overlay and title fade switches were perf* fields, which profiles never held.
@@ -76,7 +76,7 @@ public final class ProfileFieldSet {
             "hitregMuffleAmount", "hitregScoreLeftKey", "hitregScoreResetKey",
             "hitregScoreRightKey", "hitregScoreSendKey", "hitregSettingsKey",
             "hitregSharpenAmount", "hitregSwitchHandKey", "hitregTrackFights", "hitregVoidWorld",
-            "smoothCamera", "smoothCameraStrength"
+            "lavaHideOverlay", "smoothCamera", "smoothCameraStrength"
     );
 
     /** @return {@code true} for a field a later Aurora removed ({@link #RETIRED}). */
