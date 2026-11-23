@@ -56,16 +56,17 @@ public final class FeatureIcons {
         ICONS.put("resourcepack_browser",  "\uE8B0"); // browse_gallery (grid of tiles)
         ICONS.put("chat",                  "\uE0C9"); // chat
         ICONS.put("media_controls",        "\uE405"); // music_note
-        // Moved to the Modules grid 2026-09-10 (was a Settings-tab entry).
-        // The eight former Settings-tab tiles merged into "miscellaneous"
-        // (2026-09-09) had their own glyphs (videocam, av_timer, flash_on,
-        // keyboard, drag_handle, verified_user, accessibility_new); they
-        // were removed with the tiles. flash_on/keyboard remain in use by
-        // other ids above.
-        ICONS.put("miscellaneous",         "\uEB8B"); // question_mark — the "no dedicated screen yet" grab-bag
 
         // ============ SETTINGS TAB ============
         ICONS.put("custom_title",          "\uE264"); // title
+        // Display Settings ("miscellaneous") split into these on 2026-11-23.
+        ICONS.put("frame_pacing",          "\uE9E4"); // speed
+        ICONS.put("decoupled_input",       "\uE323"); // mouse
+        ICONS.put("tab_list",              "\uE241"); // format_list_bulleted
+        ICONS.put("nametags",              "\uE893"); // label
+        ICONS.put("sound_volumes",         "\uE050"); // volume_up
+        ICONS.put("streamer_mode",         "\uE8F5"); // visibility_off
+        ICONS.put("server_list",           "\uE8D5"); // swap_vert
         ICONS.put("gradient_dither",       "\uE3E9"); // gradient
         ICONS.put("smooth_fog",            "\uE818"); // foggy
 
