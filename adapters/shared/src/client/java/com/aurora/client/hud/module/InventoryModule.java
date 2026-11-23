@@ -57,6 +57,8 @@ public final class InventoryModule extends HudModule {
 
     /** Lazily created editor sample stacks when the player's inventory is empty. */
     private ItemStack[] sampleFixed;
+    /** Empty fallback used before registry item components are bound (e.g. title-screen HUD editor). */
+    private ItemStack[] emptySample;
 
     public InventoryModule() {
         super(ID);
@@ -370,25 +372,37 @@ public final class InventoryModule extends HudModule {
 
     private ItemStack[] sampleStacks() {
         if (sampleFixed != null) return sampleFixed;
+        var holder = Items.DIAMOND_PICKAXE.builtInRegistryHolder();
+        if (holder == null || !holder.areComponentsBound()) {
+            if (emptySample == null) {
+                emptySample = new ItemStack[InventoryHudLayout.TOTAL_WITH_HOTBAR];
+                java.util.Arrays.fill(emptySample, ItemStack.EMPTY);
+            }
+            return emptySample;
+        }
         ItemStack[] s = new ItemStack[InventoryHudLayout.TOTAL_WITH_HOTBAR];
         java.util.Arrays.fill(s, ItemStack.EMPTY);
 
-        ItemStack pick = new ItemStack(Items.DIAMOND_PICKAXE);
-        pick.setDamageValue(pick.getMaxDamage() / 3);
-        s[0] = pick;
-        s[1] = new ItemStack(Items.GOLDEN_APPLE, 16);
-        s[2] = new ItemStack(Items.ENDER_PEARL, 16);
-        s[3] = new ItemStack(Items.OBSIDIAN, 64);
-        s[4] = new ItemStack(Items.TORCH, 64);
-        s[9] = new ItemStack(Items.COOKED_BEEF, 32);
-        s[10] = new ItemStack(Items.ARROW, 64);
-        s[11] = new ItemStack(Items.COBBLESTONE, 64);
-        s[18] = new ItemStack(Items.TOTEM_OF_UNDYING, 1);
+        try {
+            ItemStack pick = new ItemStack(Items.DIAMOND_PICKAXE);
+            pick.setDamageValue(pick.getMaxDamage() / 3);
+            s[0] = pick;
+            s[1] = new ItemStack(Items.GOLDEN_APPLE, 16);
+            s[2] = new ItemStack(Items.ENDER_PEARL, 16);
+            s[3] = new ItemStack(Items.OBSIDIAN, 64);
+            s[4] = new ItemStack(Items.TORCH, 64);
+            s[9] = new ItemStack(Items.COOKED_BEEF, 32);
+            s[10] = new ItemStack(Items.ARROW, 64);
+            s[11] = new ItemStack(Items.COBBLESTONE, 64);
+            s[18] = new ItemStack(Items.TOTEM_OF_UNDYING, 1);
 
-        // Hotbar sample (slots 27..35 in display order)
-        s[27] = new ItemStack(Items.DIAMOND_SWORD);
-        s[28] = new ItemStack(Items.SHIELD);
-        s[29] = new ItemStack(Items.WATER_BUCKET);
+            // Hotbar sample (slots 27..35 in display order)
+            s[27] = new ItemStack(Items.DIAMOND_SWORD);
+            s[28] = new ItemStack(Items.SHIELD);
+            s[29] = new ItemStack(Items.WATER_BUCKET);
+        } catch (NullPointerException | IllegalStateException ignored) {
+            return s;
+        }
 
         sampleFixed = s;
         return sampleFixed;

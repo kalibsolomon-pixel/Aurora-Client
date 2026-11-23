@@ -291,7 +291,7 @@ public class ItemScaleSetting extends FeatureSetting {
 
         // Contains in display name
         for (Item item : BuiltInRegistries.ITEM) {
-            String name = item.getName(item.getDefaultInstance()).getString().toLowerCase();
+            String name = displayName(item).toLowerCase();
             if (name.contains(clean)) {
                 return item;
             }
@@ -308,7 +308,7 @@ public class ItemScaleSetting extends FeatureSetting {
             int score = Math.max(
                     com.aurora.client.search.SearchMatcher.score(fuzzy, com.aurora.client.search.SearchMatcher.target(id.getPath())),
                     com.aurora.client.search.SearchMatcher.score(fuzzy, com.aurora.client.search.SearchMatcher.target(
-                            item.getName(item.getDefaultInstance()).getString())));
+                            displayName(item))));
             if (score > bestScore) {
                 bestScore = score;
                 best = item;
@@ -317,6 +317,38 @@ public class ItemScaleSetting extends FeatureSetting {
         if (best != null) return best;
 
         return null;
+    }
+
+    /**
+     * Builds {@code item}'s default stack only when its registry holder has
+     * bound data components. Before a world or server binds registry components
+     * (for example on the title screen) or mid-reload, {@link Item#getDefaultInstance}
+     * throws {@code NullPointerException: Components not bound yet}.
+     */
+    static ItemStack defaultStackOrEmpty(Item item) {
+        if (item == null || item == net.minecraft.world.item.Items.AIR) return ItemStack.EMPTY;
+        var holder = item.builtInRegistryHolder();
+        if (holder == null || !holder.areComponentsBound()) return ItemStack.EMPTY;
+        try {
+            ItemStack stack = item.getDefaultInstance();
+            return stack != null ? stack : ItemStack.EMPTY;
+        } catch (NullPointerException | IllegalStateException ignored) {
+            return ItemStack.EMPTY;
+        }
+    }
+
+    /**
+     * Resolves {@code item}'s localized display name without requiring bound
+     * item components, falling back to its translation key when no default
+     * stack can be constructed yet.
+     */
+    static String displayName(Item item) {
+        if (item == null) return "";
+        ItemStack stack = defaultStackOrEmpty(item);
+        if (!stack.isEmpty()) {
+            return item.getName(stack).getString();
+        }
+        return Component.translatable(item.getDescriptionId()).getString();
     }
 
     private int compactChildrenWidth = -1;
@@ -385,12 +417,17 @@ public class ItemScaleSetting extends FeatureSetting {
         if (!isHeaderPinned()) renderFixedHeader(ctx, x, y, width, mouseX, mouseY);
 
         // Draw "suggested item" preview if found — with its real icon
-        // (crisp flat-sprite path) beside the text.
+        // (crisp flat-sprite path) beside the text when item components are bound.
         int currentY = y + 32;
         if (foundItem != null) {
-            String name = foundItem.getName(foundItem.getDefaultInstance()).getString();
-            ItemSpriteRenderer.renderIcon(ctx, foundItem.getDefaultInstance(), x + 12, currentY - 2);
-            ctx.text(tr, "Add: " + name, x + 12 + ICON_SIZE + 4, currentY,
+            String name = displayName(foundItem);
+            ItemStack previewStack = defaultStackOrEmpty(foundItem);
+            int previewTextX = x + 12;
+            if (!previewStack.isEmpty()) {
+                ItemSpriteRenderer.renderIcon(ctx, previewStack, x + 12, currentY - 2);
+                previewTextX = x + 12 + ICON_SIZE + 4;
+            }
+            ctx.text(tr, "Add: " + name, previewTextX, currentY,
                     ThemeManager.color(ThemeToken.SEMANTIC_SUCCESS), false);
             currentY += 12;
         }
@@ -423,12 +460,14 @@ public class ItemScaleSetting extends FeatureSetting {
                 }
             }
 
-            // Real item icon (crisp flat-sprite path, 3D fallback), then
-            // the humanized label beside it.
-            Item item = BuiltInRegistries.ITEM.getValue(Identifier.parse(idStr));
+            // Real item icon (crisp flat-sprite path, 3D fallback) when the
+            // item's registry components are bound, then the humanized label
+            // beside it. Falls back to text-only on the title screen / reload.
+            Identifier itemId = Identifier.tryParse(idStr);
+            Item item = itemId != null ? BuiltInRegistries.ITEM.getValue(itemId) : null;
+            ItemStack stack = defaultStackOrEmpty(item);
             int textPadX = x + 20;
-            if (item != null && item != net.minecraft.world.item.Items.AIR) {
-                ItemStack stack = item.getDefaultInstance();
+            if (!stack.isEmpty()) {
                 ItemSpriteRenderer.renderIcon(ctx, stack, x + 14, rowY + (ITEM_ROW_H - ICON_SIZE) / 2);
                 textPadX = x + 20 + ICON_SIZE + 4;
             }
