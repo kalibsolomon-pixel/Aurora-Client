@@ -2,6 +2,7 @@ package com.aurora.client.hud.module;
 
 import com.aurora.client.util.HudBackgrounds;
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.hud.HudGrowth;
 import com.aurora.client.util.CachedValue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -22,9 +23,14 @@ import java.util.List;
  * optional thin durability bar (under each icon, mirrors vanilla hotbar
  * style) is gated by {@link AuroraConfig#armorShowDurabilityBars}.
  *
- * <p>Width is driven by which durability text is widest among the shown
- * pieces. Recomputing each frame is wasted work — durability changes
- * slowly so we cache the result with a 150ms TTL.
+ * <p>Slots are square and a fixed pitch apart in every layout: a durability
+ * readout wider than its slot is drawn smaller, never widening the slot
+ * (2026-11-22). Only the vertical layouts' text column follows the widest
+ * readout, which changes slowly, so that width is cached with a 150ms TTL.
+ *
+ * <p>The module grows away from the screen centre along its layout axis
+ * ({@link HudGrowth#AWAY_FROM_CENTER}): beside the hotbar, extra pieces
+ * extend outward instead of into it. The anchor places a full four-piece set.
  *
  * <p>When the Armor HUD background is set to {@link AuroraConfig.HudBackground#VANILLA},
  * the pieces sit on one continuous vanilla hotbar-strip graphic (a look
@@ -50,7 +56,14 @@ public class ArmorModule extends HudModule {
     /** Vanilla hotbar-strip geometry: 20 px cell pitch, 22 px strip height. */
     private static final int STRIP_CELL_W = HudBackgrounds.CELL_PITCH;
 
-    private final CachedValue<Integer> cachedWidth = new CachedValue<>(150L, this::computeWidth);
+    /** Plain horizontal layout: slot pitch (16 px icon + gap). */
+    private static final int PLAIN_PITCH = ICON + COL_GAP;
+    /** The slot count the anchor places: a full armor set. */
+    private static final int NOMINAL_SLOTS = 4;
+    /** Smallest scale a readout is drawn at to fit its slot. */
+    private static final float MIN_TEXT_SCALE = 0.5f;
+
+    private final CachedValue<Integer> cachedMaxText = new CachedValue<>(150L, this::computeMaxText);
     private final HudTextCache textCache = new HudTextCache(6);
     /** Reused per-frame scratch (render thread only) to avoid ArrayList allocations in HUD ticks. */
     private final ItemStack[] scratchSlots = new ItemStack[6];
@@ -117,41 +130,69 @@ public class ArmorModule extends HudModule {
         return AuroraConfig.get().armorHudBgMode == AuroraConfig.HudBackground.VANILLA;
     }
 
-    private int computeWidth() {
+    /** Widest durability readout among the shown pieces (0 without any). */
+    private int computeMaxText() {
         Minecraft client = Minecraft.getInstance();
-        if (client == null || client.font == null) return 60;
-        AuroraConfig cfg = AuroraConfig.get();
-        AuroraConfig.ArmorDurabilityFormat fmt = cfg.armorDurabilityFormat;
+        if (client == null || client.font == null) return 0;
+        AuroraConfig.ArmorDurabilityFormat fmt = AuroraConfig.get().armorDurabilityFormat;
         if (fmt == null) fmt = AuroraConfig.ArmorDurabilityFormat.REMAINING;
-        Font tr = client.font;
         int n = fillVisibleSlots(client, scratchSlots);
-        if (n == 0) return STRIP_CELL_W;
         int maxText = 0;
         for (int i = 0; i < n; i++) {
-            maxText = Math.max(maxText, tr.width(formatDurability(scratchSlots[i], fmt)));
+            maxText = Math.max(maxText, client.font.width(formatDurability(scratchSlots[i], fmt)));
         }
+        return maxText;
+    }
 
-        if (isVanillaBg()) {
-            boolean hasText = fmt != AuroraConfig.ArmorDurabilityFormat.NONE && maxText > 0;
-            if (cfg.armorHorizontal) {
-                // One continuous strip; cells widen (stretch uniformly) only
-                // when a durability text needs more than its 20 px cell.
-                float s = hasText ? Math.max(1f, (maxText + 6) / (float) HudBackgrounds.CELL_PITCH) : 1f;
-                return Math.round((n * HudBackgrounds.CELL_PITCH + 2) * s);
-            }
-            // Vertical strip: 20 px cells, text in a column to the right.
-            return STRIP_CELL_W + 2 + (hasText ? TEXT_GAP + maxText : 0);
-        }
+    /** Intrinsic width for {@code n} shown slots. Horizontal layouts never depend on the text. */
+    private int widthFor(int n) {
+        if (n == 0) return STRIP_CELL_W;
+        AuroraConfig cfg = AuroraConfig.get();
         if (cfg.armorHorizontal) {
-            // Each cell is sized to fit whichever is wider — the 16-px
-            // icon or that piece's durability text. We use the widest
-            // text across all pieces so cells stay aligned in a
-            // tidy grid even when the readings differ in length.
-            int cellW = Math.max(ICON, maxText);
-            return n * cellW + (n - 1) * COL_GAP;
+            return isVanillaBg() ? n * STRIP_CELL_W + 2 : n * ICON + (n - 1) * COL_GAP;
+        }
+        int maxText = cfg.armorDurabilityFormat == AuroraConfig.ArmorDurabilityFormat.NONE ? 0 : cachedMaxText.get();
+        if (isVanillaBg()) {
+            // Vertical strip: 20 px cells, text in a column to the right.
+            return STRIP_CELL_W + 2 + (maxText > 0 ? TEXT_GAP + maxText : 0);
         }
         return ICON + TEXT_GAP + Math.max(maxText, 30);
     }
+
+    /** Intrinsic height for {@code n} shown slots. */
+    private int heightFor(int n, Minecraft client) {
+        if (n == 0) return ROW_H;
+        AuroraConfig cfg = AuroraConfig.get();
+        int lineH = (client != null && client.font != null) ? client.font.lineHeight : 9;
+        AuroraConfig.ArmorDurabilityFormat fmt = cfg.armorDurabilityFormat;
+        boolean hasText = fmt != null && fmt != AuroraConfig.ArmorDurabilityFormat.NONE;
+        if (isVanillaBg()) {
+            if (cfg.armorHorizontal) {
+                boolean anyText = hasText && client != null && anyDurabilityText(client, fmt);
+                return (anyText ? lineH + TEXT_GAP : 0) + HudBackgrounds.CELL_PITCH + 2; // strip: 22 px tall
+            }
+            return n * HudBackgrounds.CELL_PITCH + 2;
+        }
+        if (cfg.armorHorizontal) {
+            // Icon row + optional text row above the icons.
+            return ICON + (hasText ? TEXT_GAP + lineH : 0);
+        }
+        // Durability bars render inside the icon's 16-px footprint (vanilla
+        // hotbar style), so they no longer change row spacing.
+        return ROW_H * n;
+    }
+
+    @Override protected HudGrowth growthX() {
+        return AuroraConfig.get().armorHorizontal ? HudGrowth.AWAY_FROM_CENTER : HudGrowth.ANCHORED;
+    }
+
+    @Override protected HudGrowth growthY() {
+        return AuroraConfig.get().armorHorizontal ? HudGrowth.ANCHORED : HudGrowth.AWAY_FROM_CENTER;
+    }
+
+    @Override protected int referenceWidth() { return widthFor(NOMINAL_SLOTS); }
+
+    @Override protected int referenceHeight() { return heightFor(NOMINAL_SLOTS, Minecraft.getInstance()); }
 
     @Override
     public boolean isConfigEnabled() {
@@ -159,37 +200,13 @@ public class ArmorModule extends HudModule {
     }
 
     @Override public int getWidth() {
-        // computeWidth() accounts for the hotbar strip + durability text
-        // column when the VANILLA background is active, and the plain
-        // icon + text layout otherwise.
-        return cachedWidth.get();
+        Minecraft client = Minecraft.getInstance();
+        return widthFor(client != null ? visibleSlotCount(client) : 0);
     }
 
     @Override public int getHeight() {
-        AuroraConfig cfg = AuroraConfig.get();
-        boolean horizontal = cfg.armorHorizontal;
         Minecraft client = Minecraft.getInstance();
-        int lineH = (client != null && client.font != null) ? client.font.lineHeight : 9;
-        AuroraConfig.ArmorDurabilityFormat fmt = cfg.armorDurabilityFormat;
-        boolean hasText = fmt != null && fmt != AuroraConfig.ArmorDurabilityFormat.NONE;
-        int n = (client != null) ? visibleSlotCount(client) : 0;
-        if (n == 0) return ROW_H;
-
-        if (isVanillaBg()) {
-            if (horizontal) {
-                boolean anyText = hasText && client.font != null && anyDurabilityText(client, fmt);
-                return (anyText ? lineH + TEXT_GAP : 0) + HudBackgrounds.CELL_PITCH + 2; // strip: 22 px tall
-            }
-            return n * HudBackgrounds.CELL_PITCH + 2;
-        }
-
-        if (horizontal) {
-            // Icon row + optional text row below each icon.
-            return ICON + (hasText ? TEXT_GAP + lineH : 0);
-        }
-        // Durability bars render inside the icon's 16-px footprint (vanilla
-        // hotbar style), so they no longer change row spacing.
-        return ROW_H * n;
+        return heightFor(client != null ? visibleSlotCount(client) : 0, client);
     }
 
     /** Whether any visible slot actually has a durability reading (format != NONE). */
@@ -247,26 +264,17 @@ public class ArmorModule extends HudModule {
 
         if (cfg.armorHorizontal) {
             // Horizontal layout: helmet → chest → legs → boots (→ hands),
-            // left to right. cellW is derived from the cached layout width:
-            //   width = n * cellW + (n-1) * COL_GAP
-            // so we don't re-loop through stacks calling tr.width() on
-            // every frame just to recover the same value computeWidth()
-            // produced behind cachedWidth.
-            int cellW = Math.max(ICON, (cachedWidth.get() - (n - 1) * COL_GAP) / n);
+            // left to right, one 16 px icon per slot at a fixed pitch.
             int textSpace = (fmt != AuroraConfig.ArmorDurabilityFormat.NONE) ? tr.lineHeight + TEXT_GAP : 0;
             for (int i = 0; i < n; i++) {
                 ItemStack s = scratchSlots[i];
-                int cellX = x + i * (cellW + COL_GAP);
-                int iconX = cellX + (cellW - ICON) / 2;
+                int iconX = x + i * PLAIN_PITCH;
                 int iconY = y + textSpace;
                 ctx.item(s, iconX, iconY);
 
-                String Component = formatDurability(s, fmt);
-                if (!Component.isEmpty()) {
-                    int tw = tr.width(Component);
-                    int tx = cellX + (cellW - tw) / 2;
-                    int ty = y;
-                    com.aurora.client.hud.HudTextPainter.draw(ctx,tr, textCache.text(i, Component), tx, ty, color);
+                String text = formatDurability(s, fmt);
+                if (!text.isEmpty()) {
+                    drawFitted(ctx, tr, i, text, iconX + ICON / 2f, y, PLAIN_PITCH - 2, color, false);
                 }
 
                 if (drawBars && s.getMaxDamage() > 0) {
@@ -321,25 +329,17 @@ public class ArmorModule extends HudModule {
         boolean hasText = fmt != AuroraConfig.ArmorDurabilityFormat.NONE;
 
         if (horizontal) {
-            // Uniform strip scale: widen every cell equally when a text
-            // needs more than its 20 px column (native cells otherwise).
-            int maxText = 0;
-            if (hasText) {
-                for (int i = 0; i < n; i++) maxText = Math.max(maxText, tr.width(formatDurability(scratchSlots[i], fmt)));
-            }
-            // 6 px of air between neighbouring readouts (was 2, where "528 495" ran together).
-            float s = hasText && maxText > 0 ? Math.max(1f, (maxText + 6) / (float) HudBackgrounds.CELL_PITCH) : 1f;
-            int textSpace = (hasText && maxText > 0) ? tr.lineHeight + TEXT_GAP : 0;
+            // Native 20 px square cells, always: the strip is never stretched to fit text.
+            boolean anyText = hasText && anyDurabilityText(client, fmt);
+            int textSpace = anyText ? tr.lineHeight + TEXT_GAP : 0;
             int stripY = y + textSpace;
 
-            HudBackgrounds.hotbarStrip(ctx, x, stripY, n, s, 1f);
+            HudBackgrounds.hotbarStrip(ctx, x, stripY, n, 1f, 1f);
 
             for (int i = 0; i < n; i++) {
                 ItemStack stack = scratchSlots[i];
-                // Cell k's center sits at sprite x = 10.5 + k*20 (1 px left
-                // border + 18 px interior + shared right border, pitch 20).
-                float centerX = (10.5f + i * HudBackgrounds.CELL_PITCH) * s;
-                int iconX = x + Math.round(centerX) - ICON / 2;
+                // Cell k's icon sits where vanilla draws hotbar items: 1 px border + 2 px inset.
+                int iconX = x + 3 + i * HudBackgrounds.CELL_PITCH;
                 ctx.item(stack, iconX, stripY + 3);
 
                 if (drawBars && stack.getMaxDamage() > 0) {
@@ -348,13 +348,7 @@ public class ArmorModule extends HudModule {
 
                 String text = formatDurability(stack, fmt);
                 if (hasText && !text.isEmpty()) {
-                    int tw = tr.width(text);
-                    int tx = x + Math.round(centerX) - tw / 2;
-                    int ty = y;
-                    // A faint plate under each readout, like the strip below it: the numbers float
-                    // over the world and washed out on snow and sky (council 2026-11-18).
-                    ctx.fill(tx - 2, ty - 1, tx + tw + 1, ty + tr.lineHeight, READOUT_PLATE);
-                    com.aurora.client.hud.HudTextPainter.draw(ctx,tr, textCache.text(i, text), tx, ty, textColor);
+                    drawFitted(ctx, tr, i, text, iconX + ICON / 2f, y, HudBackgrounds.CELL_PITCH - 3, textColor, true);
                 }
             }
             return;
@@ -380,6 +374,31 @@ public class ArmorModule extends HudModule {
                 com.aurora.client.hud.HudTextPainter.draw(ctx,tr, textCache.text(i, text), tx, ty, textColor);
             }
         }
+    }
+
+    /**
+     * Draws a durability readout centred on {@code centerX}, at most {@code maxW}
+     * wide: a readout wider than its slot is drawn smaller (down to
+     * {@value #MIN_TEXT_SCALE}) rather than widening the slot. With {@code plate},
+     * a faint backing like the strip below it: the numbers float over the world
+     * and washed out on snow and sky (council 2026-11-18).
+     */
+    private void drawFitted(GuiGraphicsExtractor ctx, Font tr, int slot, String text, float centerX, int y,
+                            int maxW, int color, boolean plate) {
+        int tw = tr.width(text);
+        float s = tw > maxW ? Math.max(MIN_TEXT_SCALE, maxW / (float) tw) : 1f;
+        boolean unit = s >= 0.999f;
+        if (!unit) {
+            ctx.pose().pushMatrix();
+            // Keep the smaller line vertically centred in the full-size text row.
+            ctx.pose().translate(centerX, y + tr.lineHeight * (1f - s) / 2f);
+            ctx.pose().scale(s, s);
+        }
+        int tx = unit ? Math.round(centerX - tw / 2f) : Math.round(-tw / 2f);
+        int ty = unit ? y : 0;
+        if (plate) ctx.fill(tx - 2, ty - 1, tx + tw + 1, ty + tr.lineHeight, READOUT_PLATE);
+        com.aurora.client.hud.HudTextPainter.draw(ctx, tr, textCache.text(slot, text), tx, ty, color);
+        if (!unit) ctx.pose().popMatrix();
     }
 
     /**

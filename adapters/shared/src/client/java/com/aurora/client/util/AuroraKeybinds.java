@@ -177,6 +177,8 @@ public final class AuroraKeybinds {
         }
         // Every live binding, so a plain key can tell when a combo on it outranks it.
         VanillaKeyCombos.rebuildRegistry(com.aurora.client.config.profile.ProfileManager.getInstance().hotkeys());
+        // After every feature's tick has seen this tick's modifier taps.
+        VanillaKeyCombos.endTick();
     }
 
     /** Visits every registered Aurora mapping alongside its live config binding. */

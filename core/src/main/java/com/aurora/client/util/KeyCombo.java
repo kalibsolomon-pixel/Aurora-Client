@@ -98,6 +98,27 @@ public final class KeyCombo {
     }
 
     /**
+     * The modifiers used by the combos on {@code key} that win with {@code held}
+     * (0 when only a plain binding wins, or nothing does): pressing the key
+     * completes those combos, so their modifiers did not start a binding of their own.
+     */
+    public static int comboBits(int key, int held, int[] live, int count) {
+        int bits = 0;
+        for (int i = 0; i < count; i++) {
+            int b = live[i];
+            if (b < 0 || key(b) != key) continue;
+            int need = required(b);
+            if (need != 0 && resolves(b, held, live, count)) bits |= need;
+        }
+        return bits;
+    }
+
+    /** {@link #comboBits} against the global {@link Registry}. */
+    public static int comboBits(int key, int held) {
+        return comboBits(key, held, Registry.live, Registry.count);
+    }
+
+    /**
      * Every live binding (Aurora's and Minecraft's, plus profile hotkeys), so
      * a plain key can tell when a combo on the same key outranks it. Rebuilt
      * once per client tick by the adapter into a reused array.
@@ -108,14 +129,16 @@ public final class KeyCombo {
         private static int[] next = new int[128];
         private static int nextCount;
         private static boolean combos, nextCombos;
+        private static int prefixes, nextPrefixes;
 
         private Registry() {}
 
-        public static void begin() { nextCount = 0; nextCombos = false; }
+        public static void begin() { nextCount = 0; nextCombos = false; nextPrefixes = 0; }
 
         public static void add(int binding) {
             if (binding < 0) return;
             if (modifiers(binding) != 0) nextCombos = true;
+            nextPrefixes |= required(binding);
             if (nextCount == next.length) next = java.util.Arrays.copyOf(next, next.length * 2);
             next[nextCount++] = binding;
         }
@@ -126,6 +149,7 @@ public final class KeyCombo {
             live = next;
             count = nextCount;
             combos = nextCombos;
+            prefixes = nextPrefixes;
             next = swap.length >= live.length ? swap : new int[live.length];
         }
 
@@ -133,6 +157,143 @@ public final class KeyCombo {
 
         /** Whether any live binding has modifiers; with none, every key behaves exactly as vanilla's. */
         public static boolean hasCombos() { return combos; }
+
+        /** The modifiers some live combo needs: pressing one may be the start of a combo. */
+        public static int prefixes() { return prefixes; }
+    }
+
+    /**
+     * Holds back a modifier key's own bindings while it may be starting a combo
+     * (owner request 2026-11-22). With Sprint on Ctrl and Next Track on Ctrl +
+     * Right, pressing Ctrl on the way to Right must not sprint. So a modifier
+     * that some live combo uses does nothing on press:
+     * <ul>
+     *   <li>released with no combo completed, it taps: its bindings get one
+     *       press, one tick long;</li>
+     *   <li>held past {@link #HOLD_MS} with no combo, it becomes a normal held
+     *       key for hold bindings (hold-to-sneak on Shift still works);
+     *       one-shot and toggle bindings never fire from a hold, only from the tap;</li>
+     *   <li>once a combo used it, its own bindings stay quiet until it is let go.</li>
+     * </ul>
+     * A modifier no combo uses behaves as before. Main thread only: key events
+     * and client ticks both run there.
+     */
+    public static final class Deferral {
+        /** How long a modifier is held, with no combo key, before it counts as held. */
+        public static final long HOLD_MS = 200L;
+
+        private static boolean enabled;
+        private static final long[] since = new long[MODIFIER_KEYS.length]; // 0 = not held
+        private static final boolean[] used = new boolean[MODIFIER_KEYS.length];
+        private static final boolean[] holding = new boolean[MODIFIER_KEYS.length];
+        private static final boolean[] tapped = new boolean[MODIFIER_KEYS.length];
+
+        private Deferral() {}
+
+        /** Off unless the adapter can feed key events (its mixin applied); off clears everything. */
+        public static void setEnabled(boolean on) {
+            if (enabled && !on) reset();
+            enabled = on;
+        }
+
+        public static void reset() {
+            java.util.Arrays.fill(since, 0L);
+            java.util.Arrays.fill(used, false);
+            java.util.Arrays.fill(holding, false);
+            java.util.Arrays.fill(tapped, false);
+        }
+
+        private static int slot(int scancode) {
+            for (int i = 0; i < MODIFIER_KEYS.length; i++) if (MODIFIER_KEYS[i] == scancode) return i;
+            return -1;
+        }
+
+        /** Whether this key's bindings wait: it is a modifier that some live combo uses. */
+        public static boolean defers(int scancode) {
+            int bit = modifierOf(scancode);
+            return enabled && bit != 0 && (Registry.prefixes() & bit) != 0;
+        }
+
+        /**
+         * A key went down. Returns true while its own bindings must wait (a deferred
+         * modifier not yet held long enough); repeats keep the first press's time.
+         */
+        public static boolean press(int scancode, long nowMs) {
+            if (!defers(scancode)) return false;
+            int s = slot(scancode);
+            if (since[s] == 0L) {
+                since[s] = Math.max(1L, nowMs);
+                used[s] = false;
+                holding[s] = false;
+            }
+            return !holding[s];
+        }
+
+        /** Whether the key is down and still waiting (neither tapped nor held yet). */
+        public static boolean waiting(int scancode) {
+            int s = slot(scancode);
+            return s >= 0 && since[s] != 0L && !holding[s];
+        }
+
+        /** A combo using {@code bits} completed: those modifiers started no binding of their own. */
+        public static void consume(int bits) {
+            if (bits == 0) return;
+            for (int s = 0; s < MODIFIER_KEYS.length; s++) {
+                if (since[s] != 0L && (modifierOf(MODIFIER_KEYS[s]) & bits) != 0) used[s] = true;
+            }
+        }
+
+        /**
+         * A key came up. True when it taps: a deferred modifier, released in game
+         * with no combo and before it counted as held.
+         */
+        public static boolean release(int scancode, boolean inGame) {
+            int s = slot(scancode);
+            if (s < 0 || since[s] == 0L) return false;
+            boolean tap = inGame && !used[s] && !holding[s];
+            since[s] = 0L;
+            used[s] = false;
+            holding[s] = false;
+            if (tap) tapped[s] = true;
+            return tap;
+        }
+
+        /**
+         * Marks modifiers held past {@link #HOLD_MS} with no combo as held. Returns the
+         * newly held ones as bits over {@link KeyCombo#MODIFIER_KEYS} indices.
+         */
+        public static int promoteDue(long nowMs) {
+            int promoted = 0;
+            for (int s = 0; s < MODIFIER_KEYS.length; s++) {
+                if (since[s] != 0L && !used[s] && !holding[s] && nowMs - since[s] >= HOLD_MS) {
+                    holding[s] = true;
+                    promoted |= 1 << s;
+                }
+            }
+            return promoted;
+        }
+
+        /** Whether a deferred modifier now counts as held (for hold bindings). */
+        public static boolean held(int scancode) {
+            int s = slot(scancode);
+            return s >= 0 && holding[s];
+        }
+
+        /** Whether the key tapped since the last {@link #endTick}. */
+        public static boolean tapped(int scancode) {
+            int s = slot(scancode);
+            return s >= 0 && tapped[s];
+        }
+
+        /** Ends the tick a tap was visible in. */
+        public static void endTick() {
+            java.util.Arrays.fill(tapped, false);
+        }
+
+        /** A screen took the keyboard: modifiers held now tap nothing when let go. */
+        public static void cancelHeld() {
+            for (int s = 0; s < MODIFIER_KEYS.length; s++) if (since[s] != 0L) used[s] = true;
+        }
     }
 
     /**

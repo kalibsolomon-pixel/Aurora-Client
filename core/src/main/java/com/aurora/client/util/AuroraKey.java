@@ -63,9 +63,27 @@ public final class AuroraKey {
      * when a screen closes with the key still held.
      */
     private static boolean isDownRaw(int binding) {
+        return isDownRaw(binding, true);
+    }
+
+    /**
+     * {@code hold}: a modifier that is waiting for a combo ({@link KeyCombo.Deferral})
+     * also reads down once it counts as held; without, only its one-tick tap does,
+     * so one-shot bindings never fire from a held modifier.
+     */
+    private static boolean isDownRaw(int binding, boolean hold) {
         if (binding == UNBOUND) return false;
-        if (!input.isDown(KeyCombo.key(binding))) return false;
-        return KeyCombo.resolves(binding, heldModifiers());
+        int key = KeyCombo.key(binding);
+        if (KeyCombo.Deferral.defers(key)) {
+            boolean down = KeyCombo.Deferral.tapped(key) || (hold && KeyCombo.Deferral.held(key));
+            return down && KeyCombo.resolves(binding, heldModifiers());
+        }
+        if (!input.isDown(key)) return false;
+        int held = heldModifiers();
+        if (!KeyCombo.resolves(binding, held)) return false;
+        // A combo completed: its modifiers started no binding of their own.
+        KeyCombo.Deferral.consume(KeyCombo.modifiers(binding));
+        return true;
     }
 
     /** True when any GUI/screen is open — Aurora keybinds suppress here. */
@@ -86,7 +104,7 @@ public final class AuroraKey {
 
         /** Polls a binding and returns true exactly once per press, in-game only. */
         public boolean justPressed(int scancodeKey) {
-            boolean rawDown = isDownRaw(scancodeKey);
+            boolean rawDown = isDownRaw(scancodeKey, false);
             boolean edge = rawDown && !wasDown && !suppressed();
             wasDown = rawDown;
             return edge;

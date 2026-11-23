@@ -54,6 +54,21 @@ options.txt; their modifiers ride on the mapping (`KeyComboHolder`) and persist 
 `AuroraConfig.vanillaKeyModifiers`; profiles' controls strings append `|<mods>`.
 With no combos anywhere the mixins return before changing anything.
 
+A modifier that some live combo uses waits (`KeyCombo.Deferral`, 2026-11-22): its
+own bindings do nothing on press, so reaching for Ctrl + Right never sprints on
+Ctrl. Let go with no combo, it taps (one press, held down through one tick, and
+one click); held past 200 ms with no combo, hold bindings get it as a normal held
+key, while one-shot and toggle bindings still fire only from the tap. The combo
+mixin feeds the key events and ends each tick from `AuroraKeybinds.tick`; if the
+mixin did not fully apply, nothing waits. `KeyMapping.matches(KeyEvent)`, which
+screens and Minecraft's own shortcuts use, also requires the binding to win.
+
+HUD modules place themselves through `HudModule.screenX/screenY` and the editor
+moves them through `moveTo`. A module can grow along an axis
+(`core/hud/HudGrowth`): its anchor places a nominal-size reference box and the
+real box keeps the edge facing the screen centre (Armor HUD, away from the
+centre) or the screen border (Potion HUD, toward the centre).
+
 `RenderUtil` owns native transforms and fill accounting. It sends physical-pixel
 rectangles to core's `ShapeRasterizer` through `DrawSurface`. Both live GUI and
 static-layer-cache destinations use the same coverage math. Live rounded

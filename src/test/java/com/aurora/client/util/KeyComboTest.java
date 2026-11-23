@@ -92,11 +92,17 @@ class KeyComboTest {
 
     @Test void everyKeyPathGoesThroughTheResolver() throws Exception {
         String key = SourceTree.read("util/AuroraKey.java");
-        assertTrue(key.contains("return KeyCombo.resolves(binding, heldModifiers());"), "Aurora's polled keybinds");
+        assertTrue(key.contains("return down && KeyCombo.resolves(binding, heldModifiers());"), "a waiting modifier's polled keybinds");
+        assertTrue(key.contains("if (!KeyCombo.resolves(binding, held)) return false;"), "Aurora's polled keybinds");
+        assertTrue(key.contains("boolean rawDown = isDownRaw(scancodeKey, false);"), "one-shots never fire from a held modifier");
         String mapping = SourceTree.read("mixin/KeyMappingComboMixin.java");
         assertTrue(mapping.contains("if (!KeyCombo.Registry.hasCombos()) return false;"), "vanilla untouched without combos");
-        assertTrue(mapping.contains("if (state && aurora$dispatch(key, false, true)) ci.cancel();"),
-                "a release reaches every mapping, so a combo lets go when its modifier came up first");
+        assertTrue(mapping.contains("if (aurora$tap(key)) ci.cancel();\n            return;"),
+                "a release reaches every mapping unless a waiting modifier taps, so a combo lets go when its modifier came up first");
+        assertTrue(mapping.contains("if (KeyCombo.Deferral.press(stored, System.currentTimeMillis())) {"));
+        assertTrue(mapping.contains("if (aurora$dispatch(key, false, true)) ci.cancel();"));
+        assertTrue(mapping.contains("method = \"matches(Lnet/minecraft/client/input/KeyEvent;)Z\""), "screens' shortcuts respect combos");
+        assertTrue(SourceTree.read("util/AuroraKeybinds.java").contains("VanillaKeyCombos.endTick();"));
         String sync = SourceTree.read("util/AuroraKeybinds.java");
         assertTrue(sync.contains("VanillaKeyCombos.setModifiers(mapping, KeyCombo.modifiers(binding));"));
         assertTrue(sync.contains("return VanillaKeyCombos.binding(mapping);"),

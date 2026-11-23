@@ -2,6 +2,7 @@ package com.aurora.client.hud.module;
 
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.hud.HudAnchor;
+import com.aurora.client.hud.HudGrowth;
 import com.aurora.client.util.HudBackgrounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -125,6 +126,71 @@ public abstract class HudModule {
 
     protected abstract void renderContent(GuiGraphicsExtractor ctx, Minecraft client, int x, int y);
 
+    /** How the module grows horizontally as its content changes; see {@link HudGrowth}. */
+    protected HudGrowth growthX() { return HudGrowth.ANCHORED; }
+    /** How the module grows vertically as its content changes; see {@link HudGrowth}. */
+    protected HudGrowth growthY() { return HudGrowth.ANCHORED; }
+    /** Nominal intrinsic width the anchor places when the module grows horizontally. */
+    protected int referenceWidth() { return getWidth(); }
+    /** Nominal intrinsic height the anchor places when the module grows vertically. */
+    protected int referenceHeight() { return getHeight(); }
+
+    /** Screen x of the module's box, {@code sw} wide (scaled). Every placement goes through here. */
+    public final int screenX(int screenW, int sw) {
+        HudGrowth g = growthX();
+        if (g == HudGrowth.ANCHORED) return anchor.applyX(screenW, sw) + offsetX;
+        int rw = Math.round(referenceWidth() * scale);
+        return g.start(anchor.applyX(screenW, rw) + offsetX, rw, sw, screenW);
+    }
+
+    /** Screen y of the module's box, {@code sh} tall (scaled). */
+    public final int screenY(int screenH, int sh) {
+        HudGrowth g = growthY();
+        if (g == HudGrowth.ANCHORED) return anchor.applyY(screenH, sh) + offsetY;
+        int rh = Math.round(referenceHeight() * scale);
+        return g.start(anchor.applyY(screenH, rh) + offsetY, rh, sh, screenH);
+    }
+
+    /** The screen size of the last {@link #render}, for content that lays out toward the centre. */
+    protected int lastScreenW, lastScreenH;
+
+    /**
+     * Which side of the screen centre the reference box lies on horizontally at the last
+     * render: -1 left, 1 right, 0 straddling it (or not yet rendered).
+     */
+    protected final int sideX() {
+        if (lastScreenW <= 0) return 0;
+        int rw = Math.round(referenceWidth() * scale);
+        int ref = anchor.applyX(lastScreenW, rw) + offsetX;
+        return HudGrowth.before(ref, rw, lastScreenW) ? -1 : HudGrowth.after(ref, lastScreenW) ? 1 : 0;
+    }
+
+    /** As {@link #sideX()}, vertically: -1 above the centre, 1 below. */
+    protected final int sideY() {
+        if (lastScreenH <= 0) return 0;
+        int rh = Math.round(referenceHeight() * scale);
+        int ref = anchor.applyY(lastScreenH, rh) + offsetY;
+        return HudGrowth.before(ref, rh, lastScreenH) ? -1 : HudGrowth.after(ref, lastScreenH) ? 1 : 0;
+    }
+
+    /** Sets the offsets so a box of {@code sw}×{@code sh} (scaled) sits at ({@code x}, {@code y}). */
+    public final void moveTo(int x, int y, int sw, int sh, int screenW, int screenH) {
+        HudGrowth gx = growthX();
+        if (gx == HudGrowth.ANCHORED) {
+            offsetX = x - anchor.applyX(screenW, sw);
+        } else {
+            int rw = Math.round(referenceWidth() * scale);
+            offsetX = gx.refStart(x, rw, sw, screenW) - anchor.applyX(screenW, rw);
+        }
+        HudGrowth gy = growthY();
+        if (gy == HudGrowth.ANCHORED) {
+            offsetY = y - anchor.applyY(screenH, sh);
+        } else {
+            int rh = Math.round(referenceHeight() * scale);
+            offsetY = gy.refStart(y, rh, sh, screenH) - anchor.applyY(screenH, rh);
+        }
+    }
+
     public boolean isConfigEnabled() { return true; }
 
     /** True while the module draws nothing (e.g. no active effects): the HUD editor then names it
@@ -155,14 +221,16 @@ public abstract class HudModule {
     public void render(GuiGraphicsExtractor ctx, Minecraft client, int screenW, int screenH) {
         if (!enabled) return;
         if (!isConfigEnabled()) return;
+        lastScreenW = screenW;
+        lastScreenH = screenH;
 
         int w = getWidth();
         int h = getHeight();
         boolean unitScale = Math.abs(scale - 1.0f) < 0.001f;
         int sw = unitScale ? w : Math.round(w * scale);
         int sh = unitScale ? h : Math.round(h * scale);
-        int x = anchor.applyX(screenW, sw) + offsetX;
-        int y = anchor.applyY(screenH, sh) + offsetY;
+        int x = screenX(screenW, sw);
+        int y = screenY(screenH, sh);
         float bgAlpha = backgroundAlpha();
 
         if (unitScale) {
@@ -186,8 +254,8 @@ public abstract class HudModule {
     public void snap(int screenW, int screenH) {
         int w = getScaledWidth();
         int h = getScaledHeight();
-        int x = anchor.applyX(screenW, w) + offsetX;
-        int y = anchor.applyY(screenH, h) + offsetY;
+        int x = screenX(screenW, w);
+        int y = screenY(screenH, h);
 
         int threshold = 6;
         if (x < threshold) x = 0;
@@ -199,7 +267,6 @@ public abstract class HudModule {
         y = Math.round(y / 4f) * 4;
 
         this.anchor = HudAnchor.nearest(x, y, w, h, screenW, screenH);
-        this.offsetX = x - anchor.applyX(screenW, w);
-        this.offsetY = y - anchor.applyY(screenH, h);
+        moveTo(x, y, w, h, screenW, screenH);
     }
 }

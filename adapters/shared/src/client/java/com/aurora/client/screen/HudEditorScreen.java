@@ -333,8 +333,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 // removed — modules now follow the cursor pixel-for-
                 // pixel for fully manual placement.
 
-                active.offsetX = newX - active.anchor.applyX(this.width,  dragW);
-                active.offsetY = newY - active.anchor.applyY(this.height, dragH);
+                active.moveTo(newX, newY, dragW, dragH, this.width, this.height);
             }
             case RESIZE -> {
                 // New diagonal = distance from cursor to pivot. Scale ratio
@@ -364,8 +363,7 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
                 // shrinking the scale, would fight the user's gesture).
                 newTopLeftX = Math.max(0, Math.min(this.width - sw, newTopLeftX));
                 newTopLeftY = Math.max(0, Math.min(this.height - sh, newTopLeftY));
-                active.offsetX = newTopLeftX - active.anchor.applyX(this.width,  sw);
-                active.offsetY = newTopLeftY - active.anchor.applyY(this.height, sh);
+                active.moveTo(newTopLeftX, newTopLeftY, sw, sh, this.width, this.height);
             }
             default -> {}
         }
@@ -399,8 +397,8 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
 
             int w = (m == active && dragMode == DragMode.MOVE) ? dragW : m.getScaledWidth();
             int h = (m == active && dragMode == DragMode.MOVE) ? dragH : m.getScaledHeight();
-            int x = m.anchor.applyX(this.width,  w) + m.offsetX;
-            int y = m.anchor.applyY(this.height, h) + m.offsetY;
+            int x = m.screenX(this.width, w);
+            int y = m.screenY(this.height, h);
 
             com.aurora.client.ui.component.IconAction action = m.enabled ? xAction(m) : null;
             boolean emphasized = m == hoveredModule || m == active || (action != null && action.isFocused());
@@ -548,8 +546,8 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
         // Compute the module's screen rectangle (using SCALED dims).
         int sw = hit.getScaledWidth();
         int sh = hit.getScaledHeight();
-        int x = hit.anchor.applyX(this.width,  sw) + hit.offsetX;
-        int y = hit.anchor.applyY(this.height, sh) + hit.offsetY;
+        int x = hit.screenX(this.width, sw);
+        int y = hit.screenY(this.height, sh);
 
         if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT) {
             // Right-click: shift = toggle lock; otherwise hide/show
@@ -653,11 +651,10 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
     private void reanchorWithoutSnap(HudModule module) {
         int w = module.getScaledWidth();
         int h = module.getScaledHeight();
-        int x = module.anchor.applyX(this.width,  w) + module.offsetX;
-        int y = module.anchor.applyY(this.height, h) + module.offsetY;
+        int x = module.screenX(this.width, w);
+        int y = module.screenY(this.height, h);
         module.anchor  = HudAnchor.nearest(x, y, w, h, this.width, this.height);
-        module.offsetX = x - module.anchor.applyX(this.width,  w);
-        module.offsetY = y - module.anchor.applyY(this.height, h);
+        module.moveTo(x, y, w, h, this.width, this.height);
     }
 
     private HudModule findAt(int x, int y) {
@@ -668,8 +665,8 @@ public class HudEditorScreen extends Screen implements ThemedScreen {
             if (!m.isConfigEnabled()) continue;
             int w = m.getScaledWidth();
             int h = m.getScaledHeight();
-            int mx = m.anchor.applyX(this.width,  w) + m.offsetX;
-            int my = m.anchor.applyY(this.height, h) + m.offsetY;
+            int mx = m.screenX(this.width, w);
+            int my = m.screenY(this.height, h);
             // Hit testing INCLUDES a CORNER_HIT_RADIUS halo so users can grab
             // corner handles that sit slightly outside the AABB.
             if (x >= mx - CORNER_HIT_RADIUS && x < mx + w + CORNER_HIT_RADIUS

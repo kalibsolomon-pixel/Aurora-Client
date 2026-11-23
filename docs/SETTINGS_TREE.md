@@ -115,8 +115,8 @@ Pushes distance fog back.
 
 #### Pack Tweaks · off · combined `{card:pack_tweaks}`
 Small visual tweaks: totem particles, shield, fluid clarity.
-- *Particles / Presentation*
-  - **Particle Size %**: slider 25–100 · 56% · size of the totem pop burst. `{totemParticleScale}`
+- *Totem Particles*
+  - **Totem Particle Size %**: slider 25–100 · 56% · size of the totem pop burst. `{totemParticleScale}`
 - *Shield*
   - **Custom Model**: toggle · off · moves your first-person shield. `{shieldTweaksEnabled}`
   - **Style**: dropdown Vanilla / Lowered / Side / Compact · Side. `{shieldStyle}`
@@ -126,7 +126,6 @@ Small visual tweaks: totem particles, shield, fluid clarity.
 - *Environment / Clarity*
   - **Underwater Fog Multiplier**: slider 1–50 · 8×. `{underwaterFogMultiplier}`
   - **Lava Fog Multiplier**: slider 1–50 · 8×. `{lavaFogMultiplier}`
-  - **Hide 1st Person Fire**: toggle · on · hides the lava and on-fire screen tint. `{lavaHideOverlay}`
 - >> Hidden parts of the card switch with no row of their own: totem tweaks on/off `{totemTweaksEnabled}`, underwater clarity on/off `{underwaterClarityEnabled}`, lava clarity on/off `{lavaClarityEnabled}`.
 
 #### Health Indicators · off · combined `{card:player_health}`
@@ -137,8 +136,8 @@ Health shown above mobs (and optionally players), and your own on the HUD; each 
   - **Only Attacked**: toggle · off · only entities you have hit. `{playerHealthOnlyAttacked}`
   - **Show Players**: toggle · off · include other players. `{playerHealthShowPlayers}`
 - *Your Health*
-  - **Show on HUD**: toggle · off · your health to two decimals (20.00), a draggable HUD module; works without the labels above entities. `{playerHealthHudEnabled}`
-  - **Text Color**: color · HUD default; absorption stays gold. `{playerHealthHudTextColor}`
+  - **Show on HUD**: toggle · off · your health to two decimals (20.00), absorption added to the same number (28.00 after a golden apple), a draggable HUD module; works without the labels above entities. `{playerHealthHudEnabled}`
+  - **Text Color**: color · HUD default. `{playerHealthHudTextColor}`
   - **Background**: dropdown None / Solid · None. `{playerHealthHudBgMode}`
   - **Background Color (when SOLID)**: color · 50% black. `{playerHealthHudBgColor}`
 
@@ -287,7 +286,7 @@ Clicks-per-second counter.
 - **Background Color (when SOLID)**: color · black, 50%. `{cpsBgColor}`
 
 #### Armor HUD · on `{card:armor_hud}`
-Your armor — and optionally your hands — and its durability.
+Your armor — and optionally your hands — and its durability. Slots are always square: a readout too wide for its slot is drawn smaller. It grows away from the screen centre along its layout (beside the hotbar, extra pieces extend outward); its position places a full four-piece set.
 - **Text Color**: color · white. `{armorHudTextColor}`
 - **Durability Format**: dropdown Remaining / Remaining of Max / Percentage / None · Remaining. `{armorDurabilityFormat}`
 - **Show Durability Bars**: toggle · on (since 2026-11-14). `{armorShowDurabilityBars}`
@@ -304,10 +303,11 @@ Distance of your last hit.
 - **Background Color (when SOLID)**: color · black, 50%. `{reachBgColor}`
 
 #### Potion HUD · on `{card:potion_hud}`
-Active effects with timers (replaces vanilla's effect icons).
+Active effects with timers (replaces vanilla's effect icons). It grows from the screen edge toward the centre, the first effect nearest the edge, and wraps into a new line nearer the centre (a new row when Condensed, a new column otherwise).
 - **Text Color**: color · white. `{potionHudTextColor}`
 - **Background**: dropdown · Vanilla (vanilla's status-effect container behind each icon; VANILLA is offered only here and on Armor HUD). `{potionBgMode}`
 - **Vanilla Layout**: segmented Standard / Condensed · Standard; Vanilla background only. Standard lists names and timers beside the icons; Condensed is a vanilla-style row with the time in each container's corner (4m, then 59s). `{potionVanillaLayout}`
+- **Effects per Line**: slider 1–12 · 6 · effects before the list wraps; also capped to what fits on screen. `{potionMaxPerLine}`
 - **Background Color (when SOLID)**: color · black, 50%. `{potionBgColor}`
 
 #### Ping · off · combined `{card:ping}`
@@ -571,7 +571,7 @@ A profile is a full snapshot of almost every setting: feature on/offs, all value
 
 All are also listed in vanilla Options → Controls under Aurora. Defaults are for a fresh install.
 
-**Combos (2026-11-12).** Every keybind — Aurora's, Minecraft's own in Options → Controls, and profile hotkeys — can be a single key or a combo of Ctrl, Shift and/or Alt with a key. While a binding waits for a key, holding a modifier shows "Ctrl + …" and waits for the second key; releasing the modifier alone binds just that key; Esc still clears. The most specific binding wins: a plain key keeps working while an unrelated modifier is held (zoom on C while sprinting with Ctrl), and gives way only to a combo on the same key whose modifiers are all held (C vs Ctrl + C). options.txt keeps Minecraft's plain key; Aurora saves the modifiers (`vanillaKeyModifiers`), so removing Aurora leaves working plain bindings. Fn cannot be used: the keyboard handles it and the game never sees it.
+**Combos (2026-11-12).** Every keybind — Aurora's, Minecraft's own in Options → Controls, and profile hotkeys — can be a single key or a combo of Ctrl, Shift and/or Alt with a key. While a binding waits for a key, holding a modifier shows "Ctrl + …" and waits for the second key; releasing the modifier alone binds just that key; Esc still clears. The most specific binding wins: a plain key keeps working while an unrelated modifier is held (zoom on C while sprinting with Ctrl), and gives way only to a combo on the same key whose modifiers are all held (C vs Ctrl + C). A modifier that some combo uses waits (2026-11-22): with Sprint on Ctrl and a Ctrl + Right binding, pressing Ctrl does nothing until it is let go, and only taps Sprint if no combo was pressed meanwhile; held for 200 ms without a combo, hold bindings (hold-to-sprint or sneak) take it as held, while one-shot and toggle bindings still wait for the release. Minecraft's own shortcuts, such as F2 and drop, respect combos too. options.txt keeps Minecraft's plain key; Aurora saves the modifiers (`vanillaKeyModifiers`), so removing Aurora leaves working plain bindings. Fn cannot be used: the keyboard handles it and the game never sees it.
 
 | Key | Default | Where set |
 |---|---|---|

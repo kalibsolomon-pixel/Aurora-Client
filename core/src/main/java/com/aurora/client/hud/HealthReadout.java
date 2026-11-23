@@ -3,37 +3,28 @@ package com.aurora.client.hud;
 import java.util.Locale;
 
 /**
- * The text of Health Indicators' HUD readout: health to two decimals
- * ("19.47", "20.00"), with absorption after it ("+4.00") when there is any.
- * Remembers the last value so an unchanged health formats nothing per frame.
+ * The text of Health Indicators' HUD readout: one number to two decimals,
+ * health plus absorption ("19.47", "20.00", "28.00" with a golden apple's
+ * four absorption hearts). Remembers the last value so an unchanged total
+ * formats nothing per frame.
  */
 public final class HealthReadout {
-    private float lastHealth = Float.NaN;
-    private float lastAbsorption = Float.NaN;
-    private String health = "";
-    private String absorption = "";
+    private float lastTotal = Float.NaN;
+    private String text = "";
 
     public static String format(float hp) {
         return String.format(Locale.ROOT, "%.2f", Math.max(0.0f, hp));
     }
 
     public void update(float health, float absorption) {
-        if (Float.compare(health, lastHealth) != 0) {
-            lastHealth = health;
-            this.health = format(health);
-        }
-        if (Float.compare(absorption, lastAbsorption) != 0) {
-            lastAbsorption = absorption;
-            this.absorption = absorption > 0.0f ? "+" + format(absorption) : "";
+        float total = Math.max(0.0f, health) + Math.max(0.0f, absorption);
+        if (Float.compare(total, lastTotal) != 0) {
+            lastTotal = total;
+            this.text = format(total);
         }
     }
 
-    public String health() {
-        return health;
-    }
-
-    /** Empty without absorption. */
-    public String absorption() {
-        return absorption;
+    public String text() {
+        return text;
     }
 }

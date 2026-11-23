@@ -1,6 +1,8 @@
 package com.aurora.client.hud.module;
 
 import com.aurora.client.config.AuroraConfig;
+import com.aurora.client.hud.HudGrowth;
+import com.aurora.client.hud.WrapGrid;
 import com.aurora.client.util.CachedValue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -25,6 +27,11 @@ import java.util.Map;
  * in one of two layouts: Standard keeps the list with names and timers beside
  * the icons; Condensed is a row of containers, as vanilla's HUD draws them, with
  * the time remaining over each one's bottom-left corner ("4m", then "59s").
+ *
+ * <p>The module grows from the screen edge toward the centre
+ * ({@link HudGrowth#TOWARD_CENTER}): the first effect stays nearest the
+ * border, and after {@link AuroraConfig#potionMaxPerLine} effects a line
+ * wraps into a new one, also nearer the centre (2026-11-22).
  *
  * <p>Width and height are driven by the active effects' name/timer Component.
  * They're cached with a 100ms TTL so getWidth/getHeight stay cheap even
@@ -51,6 +58,8 @@ public class PotionModule extends HudModule {
     /** Vertical gap between adjacent rows. */
     private static final int ROW_GAP    = 2;
     private static final int MIN_NAME_W = 60;
+    /** Standard layout: gap between wrapped columns. */
+    private static final int COLUMN_GAP = 4;
 
     private final CachedValue<int[]> dimsCache = new CachedValue<>(100L, this::computeDims);
 
@@ -79,6 +88,7 @@ public class PotionModule extends HudModule {
      */
     private int lastNonEmptyW = 0;
     private int lastNonEmptyH = 0;
+    private int lastNonEmptyColW = 0;
 
     public PotionModule() {
         super(ID);
@@ -110,16 +120,37 @@ public class PotionModule extends HudModule {
         return AuroraConfig.get().potionHudEnabled;
     }
 
-    /** Returns [width, height]. Computed at most every 100ms. */
+    /**
+     * Effects per line: the setting, cut to what fits on the screen along the
+     * line (a row when Condensed, a column otherwise) at the module's scale.
+     */
+    private int perLine() {
+        int setting = Math.max(1, Math.min(12, AuroraConfig.get().potionMaxPerLine));
+        float s = Math.max(MIN_SCALE, scale);
+        if (condensed()) {
+            if (lastScreenW <= 0) return setting;
+            int fit = (int) ((lastScreenW / s + (CONTAINER_STEP - CONTAINER)) / CONTAINER_STEP);
+            return Math.max(1, Math.min(setting, fit));
+        }
+        if (lastScreenH <= 0) return setting;
+        int fit = (int) ((lastScreenH / s - rowHeight()) / rowStride()) + 1;
+        return Math.max(1, Math.min(setting, fit));
+    }
+
+    private WrapGrid grid(int count) { return WrapGrid.of(count, perLine()); }
+
+    /** Returns [width, height, column width]. Computed at most every 100ms. */
     private int[] computeDims() {
         Minecraft client = Minecraft.getInstance();
-        if (client == null || client.font == null) return new int[] { 120, ROW_H };
+        if (client == null || client.font == null) return new int[] { 120, ROW_H, 120 };
         Font tr = client.font;
         int maxTextW = MIN_NAME_W;
         Collection<MobEffectInstance> active = effects();
+        WrapGrid grid = grid(active.size());
         if (condensed()) {
-            int count = Math.max(1, active.size());
-            return new int[] { count * CONTAINER_STEP - (CONTAINER_STEP - CONTAINER), CONTAINER };
+            // A row of containers per line; wrapped lines stack as further rows.
+            return new int[] { grid.along() * CONTAINER_STEP - (CONTAINER_STEP - CONTAINER),
+                    grid.lines() * CONTAINER_STEP - (CONTAINER_STEP - CONTAINER), CONTAINER };
         }
         for (MobEffectInstance e : active) {
             // Per row, the text column has to fit either the effect
@@ -128,11 +159,24 @@ public class PotionModule extends HudModule {
             maxTextW = Math.max(maxTextW, tr.width(nameWithLevel(e)));
             maxTextW = Math.max(maxTextW, tr.width(timeText(e)));
         }
-        int width = iconWidth() + ICON_GAP + maxTextW + 4;
-        int rows = Math.max(1, active.size());
-        int height = (rows - 1) * rowStride() + rowHeight();
-        return new int[] { width, height };
+        // A column of rows per line; wrapped lines sit side by side, one shared column width.
+        int colW = iconWidth() + ICON_GAP + maxTextW + 4;
+        int width = grid.lines() * colW + (grid.lines() - 1) * COLUMN_GAP;
+        int height = (grid.along() - 1) * rowStride() + rowHeight();
+        return new int[] { width, height, colW };
     }
+
+    @Override protected HudGrowth growthX() { return HudGrowth.TOWARD_CENTER; }
+    @Override protected HudGrowth growthY() { return HudGrowth.TOWARD_CENTER; }
+
+    /** One column (Standard) or one container (Condensed): the anchor places the first effect. */
+    @Override protected int referenceWidth() {
+        if (condensed()) return CONTAINER;
+        if (effectsFadeT() > 0f && lastNonEmptyColW > 0) return lastNonEmptyColW;
+        return dimsCache.get()[2];
+    }
+
+    @Override protected int referenceHeight() { return rowHeight(); }
 
     /**
      * Fade fraction in [0, 1]: 1 while at least one effect is active,
@@ -165,6 +209,7 @@ public class PotionModule extends HudModule {
             int[] d = dimsCache.get();
             lastNonEmptyW = d[0];
             lastNonEmptyH = d[1];
+            lastNonEmptyColW = d[2];
             return 1.0f;
         }
         if (lastEffectsPresentMs == 0L) return 0.0f;
@@ -199,28 +244,35 @@ public class PotionModule extends HudModule {
         if (active.isEmpty()) return;
 
         Font tr = client.font;
-        int row = 0;
+        WrapGrid grid = grid(active.size());
+        // Right of / below the centre, the first effect and line sit at the far (outer) edge.
+        boolean right = sideX() > 0;
+        boolean below = sideY() > 0;
+        int i = 0;
 
         if (condensed()) {
-            // A vanilla row: containers left to right, each with its time in the bottom-left corner.
+            // Vanilla rows: containers, each with its time in the bottom-left corner.
             for (MobEffectInstance e : active) {
-                int cx = x + row * CONTAINER_STEP;
-                drawContainer(ctx, e, cx, y);
-                drawEffectIcon(ctx, e, cx + (CONTAINER - ICON) / 2, y + (CONTAINER - ICON) / 2);
+                int cx = x + grid.alongSlot(i, right) * CONTAINER_STEP;
+                int cy = y + grid.lineSlot(i, below) * CONTAINER_STEP;
+                drawContainer(ctx, e, cx, cy);
+                drawEffectIcon(ctx, e, cx + (CONTAINER - ICON) / 2, cy + (CONTAINER - ICON) / 2);
                 com.aurora.client.hud.HudTextPainter.draw(ctx, tr, condensedTime(e), cx + 2,
-                        y + CONTAINER - tr.lineHeight, textColor(0xFFFFFFFF));
-                row++;
+                        cy + CONTAINER - tr.lineHeight, textColor(0xFFFFFFFF));
+                i++;
             }
             return;
         }
 
+        int colW = referenceWidth();
         for (MobEffectInstance e : active) {
-            int rowY = y + row * rowStride();
+            int rowY = y + grid.alongSlot(i, below) * rowStride();
+            int colX = x + grid.lineSlot(i, right) * (colW + COLUMN_GAP);
 
             // Real vanilla 18×18 status-effect sprite, vertically centered
             // inside the row band.
-            if (vanillaSlots()) drawContainer(ctx, e, x, rowY);
-            drawEffectIcon(ctx, e, x + (iconWidth() - ICON) / 2, rowY + (rowHeight() - ICON) / 2);
+            if (vanillaSlots()) drawContainer(ctx, e, colX, rowY);
+            drawEffectIcon(ctx, e, colX + (iconWidth() - ICON) / 2, rowY + (rowHeight() - ICON) / 2);
 
             // Two-line text column (Inventory HUD+ style):
             //   line 1 — "Effect Name II"           in white
@@ -228,13 +280,13 @@ public class PotionModule extends HudModule {
             //              minutes (if any) in green,
             //              ":SS" or bare "SS" in white,
             //              or "∞" in white for effects ≥ 1 hour / truly infinite.
-            int textX = x + iconWidth() + ICON_GAP;
+            int textX = colX + iconWidth() + ICON_GAP;
             int line1Y = rowY + (rowHeight() - (tr.lineHeight * 2 + 1)) / 2;
             int line2Y = line1Y + tr.lineHeight + 1;
             com.aurora.client.hud.HudTextPainter.draw(ctx,tr, nameWithLevel(e), textX, line1Y, textColor(0xFFFFFFFF));
             drawTimer(ctx, tr, e, textX, line2Y);
 
-            row++;
+            i++;
         }
     }
 

@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * First-person fire/lava screen overlay control on Minecraft 26.1.2:
- * hides the overlay when requested (via Lava Clarity or Pack Tweaks Fire Overlay)
+ * hides the overlay when requested (Pack Tweaks Hide Fire Overlay)
  * and supports custom vertical offset (low fire) and opacity.
  */
 @Mixin(ScreenEffectRenderer.class)
@@ -25,8 +25,7 @@ public abstract class LavaOverlayMixin {
     private static void aurora$cancelFireOverlay(PoseStack matrices, MultiBufferSource vcp,
                                                  TextureAtlasSprite sprite, CallbackInfo ci) {
         AuroraConfig cfg = AuroraConfig.get();
-        if ((cfg.lavaClarityEnabled && cfg.lavaHideOverlay)
-                || cfg.fireOverlayHide
+        if (cfg.fireOverlayHide
                 || PackTweaksMath.clampFireOpacity(cfg.fireOverlayOpacity) <= 0.001) {
             ci.cancel();
         }

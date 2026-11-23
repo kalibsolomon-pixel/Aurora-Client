@@ -956,10 +956,10 @@ public class AuroraConfig {
     public boolean underwaterClarityEnabled = false;
     public double underwaterFogMultiplier = 8.0;
 
-    // Lava clarity — same idea, separate fog modifier + screen overlay tint.
+    // Lava clarity — same idea, separate fog modifier. Its old fire switch
+    // (lavaHideOverlay) became Hide Fire Overlay; see FireOverlayMigrator.
     public boolean lavaClarityEnabled = false;
     public double  lavaFogMultiplier = 8.0;
-    public boolean lavaHideOverlay = false;   // true = cancel orange overlay entirely
 
     // ---- Pack Tweaks additions: post-processing, local time/weather, custom skies, fire, hurt cam ----
     /** Temporal motion blur strength (0.0 Off .. 0.85). Cosmetic. */
@@ -1035,6 +1035,11 @@ public class AuroraConfig {
         public String getLabel() { return this == STANDARD ? "Standard" : "Condensed"; }
     }
     public int potionBgColor = 0x80000000;
+    /**
+     * Effects in one line of the Potion HUD (a row when Condensed, a column
+     * otherwise) before it wraps into a new line nearer the screen centre.
+     */
+    public int potionMaxPerLine = 6;
 
     // ---- Totem pop counter ----
     public boolean totemPopEnabled  = false;
@@ -1578,6 +1583,7 @@ public class AuroraConfig {
                 // members so one bad field can't take the whole config down.
                 json = ThemeMigrator.migrateConfigJson(json, LOGGER);
                 json = PlayerHealthMigrator.migrateConfigJson(json, LOGGER);
+                json = FireOverlayMigrator.migrateConfigJson(json, LOGGER);
                 json = KeybindMigrator.migrateConfigJson(json, LOGGER);
                 json = TextStyleMigrator.migrateConfigJson(json, LOGGER);
                 AuroraConfig loaded = GSON.fromJson(json, AuroraConfig.class);

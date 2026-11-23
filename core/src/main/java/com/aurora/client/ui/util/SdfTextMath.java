@@ -20,7 +20,11 @@ public final class SdfTextMath {
         return (encoded - EDGE_BYTE) * (spread / (float) EDGE_BYTE);
     }
 
-    /** Screen-space coverage for a signed distance and its derivative width. */
+    /**
+     * Screen-space coverage for a signed distance and its derivative width: texels per
+     * screen pixel, which the shader takes from the interpolated UVs rather than from the
+     * sampled distance (whose derivative block can reach past the glyph's cell).
+     */
     public static float coverage(float distance, float derivativeWidth) {
         float width = Math.max(Math.abs(derivativeWidth), MIN_GRADIENT);
         return Math.max(0.0f, Math.min(1.0f, 0.5f + (distance - EDGE_BIAS) / width));

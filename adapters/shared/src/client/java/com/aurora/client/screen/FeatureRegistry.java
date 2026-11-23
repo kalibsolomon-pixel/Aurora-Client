@@ -377,8 +377,8 @@ public final class FeatureRegistry {
                                 .disabled(() -> !cfg.hurtCamEnabled)
                                 .description("Scales the intensity of the damage camera shake (100% is vanilla)."),
 
-                        new SectionHeaderSetting("Particles / Presentation"),
-                        SliderSetting.ofInt("Particle Size %",
+                        new SectionHeaderSetting("Totem Particles"),
+                        SliderSetting.ofInt("Totem Particle Size %",
                                 () -> cfg.totemParticleScale,
                                 v -> cfg.totemParticleScale = v, 25, 100).resetDefault(() -> defaults.totemParticleScale)
                                 .description("Shrinks the burst of totem particles that erupts when you pop a Totem of Undying. Lower values clear the screen faster so you can see the fight again sooner after a pop — a common competitive preference. 100% is vanilla size."),
@@ -421,11 +421,7 @@ public final class FeatureRegistry {
                         SliderSetting.of("Lava Fog Multiplier",
                                 () -> cfg.lavaFogMultiplier,
                                 v -> cfg.lavaFogMultiplier = v, 1.0, 50.0).resetDefault(() -> defaults.lavaFogMultiplier)
-                                .description("Pushes back the thick orange fog when your head is submerged in lava, letting you see further through it. Invaluable for spotting ancient debris or an exit while swimming lava in the Nether. Higher = clearer."),
-                        new BooleanSetting("Hide 1st Person Fire (Lava Clarity)",
-                                () -> cfg.lavaHideOverlay,
-                                v -> cfg.lavaHideOverlay = v).resetDefault("lavaHideOverlay", () -> defaults.lavaHideOverlay)
-                                .description("Hides the orange tint when submerged while Lava Clarity is active.")
+                                .description("Pushes back the thick orange fog when your head is submerged in lava, letting you see further through it. Invaluable for spotting ancient debris or an exit while swimming lava in the Nether. Higher = clearer.")
                 ),
                 // Prefixes match camelCase config field names via
                 // AuroraConfig.resetByPrefix (String.startsWith). The broad
@@ -436,7 +432,7 @@ public final class FeatureRegistry {
                 java.util.Arrays.asList(
                         "totemTweaks", "totemParticle", "shield",
                         "underwaterClarity", "underwaterFog",
-                        "lavaClarity", "lavaFog", "lavaHide",
+                        "lavaClarity", "lavaFog",
                         "motionBlur", "colorSaturation", "localTime", "localWeather",
                         "customSky", "fireOverlay", "hurtCam"));
 
@@ -476,9 +472,9 @@ public final class FeatureRegistry {
                         new BooleanSetting("Show on HUD",
                                 () -> cfg.playerHealthHudEnabled,
                                 v -> cfg.playerHealthHudEnabled = v).resetDefault("playerHealthHudEnabled", () -> defaults.playerHealthHudEnabled)
-                                .description("Shows your own health as an exact number with two decimals (20.00 at full health), with absorption after it in gold. Works with or without the health above entities. Move it in the HUD editor."),
+                                .description("Shows your own health as an exact number with two decimals (20.00 at full health). Absorption hearts add to the same number, so a golden apple shows 28.00. Works with or without the health above entities. Move it in the HUD editor."),
                         new ColorSetting("Text Color", () -> cfg.playerHealthHudTextColor == null ? com.aurora.client.theme.HudText.color(cfg.hudColor) : cfg.playerHealthHudTextColor, v -> cfg.playerHealthHudTextColor = v).resetDefault(() -> cfg.playerHealthHudTextColor, () -> defaults.playerHealthHudTextColor, () -> defaults.playerHealthHudTextColor == null ? (defaults.hudColor == 0 ? defaultTheme.color(com.aurora.client.theme.ThemeToken.ACCENT) : defaults.hudColor) : defaults.playerHealthHudTextColor)
-                                .description("Text color for the health number. Absorption stays gold. Reset restores its default color.")
+                                .description("Text color for the health number. Reset restores its default color.")
                                 .disabled(() -> !cfg.playerHealthHudEnabled),
                         new EnumSetting<>("Background", FLAT_BACKGROUNDS,
                                 () -> cfg.playerHealthHudBgMode, v -> cfg.playerHealthHudBgMode = v).resetDefault(() -> defaults.playerHealthHudBgMode)
@@ -981,6 +977,9 @@ addWithSettings("hitbox",
                                 AuroraConfig.PotionVanillaLayout::getLabel).resetDefault(() -> defaults.potionVanillaLayout)
                                 .description("With the Vanilla background. Standard lists each effect in vanilla's container with its name, tier and timer beside it. Condensed is a row of containers like vanilla's own, with the time left in each one's corner: minutes (4m), then seconds (59s) in the last minute.")
                                 .disabled(() -> cfg.potionBgMode != AuroraConfig.HudBackground.VANILLA),
+                        SliderSetting.ofInt("Effects per Line",
+                                () -> cfg.potionMaxPerLine, v -> cfg.potionMaxPerLine = v, 1, 12).resetDefault(() -> defaults.potionMaxPerLine)
+                                .description("The list grows from the screen edge toward the centre. After this many effects it starts a new line beside it (a new row when Condensed), so it never runs too far or off the screen."),
                         new ColorSetting("Background Color (when SOLID)",
                                 () -> cfg.potionBgColor, v -> cfg.potionBgColor = v).resetDefault(() -> defaults.potionBgColor)
                 ),
