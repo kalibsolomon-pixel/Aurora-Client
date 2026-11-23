@@ -913,6 +913,12 @@ in its label row's trailing value slot instead, above its Add control.
   body weight in primary text with a persistent neutral underline, no face (a heavier label
   shifted the tab labels as the selection moved); the list/grid layout pair marks the active layout
   with the opaque neutral field face and a primary icon.
+- **Icon rail (2026-11-23).** When the main window is shrunk below 460×308 but is still at
+  least 320 px wide (GUI scale 4 at 1080p, scale 6 at 1440p), the sidebar items become
+  22 px squares carrying an icon (`apps`, `settings`, `manage_accounts`) and name themselves
+  in a tooltip on hover; the content column starts after the rail (`UiDensity.contentLeft`),
+  and the toolbar row starts after the AURORA title. Below 320 px wide the tabs move above the
+  content as before. The full-size window keeps the labelled sidebar.
 - **States:** hover, press, selected, focus, and disabled. Focus and selection must not be
   visually confused.
 - **Input/accessibility:** pointer and keyboard navigation with group position/state exposed.
@@ -1514,7 +1520,7 @@ less scrolling, and expandable categories for long option lists. Owner follow-up
 cards keep their original 80×80 size; the window must not be oversized for the smaller UI.
 
 - **One window.** `UiDensity.window` (336×292 GUI px since the 2026-11-18 header inset, 336×288 before; shrunk to
-  fit with a 12 px margin) is
+  fit with a 12 px margin, 6 px on screens under 300 px tall since 2026-11-23) is
   the frame for the main screen, every feature detail screen, the Profile and Waypoint
   managers, the waypoint editor, color picker, mapping data and the resource-pack browser
   (which runs its layout inside the frame as a translated viewport). The content well

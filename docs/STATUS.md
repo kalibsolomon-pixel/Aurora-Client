@@ -13,6 +13,8 @@ Folder-Aware Resource Pack Manager (`resourcepackFoldersEnabled`, on by default,
 
 Media Controls (`mediaControlsEnabled`, off by default, cosmetic) adds cross-platform desktop playback keybinds (Play/Pause, Next, Previous, Volume Up, Volume Down — dispatched asynchronously off the tick thread on Windows, macOS, and Linux) plus a Windows-first **Now Playing** HUD overlay (`NowPlayingModule`, polled off-thread via WinRT GSMTC only while enabled, zero background work when off).
 
+Aurora windows keep their 460×308 size; on screens under 300 px tall the margin to the screen edge is 6 px instead of 12, and a shrunk main window shows its sidebar as an icon rail so the content column gets the room (GUI scale 4 at 1080p: 396×202 instead of 334×190). `WindowViewportMatrixTest` checks every GUI scale on 768p, 1080p, 1440p and 4K (2026-11-23).
+
 UI cache refinement crops static captures to their panel/body bounds, keeps
 unified chrome through screenshot suppression, retires screen textures after
 deferred draws, and reuses one prepared setting-tooltip layout. The optional

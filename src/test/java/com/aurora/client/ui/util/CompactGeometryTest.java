@@ -48,15 +48,16 @@ class CompactGeometryTest {
         for (int[] size : new int[][]{{640,360},{320,240},{240,180},{800,600}}) {
             var frame = UiDensity.mainFrame(size[0], size[1]);
             var body = UiDensity.mainContent(frame);
-            assertTrue(frame.x() >= 8 && frame.y() >= 8);
-            assertTrue(frame.x()+frame.width() <= size[0]-8);
-            assertTrue(frame.y()+frame.height() <= size[1]-8);
+            int margin = UiDensity.windowMargin(size[1]);
+            assertTrue(frame.x() >= margin && frame.y() >= margin);
+            assertTrue(frame.x()+frame.width() <= size[0]-margin);
+            assertTrue(frame.y()+frame.height() <= size[1]-margin);
             assertTrue(body.x() >= frame.x() + UiDensity.FRAME_EDGE && body.y() >= frame.y() + UiDensity.FRAME_EDGE);
             assertTrue(body.x()+body.width() + UiDensity.SCROLLBAR_GAP + UiDensity.SCROLLBAR_W <= frame.x()+frame.width() - UiDensity.FRAME_EDGE);
             assertTrue(body.y()+body.height() <= frame.y()+frame.height() - UiDensity.FRAME_EDGE);
             var detail = UiDensity.detailFrame(size[0], size[1]);
             assertTrue(detail.width() <= UiDensity.WINDOW_WIDTH && detail.height() <= UiDensity.WINDOW_HEIGHT);
-            assertTrue(detail.x() >= 12 && detail.y() >= 12);
+            assertTrue(detail.x() >= margin && detail.y() >= margin);
         }
     }
     @Test void sliderAllocationsDoNotOverlapAndTracksStayBounded() {
