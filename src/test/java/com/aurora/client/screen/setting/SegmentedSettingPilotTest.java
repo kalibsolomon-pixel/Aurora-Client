@@ -122,8 +122,11 @@ class SegmentedSettingPilotTest {
         // are the production rows since (2026-11-12, after the owner's
         // OneConfig references). This class still covers the component
         // through its ThemeMode fixture.
+        // The production rows span the registry and, since 2026-11-23, the Settings pages.
         String registry = java.nio.file.Files.readString(SourceTree.resolve(
-                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java"));
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java"))
+                + java.nio.file.Files.readString(SourceTree.resolve(
+                SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/SettingsPages.java"));
         assertEquals(7, registry.split("new SegmentedSetting\\<>\\(", -1).length - 1,
                 "Case, HUD Text Shadow, Search Typo Tolerance, Animations' Eating & Drinking, Block Pose and Re-equip On, and the Potion HUD's Vanilla Layout");
         assertFalse(registry.contains("ThemeMode.class"));

@@ -1,7 +1,6 @@
 package com.aurora.client.screen;
 
 import com.aurora.client.AuroraClient;
-import com.aurora.client.compat.EphemeraOwnership;
 import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.feature.FeatureCatalog;
 import com.aurora.client.config.profile.ProfileManager;
@@ -23,9 +22,9 @@ import java.util.function.Consumer;
  * <ul>
  *   <li><b>Modules</b> - Aurora's gameplay/visual features (the grid)</li>
  *   <li><b>Settings</b> - global client settings: title screen, fonts,
- *       theme, the UI fps limit and Display Settings (camera, frame pacer,
- *       latency, input, servers). The tab draws them as
- *       {@link #settingsPages() pages} behind sub-tabs (2026-11-12)
+ *       theme, the UI fps limit, frame pacing, input, tab list, nametags,
+ *       sound, Streamer Mode and the server list. The tab draws them as
+ *       {@link #settingsPages() pages} behind sub-tabs ({@link SettingsPages})
  *       rather than one entry per feature.</li>
  * </ul>
  */
@@ -33,9 +32,7 @@ public final class FeatureRegistry {
 
     private static final List<FeatureMetadata> MODULES = new ArrayList<>();
     private static final List<FeatureMetadata> SETTINGS = new ArrayList<>();
-    private static final List<SettingsPage> SETTINGS_PAGES = new ArrayList<>();
     private static boolean initialized = false;
-    private static boolean ephemeraSettingsAttached = false;
 
     /**
      * Background options for modules with no vanilla texture behind them.
@@ -46,14 +43,6 @@ public final class FeatureRegistry {
      */
     private static final AuroraConfig.HudBackground[] FLAT_BACKGROUNDS = {
             AuroraConfig.HudBackground.NONE, AuroraConfig.HudBackground.SOLID };
-
-    /**
-     * One page of the Settings tab, chosen from the sub-tabs at its top: a
-     * label and the entries it shows, in order. An entry is a Settings-tab
-     * catalog feature or a {@link FeatureMetadata#pageGroup} of rows that
-     * another feature owns.
-     */
-    public record SettingsPage(String label, List<FeatureMetadata> entries) {}
 
     private FeatureRegistry() {}
 
@@ -68,70 +57,13 @@ public final class FeatureRegistry {
         return SETTINGS;
     }
 
-    /** The Settings tab's pages, in sub-tab order. */
-    public static List<SettingsPage> settingsPages() {
+    /** The Settings tab's pages, in sub-tab order ({@link SettingsPages}). */
+    public static List<SettingsPages.Page> settingsPages() {
         if (!initialized) init();
-        if (!ephemeraSettingsAttached && com.aurora.client.compat.EphemeraBridge.hasSettings()) {
-            attachEphemeraSettings();
-        }
-        return SETTINGS_PAGES;
+        return SettingsPages.pages();
     }
 
-    private static void attachEphemeraSettings() {
-        ephemeraSettingsAttached = true;
-        List<FeatureSetting> rows = new ArrayList<>();
-        rows.add(ButtonSetting.semantic("Open Ephemera Settings", () ->
-                com.aurora.client.compat.EphemeraBridge.openConfigScreen(
-                        com.aurora.client.adapter.NativeUi.screen(net.minecraft.client.Minecraft.getInstance())))
-                .description(com.aurora.client.compat.EphemeraBridge::statusSummary));
-        String currentCategory = null;
-        for (com.aurora.client.compat.EphemeraBridge.OptionInfo opt : com.aurora.client.compat.EphemeraBridge.options()) {
-            String cat = opt.category();
-            if (cat != null && !cat.isEmpty() && !cat.equals(currentCategory)) {
-                rows.add(new SectionHeaderSetting(cat));
-                currentCategory = cat;
-            }
-            String key = opt.key();
-            String desc = opt.requiresRestart()
-                    ? opt.description() + " (Requires restart.)"
-                    : opt.description();
-            rows.add(new BooleanSetting(opt.label(),
-                    () -> com.aurora.client.compat.EphemeraBridge.getBoolean(key),
-                    v -> com.aurora.client.compat.EphemeraBridge.setBoolean(key, v))
-                    .resetDefault(opt::defaultValue)
-                    .description(desc));
-        }
-        FeatureMetadata ephemeraGroup = group("ephemera_engine", "Ephemera Engine",
-                rows.toArray(FeatureSetting[]::new))
-                .pageSummary("Hardware-accelerated terrain, culling, and visuals provided by Ephemera.");
-        for (int i = 0; i < SETTINGS_PAGES.size(); i++) {
-            SettingsPage page = SETTINGS_PAGES.get(i);
-            if ("Performance".equals(page.label())) {
-                List<FeatureMetadata> entries = new ArrayList<>(page.entries());
-                entries.add(ephemeraGroup);
-                SETTINGS_PAGES.set(i, new SettingsPage(page.label(), List.copyOf(entries)));
-                return;
-            }
-        }
-    }
-
-    /** A registered Settings-tab feature, by id. */
-    private static FeatureMetadata settingsEntry(String id) {
-        return SETTINGS.stream().filter(meta -> meta.id.equals(id)).findFirst().orElseThrow();
-    }
-
-    /**
-     * A page entry that groups rows owned by other features under one
-     * header. It has no switch of its own and no detail screen; its id is
-     * namespaced so it can never collide with a catalog feature id.
-     */
-    private static FeatureMetadata group(String id, String name, FeatureSetting... rows) {
-        return new FeatureMetadata("settings_page." + id, name, "", () -> true, v -> {}, List.of(rows))
-                .noSettingsToggle(true)
-                .pageGroup(true);
-    }
-
-    private static ButtonSetting mappingAction(String label, String description,
+    static ButtonSetting mappingAction(String label, String description,
             java.util.function.Consumer<net.minecraft.client.gui.screens.Screen> action) {
         // Navigation actions wear the arrow glyph (owner ruling 2026-10-30).
         return ButtonSetting.semantic(label, () ->
@@ -1985,13 +1917,6 @@ addWithSettings("hitbox",
                 v -> cfg.streamerOpponentColor = v).resetDefault(() -> defaults.streamerOpponentColor)
                 .description("Text color used for masked opponent nametags when Custom Opponent Color is enabled.")
                 .disabled(() -> !cfg.streamerModeEnabled || !cfg.streamerHideOtherNames || !cfg.streamerOpponentColorEnabled);
-        FeatureSetting openScreenshots = mappingAction("Open Screenshot Manager",
-                "Browse, search, rename, delete, copy to clipboard, and crop Minecraft screenshots in-game.",
-                screen -> com.aurora.client.adapter.NativeUi.setScreen(net.minecraft.client.Minecraft.getInstance(),
-                        new ScreenshotManagerScreen(screen)));
-        FeatureSetting copyDiagnostics = ButtonSetting.semantic("Copy Diagnostics", "Copy",
-                com.aurora.client.diagnostics.DiagnosticsReport::runAndCopy)
-                .description("Closes this menu, measures frame times for 5 seconds, then copies a text report to your clipboard: your mod list, any Aurora feature that could not start and why, the renderer, recent Aurora errors and the frame-time result. Nothing is sent anywhere; paste it where you are asking for help. It contains no account, world or server names.");
         // A page entry's rows carry each switch, so these entries draw no header
         // toggle and no detail link (pageGroup), exactly as their groups did; the
         // getter, setter and detail screen remain for search and the GUI audit.
@@ -2111,97 +2036,13 @@ addWithSettings("hitbox",
                 "Replaces Minecraft's linear distance fog with a smooth S-curve over the exact same start and end distances, softening harsh fog edges on terrain, sky, clouds and entities. Composes with Gradient Dithering and turns itself off while an Iris shader pack is active.",
                 () -> cfg.smoothFog, v -> cfg.smoothFog = v);
 
-        // ============ SETTINGS TAB PAGES ============
-        // The Settings tab shows one page at a time, chosen from the row of
-        // sub-tabs at its top. A page is a list of entries; each entry is a
-        // header (with the feature's own switch for Theme and Custom Title)
-        // over its rows. Most entries are catalog features (their health note
-        // replaces the summary line while a mixin is down); the rest are
-        // groups of rows owned by Interface or Performance. Six pages since
-        // 2026-11-23: Appearance, World & HUD, Performance, Audio & Keys,
-        // Privacy, Tools.
-        FeatureSetting hudEditorKey = new KeybindSetting("HUD Editor Key",
-                () -> cfg.hudEditorKey, v -> cfg.hudEditorKey = v).resetDefault(() -> defaults.hudEditorKey).keyId("key.aurora.hud_editor")
-                .description("Opens the HUD editor in game, where you move and resize HUD modules; its Aurora Settings button leads here. Also listed in Minecraft's Controls. Press ESC or Backspace while rebinding to clear it.");
-        FeatureSetting reducedMotion = new BooleanSetting("Reduced Motion",
-                () -> cfg.reducedMotion, value -> { cfg.reducedMotion = value; AuroraConfig.save(); })
-                .resetDefault("reducedMotion", () -> defaults.reducedMotion)
-                .description("Skip overlay fades and make keyboard focus scrolling instant.");
-        SETTINGS_PAGES.add(new SettingsPage("Appearance", List.of(
-                settingsEntry("theme").pageSummary("The accent, window tint and glass of every Aurora screen."),
-                settingsEntry("text_fonts").pageSummary("The typeface and style of Aurora's text, and where it applies."),
-                group("interface_motion", "Motion", reducedMotion).pageSummary("Animation and motion preferences for Aurora's menus."),
-                settingsEntry("custom_title").pageSummary("Aurora's own title screen in place of the vanilla one."))));
-        List<FeatureMetadata> worldEntries = new ArrayList<>();
-        if (EphemeraOwnership.ownsWorldVisuals()) {
-            worldEntries.add(group("world_visuals", "World Visuals", mappingAction("Open Ephemera Settings",
-                    "Adjust Gradient Dithering and Smooth Fog in Ephemera's Visuals tab.",
-                    com.aurora.client.compat.EphemeraBridge::openConfigScreen)));
-        } else {
-            worldEntries.add(settingsEntry("gradient_dither").pageSummary("Removes color banding from skies, fog and dark scenes."));
-            worldEntries.add(settingsEntry("smooth_fog").pageSummary("Softens harsh linear distance fog edges across the horizon."));
-        }
-        worldEntries.add(settingsEntry("tab_list").pageSummary("Clean up and restyle the multiplayer player list."));
-        worldEntries.add(settingsEntry("nametags").pageSummary("Third-person self nametag and floating nametag styling."));
-        SETTINGS_PAGES.add(new SettingsPage("World & HUD", List.copyOf(worldEntries)));
-        FeatureSetting searchInstant = new BooleanSetting("Instant Search",
-                () -> cfg.searchInstant, v -> { cfg.searchInstant = v; AuroraConfig.save(); }).resetDefault("searchInstant", () -> defaults.searchInstant)
-                .description("Focuses the search bar when the Aurora menu opens or you return to the Features tab, so you can type straight away.");
-        FeatureSetting searchTolerance = new SegmentedSetting<>("Search Typo Tolerance", SearchTolerance.class,
-                () -> SearchTolerance.of(cfg.searchTypoTolerance), v -> { cfg.searchTypoTolerance = v.ordinal(); AuroraConfig.save(); },
-                SearchTolerance::label).resetDefault(() -> SearchTolerance.of(defaults.searchTypoTolerance))
-                .description("How many typos a search word can have and still find a match. Exact only finds exact matches; short words always need to be exact.");
-        SETTINGS_PAGES.add(new SettingsPage("Performance", List.of(
-                settingsEntry("frame_pacing").pageSummary("Frame cap, even frame pacing and low-latency rendering."),
-                settingsEntry("decoupled_input").pageSummary("Applies mouse movement at the very start of each frame."),
-                group("menu_frame_rate", "Menu Frame Rate", uiFpsLimit).pageSummary("The framerate of Aurora's own screens."),
-                group("debug_screen", "Debug Screen", debugEntryCache).pageSummary("Makes the F3 screen cheaper to draw."),
-                group("maps", "Maps", minimapRefreshCap).pageSummary("Limits how often the minimap redraws its terrain."),
-                group("background", "Background", unfocusedLimit, unfocusedFps).pageSummary("Slows drawing while another window has focus."))));
-        SETTINGS_PAGES.add(new SettingsPage("Audio & Keys", List.of(
-                settingsEntry("sound_volumes").pageSummary("Lower or mute individual Minecraft sounds (0–100% attenuation only)."),
-                group("aurora_keys", "Aurora Keys", hudEditorKey).pageSummary("Keys that open Aurora's own screens."))));
-        SETTINGS_PAGES.add(new SettingsPage("Privacy", List.of(
-                settingsEntry("streamer_mode").pageSummary("Masks your username, skin, coordinates, server address, and optionally opponent nametags on your screen."))));
-        FeatureSetting resourcepackFolders = new BooleanSetting("Resource Pack Folders",
-                () -> cfg.resourcepackFoldersEnabled, v -> { cfg.resourcepackFoldersEnabled = v; AuroraConfig.save(); })
-                .resetDefault("resourcepackFoldersEnabled", () -> defaults.resourcepackFoldersEnabled)
-                .description("Discovers resource packs inside subfolders of resourcepacks/ and opens Aurora's folder-aware manager in Options → Resource Packs.");
-        FeatureSetting openPackManager = ButtonSetting.semantic("Open Pack Manager…",
-                () -> {
-                    net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-                    if (mc != null) {
-                        com.aurora.client.adapter.NativeUi.setScreen(mc,
-                                ResourcePackManagerScreen.open(com.aurora.client.adapter.NativeUi.screen(mc)));
-                    }
-                })
-                .description("Opens Aurora's folder-aware resource pack manager with subfolder navigation, search, and load-order controls.");
-        SETTINGS_PAGES.add(new SettingsPage("Tools", List.of(
-                group("screenshots", "Screenshots", openScreenshots).pageSummary("Browse, search, rename, copy, crop and delete screenshots in-game."),
-                group("resource_packs", "Resource Packs", resourcepackFolders, openPackManager)
-                        .pageSummary("Organize resource packs into nested folders with search and load-order controls."),
-                settingsEntry("server_list").pageSummary("Reorder servers in the Multiplayer list by dragging."),
-                group("search", "Search", searchInstant, searchTolerance).pageSummary("How the search bar finds features and settings."),
-                group("support", "Support", copyDiagnostics).pageSummary("Collects a diagnostics report to attach to bug reports."))));
+        // The Settings tab's pages, built from the features registered above.
+        SettingsPages.build(new SettingsPages.FeatureRows(uiFpsLimit, debugEntryCache, minimapRefreshCap,
+                unfocusedLimit, unfocusedFps));
 
     }
 
 
-
-    /** Search Typo Tolerance's segments; the ordinal is the stored value (0–3). */
-    private enum SearchTolerance {
-        EXACT("Exact"), ONE("1"), TWO("2"), THREE("3");
-
-        private final String label;
-
-        SearchTolerance(String label) { this.label = label; }
-
-        String label() { return label; }
-
-        static SearchTolerance of(int value) {
-            return values()[Math.max(0, Math.min(values().length - 1, value))];
-        }
-    }
 
     /** Boolean row bound to one Better Hitreg {@code Toggle} (raw stored value, not the master-gated read). */
     private static BooleanSetting hitregToggle(com.aurora.client.hitreg.settings.Toggle toggle, String label, BooleanSupplier defaultValue) {
