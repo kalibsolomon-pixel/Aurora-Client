@@ -1431,6 +1431,10 @@ addWithSettings("hitbox",
                                 () -> cfg.mediaHudShowArtist, v -> cfg.mediaHudShowArtist = v).resetDefault(() -> defaults.mediaHudShowArtist)
                                 .visibleWhen(() -> cfg.mediaNowPlayingHudEnabled)
                                 .description("Shows the artist line below the track title."),
+                        new BooleanSetting("Show Album Art",
+                                () -> cfg.mediaHudShowArt, v -> cfg.mediaHudShowArt = v).resetDefault(() -> defaults.mediaHudShowArt)
+                                .visibleWhen(() -> cfg.mediaNowPlayingHudEnabled)
+                                .description("Shows the track's cover art beside the title, as your media player publishes it (Spotify, browsers and most Windows players do)."),
                         new BooleanSetting("Show Progress Bar",
                                 () -> cfg.mediaHudShowProgress, v -> cfg.mediaHudShowProgress = v).resetDefault(() -> defaults.mediaHudShowProgress)
                                 .visibleWhen(() -> cfg.mediaNowPlayingHudEnabled)

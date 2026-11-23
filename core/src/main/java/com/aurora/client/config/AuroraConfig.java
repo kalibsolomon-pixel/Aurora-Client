@@ -1559,6 +1559,8 @@ public class AuroraConfig {
     public boolean mediaNowPlayingHudEnabled = false;
     public boolean mediaHudShowArtist = true;
     public boolean mediaHudShowProgress = true;
+    /** The track's cover art beside the title (Windows: whatever the player publishes). */
+    public boolean mediaHudShowArt = true;
     public boolean mediaHudHideWhenIdle = true;
     public int mediaHudMaxWidth = 180;
     public HudBackground mediaHudBgMode = HudBackground.SOLID;

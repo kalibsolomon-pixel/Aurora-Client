@@ -5,7 +5,9 @@
 # Protocol (one request line, then its reply):
 #   CMD <ACTION> <vk>  ->  OK <1|0>    asks the media session first (play/pause,
 #                                       next, previous), else sends the virtual key
-#   POLL               ->  KEY=VALUE lines, then ---END---
+#   POLL [ART]         ->  KEY=VALUE lines, then ---END---; with ART, an
+#                          ART=<base64 PNG> line (96x96, centre-cropped) when the
+#                          track's cover is new or changed
 #   QUIT                   exits
 # The first line written is "READY gsmtc=<0|1> keys=<0|1>".
 
@@ -30,6 +32,20 @@ try {
     })[0]
 } catch {}
 
+# Cover art: WinRT stream -> .NET stream (by reflection: PowerShell cannot pick the
+# overload for a WinRT COM object) -> System.Drawing for the crop and scale.
+$asRead = $null
+try {
+    Add-Type -AssemblyName System.Drawing
+    $null = [Windows.Storage.Streams.IRandomAccessStreamWithContentType, Windows.Storage.Streams, ContentType=WindowsRuntime]
+    $inputType = [Windows.Storage.Streams.IInputStream, Windows.Storage.Streams, ContentType=WindowsRuntime]
+    $asRead = [System.IO.WindowsRuntimeStreamExtensions].GetMethod('AsStreamForRead', [type[]]@($inputType))
+} catch {}
+$ART_SIZE = 96
+$artKey = $null
+$artTries = 0
+$lastArt = $null
+
 # A task's IsCompletedSuccessfully property does not exist on .NET Framework (PowerShell 5.1); test Status.
 function AwaitOp($op, $type) {
     try {
@@ -39,6 +55,36 @@ function AwaitOp($op, $type) {
         }
     } catch {}
     return $null
+}
+
+# The track's cover as a 96x96 PNG, base64; null when it has none or it cannot be read.
+function CoverBase64($props) {
+    if ($asRead -eq $null -or $props.Thumbnail -eq $null) { return $null }
+    $net = $null
+    $src = $null
+    try {
+        $stream = AwaitOp ($props.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
+        if ($stream -eq $null) { return $null }
+        $net = $asRead.Invoke($null, @($stream))
+        $src = [System.Drawing.Image]::FromStream($net)
+        $side = [Math]::Min($src.Width, $src.Height)
+        $from = New-Object System.Drawing.Rectangle ([int](($src.Width - $side) / 2)), ([int](($src.Height - $side) / 2)), $side, $side
+        $bmp = New-Object System.Drawing.Bitmap $ART_SIZE, $ART_SIZE
+        $g = [System.Drawing.Graphics]::FromImage($bmp)
+        $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+        $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+        $g.DrawImage($src, (New-Object System.Drawing.Rectangle 0, 0, $ART_SIZE, $ART_SIZE), $from, [System.Drawing.GraphicsUnit]::Pixel)
+        $g.Dispose()
+        $out = New-Object System.IO.MemoryStream
+        $bmp.Save($out, [System.Drawing.Imaging.ImageFormat]::Png)
+        $bmp.Dispose()
+        return [Convert]::ToBase64String($out.ToArray())
+    } catch {
+        return $null
+    } finally {
+        if ($src -ne $null) { $src.Dispose() }
+        if ($net -ne $null) { $net.Dispose() }
+    }
 }
 
 if ($asTask -ne $null) {
@@ -94,7 +140,7 @@ while (($line = [Console]::In.ReadLine()) -ne $null) {
             } catch {}
         }
         Write-Output ('OK ' + [int]$done)
-    } elseif ($line -eq 'POLL') {
+    } elseif ($line -eq 'POLL' -or $line -eq 'POLL ART') {
         if ($mgr -ne $null) {
             try {
                 $s = PickSession
@@ -117,6 +163,20 @@ while (($line = [Console]::In.ReadLine()) -ne $null) {
                             }
                             Write-Output ('POS=' + [long]$pos)
                             Write-Output ('DUR=' + [long]$tl.EndTime.TotalMilliseconds)
+                        }
+                        if ($line -eq 'POLL ART') {
+                            # Read a new track's cover on its first two polls: players such as
+                            # Spotify can publish the cover a moment after the title.
+                            $key = [string]$props.Title + '|' + [string]$props.Artist + '|' + [string]$props.AlbumTitle
+                            if ($key -ne $artKey) { $artKey = $key; $artTries = 0; $lastArt = $null }
+                            if ($artTries -lt 2) {
+                                $artTries++
+                                $art = CoverBase64 $props
+                                if ($art -ne $null -and $art -ne $lastArt) {
+                                    $lastArt = $art
+                                    Write-Output ('ART=' + $art)
+                                }
+                            }
                         }
                     }
                 }

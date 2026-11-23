@@ -26,6 +26,25 @@ class WindowsMediaHelperContractTest {
                 && script.contains("TrySkipPreviousAsync"), "commands go to the media session first");
     }
 
+    @Test void coversComeAsSmallPngsOnlyWhenAskedFor() throws Exception {
+        String script = Files.readString(SCRIPT);
+        assertTrue(script.contains("$line -eq 'POLL ART'"));
+        assertTrue(script.contains("$ART_SIZE = 96"));
+        assertTrue(script.contains("GetMethod('AsStreamForRead', [type[]]@($inputType))"),
+                "PowerShell cannot pick the overload for a WinRT stream itself");
+        assertTrue(script.contains("$lastArt = $null }"), "a new track re-sends its cover even when the album repeats");
+        String bridge = Files.readString(BRIDGE);
+        assertTrue(bridge.contains("public static final int COVER_SIZE = 96;"), "the texture size matches the helper's");
+        assertTrue(bridge.contains("if (line.startsWith(\"ART=\")) art = line.substring(4);"));
+    }
+
+    @Test void aTrackKeyIgnoresPlayback() {
+        var a = new MediaTrackState(true, true, "Bones", "Imagine Dragons", "Mercury", 1_000L, 165_000L, 5L);
+        var b = new MediaTrackState(true, false, "Bones", "Imagine Dragons", "Mercury", 90_000L, 165_000L, 9L);
+        assertEquals(a.trackKey(), b.trackKey());
+        assertNotEquals(a.trackKey(), new MediaTrackState(true, true, "Bones", "Imagine Dragons", "Other", 0L, 0L, 0L).trackKey());
+    }
+
     @Test void theBridgePassesTheScriptEncodedAndDrainsBothStreams() throws Exception {
         String bridge = Files.readString(BRIDGE);
         assertTrue(bridge.contains("\"-EncodedCommand\""));

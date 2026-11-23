@@ -54,6 +54,30 @@ public final class SystemMediaBridge {
     /** Latest polled desktop media track state (never null). */
     public static MediaTrackState currentTrack() { return STATE.get(); }
 
+    /**
+     * A track's cover: a {@value #COVER_SIZE}-pixel square PNG, for the track with
+     * {@code trackKey} ({@link MediaTrackState#trackKey()}). {@code serial} rises with each new cover.
+     */
+    public record Cover(String trackKey, byte[] png, long serial) {}
+
+    public static final int COVER_SIZE = 96;
+    /** A 96-pixel PNG is a few tens of KB; anything far larger is not the helper's cover. */
+    private static final int MAX_COVER_BASE64 = 512 * 1024;
+    private static final AtomicReference<Cover> COVER = new AtomicReference<>();
+    private static long coverSerial;
+
+    /** The most recent cover, or null; it belongs to the current track only when the keys match. */
+    public static Cover currentCover() { return COVER.get(); }
+
+    private static void acceptCover(String trackKey, String base64) {
+        if (base64.isEmpty() || base64.length() > MAX_COVER_BASE64) return;
+        try {
+            COVER.set(new Cover(trackKey, Base64.getDecoder().decode(base64), ++coverSerial));
+        } catch (IllegalArgumentException e) {
+            AuroraClient.LOGGER.debug("[Media] unreadable cover art: {}", e.getMessage());
+        }
+    }
+
     /** Dispatches an OS media control action asynchronously off the tick thread. */
     public static void dispatch(MediaAction action) {
         if (action == null) return;
@@ -265,16 +289,20 @@ public final class SystemMediaBridge {
         synchronized (HELPER) {
             if (!ensureWinHelper()) return;
             try {
-                winIn.write("POLL\n");
+                winIn.write(com.aurora.client.config.AuroraConfig.get().mediaHudShowArt ? "POLL ART\n" : "POLL\n");
                 winIn.flush();
                 StringBuilder sb = new StringBuilder();
+                String art = null;
                 String line;
                 while ((line = nextLine(REPLY_TIMEOUT_MS)) != null) {
                     if ("---END---".equals(line)) break;
-                    sb.append(line).append('\n');
+                    if (line.startsWith("ART=")) art = line.substring(4);
+                    else sb.append(line).append('\n');
                 }
                 if (line == null) return;
-                STATE.set(MediaTrackState.parseLines(sb.toString(), System.currentTimeMillis()));
+                MediaTrackState state = MediaTrackState.parseLines(sb.toString(), System.currentTimeMillis());
+                STATE.set(state);
+                if (art != null && state.active()) acceptCover(state.trackKey(), art);
             } catch (IOException e) {
                 closeWinProcess();
             }
