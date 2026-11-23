@@ -202,8 +202,11 @@ class RolloutStatesTest {
         // this rollout). Any added/removed keybind row must consciously
         // update this count together with ARCHITECTURE.md.
         try {
+            // The production rows span the registry and, since 2026-11-23, the Settings pages.
             String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
-                    SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
+                    SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")))
+                    + new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
+                    SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/SettingsPages.java")));
             int count = src.split("new KeybindSetting", -1).length - 1;
             // 17 since 2026-11-12: the HUD Editor key gained a row on the
             // Settings tab's Controls page (it was vanilla-Controls-only).

@@ -23,6 +23,8 @@ class AuroraScreenNavigationTest {
             SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/AuroraScreen.java");
     private static final Path REGISTRY = SourceTree.resolve(
             SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java");
+    private static final Path PAGES = SourceTree.resolve(
+            SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/SettingsPages.java");
     private static final Path MODULES = SourceTree.resolve(
             SourceTree.ADAPTER + "/src/client/java/com/aurora/client/module/ModuleManager.java");
 
@@ -78,8 +80,9 @@ class AuroraScreenNavigationTest {
         assertEquals(14, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.SETTINGS).size(),
                 "fourteen Settings-tab features (custom_title, text_fonts, theme, interface, the seven former Display Settings"
                         + " features, performance, gradient_dither, smooth_fog)");
-        // The tab draws pages, not one entry per feature.
-        assertTrue(registry.contains("SETTINGS_PAGES.add(new SettingsPage(\"Appearance\""));
+        // The tab draws pages, not one entry per feature; SettingsPages builds them (2026-11-23).
+        assertTrue(read(PAGES).contains("PAGES.add(new Page(\"Appearance\""));
+        assertTrue(registry.contains("SettingsPages.build("));
         // custom_title is registered without settings (grouping chrome, no
         // navigation zone) — the 4-arg add() leaves its settings empty.
         assertTrue(registry.contains(" add(\"custom_title\""));

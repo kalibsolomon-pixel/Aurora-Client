@@ -208,7 +208,7 @@ public class AuroraScreen extends Screen implements ThemedScreen, LayoutScreen {
      * search field, so the content viewport is identical on both tabs.
      */
     private int selectedPage = 0;
-    private final List<FeatureRegistry.SettingsPage> pages = FeatureRegistry.settingsPages();
+    private final List<SettingsPages.Page> pages = FeatureRegistry.settingsPages();
     /** Every entry on every page, in page order: init, invalidation and teardown walk all of them. */
     private final List<FeatureMetadata> allPageEntries = pages.stream()
             .flatMap(page -> page.entries().stream()).toList();
