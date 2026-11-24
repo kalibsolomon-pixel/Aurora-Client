@@ -236,6 +236,15 @@ unbound-item-components crash fix (PR #114) ([notes](releases/RELEASE_NOTES_3.9.
 rows passed with six reports each; judged runs 0.034–0.114 ms mean and at most 0.263 ms p95, zero
 fills and glass ([evidence](releases/evidence/3.9.0-parity.json)).
 
+3.10.0 follows: the 2026-11-23 code-review reliability pass (PR #116), compact icon-rail Settings
+window on short/high-scale screens (PR #118), six-page Settings reorganisation splitting Display
+Settings into individual catalog features (PR #119, PR #120), full-screen Resource Pack Manager
+layout (PR #117), removal of Aurora's frame pacer, frame rate limiters, low latency and Reflex in
+favour of Ephemera (PR #121, with the 10 removed profile fields retired in `ProfileFieldSet`), and
+tiered linear-filtered title-screen Aurora logos (PR #122) ([notes](releases/RELEASE_NOTES_3.10.0.md)).
+All fourteen rows passed with six reports each; judged runs 0.038–0.109 ms mean and at most
+0.202 ms p95, zero fills and glass ([evidence](releases/evidence/3.10.0-parity.json)).
+
 Window frames now use a cached, content-clipped bevel with one fixed strength, a little lighter than the former Subtle level (the Window Bevel setting and its levels were retired on 2026-11-18). Below full opacity the rim stays as clear as the window and the glass pass bends the backdrop across the frame band; glass, gem and metal were captured in the 26.3 client on OpenGL and Vulkan and await owner review. Since 2026-11-18 every window keeps a 10 px frame room, so the band is never squeezed by content (it may take up to 6 px) and content keeps a 4 px gap from it (DESIGN_LANGUAGE "Frame room").
 
 ## Acceptance and contributor readiness
