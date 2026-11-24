@@ -1,7 +1,6 @@
 package com.aurora.client.diagnostics;
 
 import com.aurora.client.AuroraClient;
-import com.aurora.client.config.AuroraConfig;
 import com.aurora.client.ui.render.RenderBackend;
 import com.aurora.client.ui.render.blur.BlurPanelRenderer;
 import com.aurora.client.ui.util.RenderUtil;
@@ -109,16 +108,12 @@ public final class DiagnosticsReport {
     }
 
     private static List<String> settings(Minecraft mc) {
-        AuroraConfig cfg = AuroraConfig.get();
         List<String> out = new ArrayList<>();
         try {
             out.add("fps limit " + mc.options.framerateLimit().get());
             out.add("vsync " + (mc.options.enableVsync().get() ? "on" : "off"));
             out.add("render distance " + mc.options.renderDistance().get());
         } catch (Throwable ignored) {}
-        out.add("Aurora frame cap " + (cfg.frameCapFps > 0 ? cfg.frameCapFps : "off"));
-        out.add("frame pacer " + (cfg.smoothFramePacer ? String.valueOf(cfg.framePacingStrategy) : "off"));
-        out.add("low latency " + (cfg.lowLatencyRender ? "on" : "off"));
         return out;
     }
 

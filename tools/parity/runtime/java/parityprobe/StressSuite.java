@@ -996,7 +996,6 @@ public final class StressSuite {
             cfg.streamerModeEnabled = true; cfg.streamerHideOwnName = true; cfg.streamerHideCoords = true;
             cfg.gradientDither = true;
             cfg.smoothFog = true;
-            cfg.perfUnfocusedLimit = true; cfg.perfUnfocusedFps = 30;
 
             // Populate live world state via singleplayer server
             var server = mc.getSingleplayerServer();

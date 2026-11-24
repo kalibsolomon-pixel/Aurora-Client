@@ -104,8 +104,8 @@ class RolloutStatesTest {
             String src = new String(java.nio.file.Files.readAllBytes(SourceTree.resolve(
                     SourceTree.ADAPTER + "/src/client/java/com/aurora/client/screen/FeatureRegistry.java")));
             int count = src.split("new EnumSetting<>", -1).length - 1;
-            assertEquals(36, count,
-                    "production EnumSetting construction sites (inventory drift guard; 31→32 Inventory HUD, 32→34 Pack Tweaks, 34→35 Chat, 35→36 Media Controls, 2026-11-21/22)");
+            assertEquals(34, count,
+                    "production EnumSetting construction sites (inventory drift guard; 36→34 UI FPS Limit and Frame Pacer Strategy removed 2026-11-23)");
         } catch (java.io.IOException e) {
             fail("FeatureRegistry.java not readable from the test working dir: " + e.getMessage());
         }

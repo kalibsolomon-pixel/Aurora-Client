@@ -200,12 +200,8 @@ public final class EphemeraBridge {
             fastWrite = "on (sdfGlyph=" + (sdfGlyphHandle != null) + ", sdfBox=" + (sdfBoxHandle != null)
                     + ", line=" + (lineHandle != null) + ")";
         }
-        String pacer = EphemeraPacingBridge.isBound()
-                ? EphemeraPacingBridge.statusLine()
-                : "";
-        String base = (hasSettings() ? statusSummary() : "settings bridge not connected")
+        return (hasSettings() ? statusSummary() : "settings bridge not connected")
                 + " | direct fast-write " + fastWrite;
-        return pacer.isEmpty() ? base : base + " | pacer " + pacer;
     }
 
     public static String backend() {

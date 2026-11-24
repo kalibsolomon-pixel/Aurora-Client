@@ -17,14 +17,13 @@ when the owning mod is absent.
 
 | Installed mod | Aurora optimization that yields | Shared work |
 |---|---|---|
-| Dynamic FPS (`dynamic_fps`) | Unfocused frame limit | Chooses the effective limit when the window loses focus |
 | Polytone (`polytone`) | GUI layering | Selects GUI depth nodes |
 | Gnetum (`gnetum`) | GUI layering | Routes HUD submissions into cached and live layers |
 | Modern UI (`modernui`) or Caxton (`caxton`) | Left-to-right text | Owns visual ordering of styled text |
 | ImmediatelyFast (`immediatelyfast`) | GUI Item Baking | Redraws animated GUI items in its own atlas |
 | Entity Culling (`entityculling`) | Entity and block-entity occlusion culling | Skips terrain-occluded entities and block entities during extraction |
 | VulkanMod (`vulkanmod`) | Blaze3D OpenGL dispatch caching (`perfGlDispatch`, 26.2) | Replaces OpenGL draw dispatch |
-| Ephemera (`ephemera`) | Engine performance hooks (`perfEntityOcclusion`, `perfGlDispatch`, `perfGuiLayering`, `perfLeftToRightText`, `perfFreeSpriteMipmaps`, `perfDebugEntryCache`, `perfSoundListenerThrottle`, `perfUnfocusedLimit`, `perfSkipLevelLoadDelay`) | Builds advertising engine ownership also handle animated GUI item redraws and frame pacing. Aurora keeps its glint styling, flat-face culling, SDF text, HUD, and overlays. World shader ownership is advertised per Minecraft line. The `ObjectShare` bridges convey Aurora's FPS caps and expose Ephemera's settings and fast vertex writers. |
+| Ephemera (`ephemera`) | Engine performance hooks (`perfEntityOcclusion`, `perfGlDispatch`, `perfGuiLayering`, `perfLeftToRightText`, `perfFreeSpriteMipmaps`, `perfDebugEntryCache`, `perfSoundListenerThrottle`, `perfSkipLevelLoadDelay`) | Builds advertising engine ownership also handle animated GUI item redraws. Aurora keeps its glint styling, flat-face culling, SDF text, HUD, and overlays. World shader ownership is advertised per Minecraft line. The `ObjectShare` bridges expose Ephemera's settings and fast vertex writers. |
 
 The [GUI, text and map measurements](reports/2026-11-20-gui-text-map.md) record
 the mod combinations and backends exercised.

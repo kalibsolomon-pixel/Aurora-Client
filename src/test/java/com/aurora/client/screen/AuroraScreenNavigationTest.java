@@ -77,8 +77,8 @@ class AuroraScreenNavigationTest {
         // Title — page groups and Text & Fonts have none).
         assertTrue(src.contains("if (metadata.hasDetail()) {\n                headerNavControls.put(metadata.id, headerNavControl(metadata));\n            }"));
         assertTrue(src.contains("if (!metadata.noSettingsToggle) {\n                headerToggleControls.put(metadata.id, headerToggleControl(metadata));\n            }"));
-        assertEquals(14, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.SETTINGS).size(),
-                "fourteen Settings-tab features (custom_title, text_fonts, theme, interface, the seven former Display Settings"
+        assertEquals(12, com.aurora.client.feature.FeatureCatalog.featuresOn(com.aurora.client.feature.FeatureCatalog.Tab.SETTINGS).size(),
+                "twelve Settings-tab features (custom_title, text_fonts, theme, the six remaining former Display Settings"
                         + " features, performance, gradient_dither, smooth_fog)");
         // The tab draws pages, not one entry per feature; SettingsPages builds them (2026-11-23).
         assertTrue(read(PAGES).contains("PAGES.add(new Page(\"Appearance\""));

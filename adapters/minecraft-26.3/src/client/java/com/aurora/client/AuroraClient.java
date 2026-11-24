@@ -30,12 +30,9 @@ public class AuroraClient implements ClientModInitializer {
         com.aurora.client.config.ConfigDirectory.set(
                 net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir());
 
-        com.aurora.client.util.ParkDiagnosticsControl.initialize();
-
         com.aurora.client.launcher.LauncherActivityIntegration.initialize();
 
         AuroraConfig.load();
-        com.aurora.client.compat.EphemeraPacingBridge.ensureBound();
 
         // Load + apply the active profile (or create the default one on first
         // run). MUST happen after AuroraConfig.load() (reads activeProfile)

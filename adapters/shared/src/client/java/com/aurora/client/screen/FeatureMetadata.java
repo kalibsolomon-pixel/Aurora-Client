@@ -153,7 +153,7 @@ public final class FeatureMetadata {
         String broken = com.aurora.client.health.FeatureHealth.headlineFor(id);
         return broken != null ? broken : subtitle;
     }
-    public boolean hasDetail() { return !pageGroup && !settings.isEmpty() && !List.of("text_fonts", "theme", "interface").contains(id); }
+    public boolean hasDetail() { return !pageGroup && !settings.isEmpty() && !List.of("text_fonts", "theme").contains(id); }
 
     /**
      * Reset this feature's config fields to their factory defaults.

@@ -5,13 +5,11 @@ import com.aurora.client.config.ConfigDirectory;
 import com.google.gson.Gson;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
-class FramePacingPersistenceTest {
+class ConfigAndProfilePersistenceTest {
     @TempDir static Path temporary;
     private static final Gson GSON = new Gson();
 
@@ -20,54 +18,23 @@ class FramePacingPersistenceTest {
         ConfigDirectory.set(temporary);
     }
 
-    @Test void factoryDefaultsAreStillTheAuditedDefaults() {
-        AuroraConfig cfg = new AuroraConfig();
-        assertEquals(AuroraConfig.PacingStrategy.PARK, cfg.framePacingStrategy);
-        assertTrue(cfg.smoothFramePacer);
-        assertEquals(500, cfg.framePacerSpinThresholdMicros);
-        assertEquals(2000, cfg.framePacerParkThresholdMicros);
-        assertFalse(cfg.framePacerLowCpuMode);
-        assertTrue(cfg.lowLatencyRender);
-        assertFalse(cfg.adaptiveRenderSleeping);
-        assertEquals(0, cfg.frameCapFps);
-    }
+    @Test void legacyConfigsAndProfilesWithRemovedPacingFieldsLoadCleanly() throws Exception {
+        assertTrue(AuroraConfig.flushPending(5000));
+        Path path = temporary.resolve("aurora.json");
+        String legacy = "{\"smoothFramePacer\":true,\"framePacingStrategy\":\"PARK\","
+                + "\"framePacerSpinThresholdMicros\":500,\"framePacerParkThresholdMicros\":2000,"
+                + "\"framePacerLowCpuMode\":false,\"frameCapFps\":240,\"lowLatencyRender\":true,"
+                + "\"disableVSync\":true,\"adaptiveRenderSleeping\":true,\"guiFpsLimit\":60,"
+                + "\"perfUnfocusedLimit\":true,\"perfUnfocusedFps\":30,\"zoomLevel\":7.5}";
+        Files.writeString(path, legacy);
+        AuroraConfig.load();
+        assertEquals(7.5, AuroraConfig.get().zoomLevel, 1e-6);
 
-    @ParameterizedTest @EnumSource(AuroraConfig.PacingStrategy.class)
-    void realConfigPersistenceAndProfileRestorePreserveEachStrategyAndModifier(AuroraConfig.PacingStrategy strategy) throws Exception {
-        for (boolean lowCpu : new boolean[]{false, true}) {
-            var live = AuroraConfig.get();
-            live.framePacingStrategy = strategy;
-            live.framePacerLowCpuMode = lowCpu;
-            live.framePacerSpinThresholdMicros = 1750;
-            live.framePacerParkThresholdMicros = 6500;
-            AuroraConfig.saveBlocking();
-            String disk = Files.readString(temporary.resolve("aurora.json"));
-            assertTrue(disk.contains("\"framePacingStrategy\": \"" + strategy + "\""));
-            live.framePacingStrategy = AuroraConfig.PacingStrategy.PARK;
-            live.framePacerLowCpuMode = !lowCpu;
-            live.framePacerSpinThresholdMicros = 500;
-            AuroraConfig.load();
-            assertSettings(strategy, lowCpu, 1750, 6500);
-
-            var manager = ProfileManager.getInstance();
-            manager.saveCurrentBlocking();
-            Profile restored = GSON.fromJson(Files.readString(temporary.resolve("profiles/default.json")), Profile.class);
-            AuroraConfig.get().framePacingStrategy = AuroraConfig.PacingStrategy.SPIN;
-            AuroraConfig.get().framePacerLowCpuMode = !lowCpu;
-            AuroraConfig.get().framePacerParkThresholdMicros = 2000;
-            manager.applyProfile(restored);
-            assertSettings(strategy, lowCpu, 1750, 6500);
-        }
-    }
-
-    @Test void olderProfilesKeepDefaultsAndRemovedStrategyKeepsTheExistingNullFallback() {
         var manager = ProfileManager.getInstance();
-        manager.applyProfile(GSON.fromJson("{\"name\":\"old\",\"fields\":{\"framePacerLowCpuMode\":true}}", Profile.class));
-        assertSettings(AuroraConfig.PacingStrategy.PARK, true, 500, 2000);
-        manager.applyProfile(GSON.fromJson("{\"name\":\"old\",\"fields\":{\"framePacingStrategy\":\"YIELD\",\"framePacerSpinThresholdMicros\":1234}}", Profile.class));
-        assertNull(AuroraConfig.get().framePacingStrategy);
-        assertEquals(1234, AuroraConfig.get().framePacerSpinThresholdMicros);
-        assertFalse(AuroraConfig.get().framePacerLowCpuMode);
+        manager.applyProfile(GSON.fromJson(
+                "{\"name\":\"old\",\"fields\":{\"framePacingStrategy\":\"YIELD\",\"frameCapFps\":120,\"zoomLevel\":6.0}}",
+                Profile.class));
+        assertEquals(6.0, AuroraConfig.get().zoomLevel, 1e-6);
     }
 
     @Test void createThenImmediateSwitchSeesTheQueuedProfileAndDeleteIsNotUndone() throws Exception {
@@ -75,6 +42,7 @@ class FramePacingPersistenceTest {
         // file asynchronously; switchTo() used to scan the directory before
         // it existed and silently refuse the switch.
         var manager = ProfileManager.getInstance();
+        manager.saveCurrentBlocking();
         String name = "ryw-" + System.nanoTime();
         assertTrue(manager.create(name));
         assertTrue(manager.switchTo(name), "switching to a just-created profile must work");
@@ -184,14 +152,6 @@ class FramePacingPersistenceTest {
             for (String filler : fillers) manager.delete(filler);
             manager.saveCurrentBlocking();
         }
-    }
-
-    private static void assertSettings(AuroraConfig.PacingStrategy strategy, boolean lowCpu, int spin, int park) {
-        AuroraConfig cfg = AuroraConfig.get();
-        assertEquals(strategy, cfg.framePacingStrategy);
-        assertEquals(lowCpu, cfg.framePacerLowCpuMode);
-        assertEquals(spin, cfg.framePacerSpinThresholdMicros);
-        assertEquals(park, cfg.framePacerParkThresholdMicros);
     }
 
     @Test void releaseDefaultsArePortableIndependentAndKeepTheOwnersVisualChoices() throws Exception {

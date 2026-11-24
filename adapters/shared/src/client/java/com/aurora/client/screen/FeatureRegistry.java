@@ -6,7 +6,6 @@ import com.aurora.client.feature.FeatureCatalog;
 import com.aurora.client.config.profile.ProfileManager;
 import com.aurora.client.screen.setting.*;
 import com.aurora.client.theme.ThemeMode;
-import com.aurora.client.util.EphemeraPacingHook;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -22,10 +21,10 @@ import java.util.function.Consumer;
  * <ul>
  *   <li><b>Modules</b> - Aurora's gameplay/visual features (the grid)</li>
  *   <li><b>Settings</b> - global client settings: title screen, fonts,
- *       theme, the UI fps limit, frame pacing, input, tab list, nametags,
- *       sound, Streamer Mode and the server list. The tab draws them as
- *       {@link #settingsPages() pages} behind sub-tabs ({@link SettingsPages})
- *       rather than one entry per feature.</li>
+ *       theme, input, tab list, nametags, sound, Streamer Mode and the
+ *       server list. The tab draws them as {@link #settingsPages() pages}
+ *       behind sub-tabs ({@link SettingsPages}) rather than one entry per
+ *       feature.</li>
  * </ul>
  */
 public final class FeatureRegistry {
@@ -1477,17 +1476,6 @@ addWithSettings("hitbox",
                                 .description("How strongly the backdrop behind Aurora's glass windows and controls is blurred, in GUI pixels. Off shows the tint alone. Drag previews the change live; release saves it.")
                 )).noSettingsToggle(true);
 
-        FeatureSetting uiFpsLimit = new EnumSetting<>("UI FPS Limit", AuroraConfig.GuiFps.class,
-                () -> AuroraConfig.GuiFps.fromValue(cfg.guiFpsLimit), v -> cfg.guiFpsLimit = v.value).resetDefault(() -> AuroraConfig.GuiFps.fromValue(defaults.guiFpsLimit))
-                .labels(AuroraConfig.GuiFps::label)
-                .description("The framerate Aurora screens run at. 'Unlimited' removes the cap so the GUI matches your main FPS.");
-        addWithSettings("interface",
-                "Caps the framerate while an Aurora screen is open, independent of Minecraft's main FPS cap. A lower limit keeps the UI smooth while freeing GPU time for the world behind it.",
-                () -> cfg.guiFpsLimit != 1000,
-                v -> cfg.guiFpsLimit = v ? 60 : 1000,
-                List.of(uiFpsLimit),
-                List.of("guiFpsLimit"));
-
         // Three categories, each covering several animations (owner, 2026-11-18): the hands
         // and held items, using and switching items, and the camera and your own avatar.
         // Small choices are segmented rows and related switches share a row, so Swing Curve
@@ -1725,60 +1713,12 @@ addWithSettings("hitbox",
                 List.of("chat"));
 
         // ---- Former Display Settings ----
-        // Frame pacing, decoupled input, tab list, nametags, per-sound volume,
-        // Streamer Mode and server-list dragging were one catalog feature
-        // ("miscellaneous") until 2026-11-23; each is now its own feature with
-        // its own fair-play class, health note and reset, shown as an entry on
-        // a Settings-tab page. The rows are built once and shared, so a detail
-        // screen (opened from search) and the page edit the same values.
-        FeatureSetting framePacerEnabled = new BooleanSetting("Enabled",
-                () -> cfg.smoothFramePacer,
-                v -> cfg.smoothFramePacer = v).resetDefault("smoothFramePacer", () -> defaults.smoothFramePacer)
-                .description(() -> EphemeraPacingHook.ownsFramePacing()
-                        ? "Ephemera is pacing frames. Adjust its pacer under Settings → Performance → Ephemera Engine."
-                        : "Spaces frames evenly at the FPS cap set in Video Settings.")
-                .disabled(EphemeraPacingHook::ownsFramePacing);
-        FeatureSetting framePacingStrategy = new EnumSetting<>("Strategy",
-                AuroraConfig.PacingStrategy.class,
-                () -> cfg.framePacingStrategy,
-                v -> cfg.framePacingStrategy = v).resetDefault(() -> defaults.framePacingStrategy)
-                .valueDescriptions(s -> switch (s) {
-                    case VANILLA -> "Disabled — uses Minecraft's default frame pacing. Notice the jitter at high FPS caps above ~64.";
-                    case PARK -> "Default. Sleeps for most of the wait, spinning only the final half-millisecond. Measured the most stable frame times of any strategy at 60 fps while using the least CPU - cool and quiet with nothing given up.";
-                    case HYBRID -> "Sleeps until the configured Park Threshold, then spins to the deadline. Low CPU uses the shorter Spin Threshold instead. Kept for existing manual configurations.";
-                    case SPIN -> "Pure busy-loop. Maximum precision (sub-microsecond) but wastes a CPU core. Useful for benchmarking only.";
-                }).disabled(EphemeraPacingHook::ownsFramePacing);
-        FeatureSetting framePacerLowCpu = new BooleanSetting("Low CPU (Hybrid only)",
-                () -> cfg.framePacerLowCpuMode,
-                v -> cfg.framePacerLowCpuMode = v).resetDefault("framePacerLowCpuMode", () -> defaults.framePacerLowCpuMode)
-                .description("Hybrid only: parks until the configured Spin Threshold, shortening its planned spin window. Park and Spin are unchanged. Timing precision and actual CPU effects depend on the system.")
-                .disabled(() -> EphemeraPacingHook.ownsFramePacing() || cfg.framePacingStrategy != AuroraConfig.PacingStrategy.HYBRID);
-        FeatureSetting framePacerSpinThreshold = SliderSetting.ofInt("Spin Threshold (µs)",
-                () -> cfg.framePacerSpinThresholdMicros,
-                v -> cfg.framePacerSpinThresholdMicros = v, 100, 2000).resetDefault(() -> defaults.framePacerSpinThresholdMicros)
-                .description("Planned spin tail in microseconds for Park, and for Hybrid with Low CPU enabled. Manual values are preserved; actual timing and CPU use depend on the system. Spin ignores this threshold.")
-                .disabled(EphemeraPacingHook::ownsFramePacing);
-        FeatureSetting framePacerParkThreshold = SliderSetting.ofInt("Park Threshold (µs)",
-                () -> cfg.framePacerParkThresholdMicros,
-                v -> cfg.framePacerParkThresholdMicros = v, 1000, 8000).resetDefault(() -> defaults.framePacerParkThresholdMicros)
-                .description("Planned spin window in microseconds for Hybrid with Low CPU off. A higher value reserves more active spinning. Park and Spin ignore this threshold.")
-                .disabled(EphemeraPacingHook::ownsFramePacing);
-        FeatureSetting globalFrameCap = SliderSetting.ofInt("Global Frame Cap",
-                () -> cfg.frameCapFps, v -> cfg.frameCapFps = v, 0, 2000).resetDefault(() -> defaults.frameCapFps)
-                .editableValue()
-                .valueFormatter(v -> v.intValue() <= 0 ? "Off" : Integer.toString(v.intValue()))
-                .description("Caps the game's framerate everywhere — world, menus, and Aurora's screens alike — at up to 2000 FPS. 0 (Off) removes the cap. Unlike Minecraft's own FPS limit, this works even when that option is set to Unlimited, and it stacks cleanly with it: whichever is lower wins. The wait happens at the very start of each frame, so latency stays low. Click the value to type an exact number; drag or use the arrows for rough adjustment.");
-        FeatureSetting lowLatencyEnabled = new BooleanSetting("Enabled",
-                () -> cfg.lowLatencyRender,
-                v -> cfg.lowLatencyRender = v).resetDefault("lowLatencyRender", () -> defaults.lowLatencyRender)
-                .description("Master switch for the latency settings in this section: the VSync-off enforcement and the Reflex-style render sleep below. With this off, neither has any effect, even with their own toggles on.");
-        FeatureSetting disableVSync = new BooleanSetting("Disable VSync (causes tearing without VRR)",
-                () -> cfg.disableVSync, v -> cfg.disableVSync = v).resetDefault("disableVSync", () -> defaults.disableVSync)
-                .description("Turns off vertical sync, removing the frame-buffering delay it adds for the lowest possible input lag. The trade-off is screen tearing (a horizontal seam during fast motion) unless your monitor has a variable refresh rate like G-Sync or FreeSync. Leave on if you see tearing.");
-        FeatureSetting adaptiveRenderSleeping = new BooleanSetting("Adaptive Render Sleeping (Reflex-style)",
-                () -> cfg.adaptiveRenderSleeping, v -> cfg.adaptiveRenderSleeping = v).resetDefault("adaptiveRenderSleeping", () -> defaults.adaptiveRenderSleeping)
-                .description("Moves the frame-rate limiter's wait from the end of the frame to the very start of the next one, so the CPU sleeps just before your input is applied and the frame is built — keeping the GPU render queue short. Requires this section's Enabled toggle plus the Frame Pacer above being on with a non-Vanilla strategy.")
-                .disabled(EphemeraPacingHook::ownsFramePacing);
+        // Decoupled input, tab list, nametags, per-sound volume, Streamer Mode
+        // and server-list dragging were one catalog feature ("miscellaneous")
+        // until 2026-11-23; each is now its own feature with its own fair-play
+        // class, health note and reset, shown as an entry on a Settings-tab
+        // page. The rows are built once and shared, so a detail screen (opened
+        // from search) and the page edit the same values.
         FeatureSetting decoupledInputEnabled = new BooleanSetting("Enabled",
                 () -> cfg.inputSamplingDecoupled,
                 v -> cfg.inputSamplingDecoupled = v).resetDefault("inputSamplingDecoupled", () -> defaults.inputSamplingDecoupled)
@@ -1920,27 +1860,6 @@ addWithSettings("hitbox",
         // A page entry's rows carry each switch, so these entries draw no header
         // toggle and no detail link (pageGroup), exactly as their groups did; the
         // getter, setter and detail screen remain for search and the GUI audit.
-        addWithSettings("frame_pacing",
-                "When frames are drawn: a global frame cap, a pacer that spaces frames evenly, and low-latency rendering with VSync and render-sleep controls.",
-                () -> cfg.smoothFramePacer || cfg.lowLatencyRender || cfg.frameCapFps > 0,
-                v -> {
-                    cfg.smoothFramePacer = v;
-                    cfg.lowLatencyRender = v;
-                    // The cap is a value, not a switch: off removes it, on keeps
-                    // whatever cap the player chose.
-                    if (!v) cfg.frameCapFps = 0;
-                },
-                List.of(
-                        new SectionHeaderSetting("Frame Cap"),
-                        globalFrameCap,
-                        new SectionHeaderSetting("Frame Pacer"),
-                        framePacerEnabled, framePacingStrategy, framePacerLowCpu,
-                        framePacerSpinThreshold, framePacerParkThreshold,
-                        new SectionHeaderSetting("Low Latency"),
-                        lowLatencyEnabled, disableVSync, adaptiveRenderSleeping),
-                List.of("smoothFramePacer", "framePacer", "framePacing", "frameCap",
-                        "lowLatencyRender", "disableVSync", "adaptiveRenderSleeping"))
-                .noSettingsToggle(true).pageGroup(true);
         addWithSettings("decoupled_input",
                 "Applies mouse movement at the very start of each frame, so the view follows the mouse one step sooner.",
                 () -> cfg.inputSamplingDecoupled, v -> cfg.inputSamplingDecoupled = v,
@@ -2010,22 +1929,14 @@ addWithSettings("hitbox",
         FeatureSetting minimapRefreshCap = new BooleanSetting("Cap Minimap Redraws",
                 () -> cfg.perfMinimapRefreshCap, v -> cfg.perfMinimapRefreshCap = v).resetDefault("perfMinimapRefreshCap", () -> defaults.perfMinimapRefreshCap)
                 .description("While you move or turn, the minimap redraws its terrain at most 60 times a second instead of on every frame, which saves time at high frame rates. Markers stay lined up with the terrain. On screens faster than 60 Hz the terrain scrolls in small steps.");
-        FeatureSetting unfocusedLimit = new BooleanSetting("Background Frame Limit",
-                () -> cfg.perfUnfocusedLimit, v -> cfg.perfUnfocusedLimit = v).resetDefault("perfUnfocusedLimit", () -> defaults.perfUnfocusedLimit)
-                .description("While another window has focus, the game draws fewer frames a second, which frees your CPU and GPU for that window and saves power. Minecraft itself only slows down when minimized or after a minute without input. The game keeps running at full speed; only drawing slows.");
-        FeatureSetting unfocusedFps = SliderSetting.ofInt("Background FPS",
-                () -> cfg.perfUnfocusedFps, v -> cfg.perfUnfocusedFps = v, 5, 120).resetDefault(() -> defaults.perfUnfocusedFps)
-                .visibleWhen(() -> cfg.perfUnfocusedLimit)
-                .description("The most frames a second the game draws while another window has focus.");
         addWithSettings("performance",
                 "Loading, caching and drawing optimizations. Most are always on; the switches here are the ones you might notice.",
-                () -> cfg.perfDebugEntryCache || cfg.perfMinimapRefreshCap || cfg.perfUnfocusedLimit,
+                () -> cfg.perfDebugEntryCache || cfg.perfMinimapRefreshCap,
                 v -> {
                     cfg.perfDebugEntryCache = v;
                     cfg.perfMinimapRefreshCap = v;
-                    cfg.perfUnfocusedLimit = v;
                 },
-                List.of(debugEntryCache, minimapRefreshCap, unfocusedLimit, unfocusedFps),
+                List.of(debugEntryCache, minimapRefreshCap),
                 List.of("perf"));
 
         add("gradient_dither",
@@ -2037,8 +1948,7 @@ addWithSettings("hitbox",
                 () -> cfg.smoothFog, v -> cfg.smoothFog = v);
 
         // The Settings tab's pages, built from the features registered above.
-        SettingsPages.build(new SettingsPages.FeatureRows(uiFpsLimit, debugEntryCache, minimapRefreshCap,
-                unfocusedLimit, unfocusedFps));
+        SettingsPages.build(new SettingsPages.FeatureRows(debugEntryCache, minimapRefreshCap));
 
     }
 

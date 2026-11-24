@@ -17,7 +17,7 @@ import java.util.List;
  * own switch for Theme and Custom Title) over its rows. Most entries are
  * Settings-tab catalog features (their health note replaces the summary line
  * while a mixin is down); the rest are {@link FeatureMetadata#pageGroup groups}
- * of rows owned by Interface or Performance, or by no feature at all. Six pages
+ * of rows owned by Performance, or by no feature at all. Six pages
  * since 2026-11-23: Appearance, World &amp; HUD, Performance, Audio &amp; Keys,
  * Privacy, Tools.
  */
@@ -32,8 +32,7 @@ public final class SettingsPages {
     public record Page(String label, List<FeatureMetadata> entries) {}
 
     /** Rows that belong to a feature the registry builds, shown on a page as a group. */
-    record FeatureRows(FeatureSetting uiFpsLimit, FeatureSetting debugEntryCache, FeatureSetting minimapRefreshCap,
-                       FeatureSetting unfocusedLimit, FeatureSetting unfocusedFps) {}
+    record FeatureRows(FeatureSetting debugEntryCache, FeatureSetting minimapRefreshCap) {}
 
     private static final List<Page> PAGES = new ArrayList<>();
     private static boolean ephemeraSettingsAttached = false;
@@ -77,13 +76,9 @@ public final class SettingsPages {
         PAGES.add(new Page("World & HUD", List.copyOf(worldEntries)));
 
         PAGES.add(new Page("Performance", List.of(
-                entry("frame_pacing").pageSummary("Frame cap, even frame pacing and low-latency rendering."),
                 entry("decoupled_input").pageSummary("Applies mouse movement at the very start of each frame."),
-                group("menu_frame_rate", "Menu Frame Rate", shared.uiFpsLimit()).pageSummary("The framerate of Aurora's own screens."),
                 group("debug_screen", "Debug Screen", shared.debugEntryCache()).pageSummary("Makes the F3 screen cheaper to draw."),
-                group("maps", "Maps", shared.minimapRefreshCap()).pageSummary("Limits how often the minimap redraws its terrain."),
-                group("background", "Background", shared.unfocusedLimit(), shared.unfocusedFps())
-                        .pageSummary("Slows drawing while another window has focus."))));
+                group("maps", "Maps", shared.minimapRefreshCap()).pageSummary("Limits how often the minimap redraws its terrain."))));
 
         FeatureSetting hudEditorKey = new KeybindSetting("HUD Editor Key",
                 () -> cfg.hudEditorKey, v -> cfg.hudEditorKey = v).resetDefault(() -> defaults.hudEditorKey).keyId("key.aurora.hud_editor")
