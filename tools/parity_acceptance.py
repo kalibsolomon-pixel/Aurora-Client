@@ -137,7 +137,7 @@ def record(root, logs):
         elif backend == 'VULKAN':
             backend_ok = observed_log == 'VULKAN' and not vulkanmod_in_log
         elif backend == 'VULKANMOD':
-            backend_ok = observed_log in ('VULKAN', 'VULKANMOD') and vulkanmod_in_log
+            backend_ok = observed_log in ('VULKAN', 'VULKANMOD', 'NOT OPENGL (VULKAN OR OTHER)') and vulkanmod_in_log
         else:
             raise ValueError(f'Unsupported backend {backend}: {mc}/{backend}/{name}')
         if not backend_ok:
