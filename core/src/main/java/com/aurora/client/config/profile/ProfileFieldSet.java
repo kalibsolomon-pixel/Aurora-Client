@@ -57,14 +57,21 @@ public final class ProfileFieldSet {
 
     /**
      * Fields Aurora has removed (3.5.1, 2026-11-15: entity movement smoothing and the
-     * Better Hitreg parts other than its custom delay; 3.8.1, 2026-11-22: Smooth Camera; 3.9.0: Lava Clarity's fire switch).
+     * Better Hitreg parts other than its custom delay; 3.8.1, 2026-11-22: Smooth Camera;
+     * 3.9.0: Lava Clarity's fire switch; 3.10.0, 2026-11-23: frame pacer, GUI FPS cap,
+     * low latency, VSync override, and adaptive render sleeping).
      * Profiles saved before still carry them; restore skips them quietly, because nothing
      * is wrong with such a profile. Any other unknown field still logs a warning. The
-     * reload overlay and title fade switches were perf* fields, which profiles never held.
+     * reload overlay, title fade, and unfocused FPS switches were perf* fields, which
+     * profiles never held.
      */
     public static final Set<String> RETIRED = Set.of(
+            "adaptiveRenderSleeping", "disableVSync",
             "entityMovementSmoothingEnabled", "entityMovementSmoothingStrength",
-            "fightStatsPlaytimeSeconds", "fightStatsTotalFights", "hitregAlertDelays",
+            "fightStatsPlaytimeSeconds", "fightStatsTotalFights",
+            "frameCapFps", "framePacerLowCpuMode", "framePacerParkThresholdMicros",
+            "framePacerSpinThresholdMicros", "framePacingStrategy", "guiFpsLimit",
+            "hitregAlertDelays",
             "hitregAlertGhosts", "hitregAlertInconsistencies", "hitregColorCrossFar",
             "hitregColorCrossFarWithHitbox", "hitregColorCrossNear",
             "hitregColorCrossNearWithHitbox", "hitregColorFloor", "hitregColorGrid",
@@ -76,7 +83,8 @@ public final class ProfileFieldSet {
             "hitregMuffleAmount", "hitregScoreLeftKey", "hitregScoreResetKey",
             "hitregScoreRightKey", "hitregScoreSendKey", "hitregSettingsKey",
             "hitregSharpenAmount", "hitregSwitchHandKey", "hitregTrackFights", "hitregVoidWorld",
-            "lavaHideOverlay", "smoothCamera", "smoothCameraStrength"
+            "lavaHideOverlay", "lowLatencyRender",
+            "smoothCamera", "smoothCameraStrength", "smoothFramePacer"
     );
 
     /** @return {@code true} for a field a later Aurora removed ({@link #RETIRED}). */

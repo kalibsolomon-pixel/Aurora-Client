@@ -153,7 +153,9 @@ class ParityTest(unittest.TestCase):
             row_dir.mkdir(parents=True, exist_ok=True)
             manifest = json.loads((ROOT / f'adapters/{acceptance.versions(ROOT)[mc]["adapter"]}/src/client/resources/aurora.mixins.json').read_text())
             count = len(manifest['client'])
-            renderer = 'OpenGL' if backend == 'OPENGL' else 'Vulkan'
+            renderer = 'OpenGL' if backend == 'OPENGL' else (
+                'not OpenGL (Vulkan or other)' if backend == 'VULKANMOD' else 'Vulkan'
+            )
             is_vm = backend == 'VULKANMOD'
             log_path = row_dir / f'{name}-latest.log'
             log_bytes = self._make_fake_log(count, renderer, vulkanmod=is_vm).encode('utf-8')
