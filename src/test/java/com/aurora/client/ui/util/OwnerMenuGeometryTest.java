@@ -130,4 +130,45 @@ class OwnerMenuGeometryTest {
         assertFalse(brand.contains("ThemeManager"));
         assertFalse(brand.contains("GlassSurface"));
     }
+
+    @Test void brandMarkTiersHaveLinearClampMetadataAndEdgeBleed() throws Exception {
+        String brand = Files.readString(SourceTree.resolve(SourceTree.ADAPTER + "/src/client/java/com/aurora/client/ui/util/AuroraBrand.java"));
+        int[] tiers = {16, 32, 64, 128, 256, 512};
+        for (int size : tiers) {
+            String name = size == 256 ? "aurora_mark.png" : "aurora_mark_" + size + ".png";
+            assertTrue(brand.contains("textures/ui/" + name), "AuroraBrand must reference " + name);
+            var pngPath = SourceTree.resolve(SourceTree.ADAPTER + "/src/client/resources/assets/aurora/textures/ui/" + name);
+            var asset = ImageIO.read(pngPath.toFile());
+            assertNotNull(asset, name + " must load as an image");
+            assertEquals(size, asset.getWidth(), name + " width");
+            assertEquals(size, asset.getHeight(), name + " height");
+            String meta = Files.readString(pngPath.resolveSibling(name + ".mcmeta"));
+            assertTrue(meta.contains("\"blur\": true"), name + ".mcmeta must enable bilinear blur");
+            assertTrue(meta.contains("\"clamp\": true"), name + ".mcmeta must enable edge clamping");
+            // Transparent pixels directly adjacent to opaque pixels must carry bled RGB (never 0x00000000).
+            boolean sawAdjacentTransparent = false;
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    int argb = asset.getRGB(x, y);
+                    if ((argb >>> 24) != 0) continue;
+                    boolean touchesOpaque = false;
+                    for (int dy = -1; dy <= 1 && !touchesOpaque; dy++) {
+                        for (int dx = -1; dx <= 1 && !touchesOpaque; dx++) {
+                            int nx = x + dx, ny = y + dy;
+                            if (nx >= 0 && nx < size && ny >= 0 && ny < size
+                                    && (asset.getRGB(nx, ny) >>> 24) >= 128) {
+                                touchesOpaque = true;
+                            }
+                        }
+                    }
+                    if (touchesOpaque) {
+                        sawAdjacentTransparent = true;
+                        assertNotEquals(0, argb & 0x00FFFFFF,
+                                name + " transparent edge pixel (" + x + "," + y + ") must carry bled RGB");
+                    }
+                }
+            }
+            assertTrue(sawAdjacentTransparent, name + " should have silhouette boundary pixels");
+        }
+    }
 }
